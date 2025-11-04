@@ -1,0 +1,20 @@
+{
+  "name": "chatsyok-app",
+  "version": "1.0.0",
+  "description": "A character chat app using Netlify Functions and Firebase.",
+  "main": "index.html",
+  "scripts": {
+    "start": "netlify dev",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Cecep Hardiansyah",
+  "license": "ISC",
+  "dependencies": {
+    "@google/generative-ai": "^0.14.1",
+    "cloudinary": "^2.8.0",
+    "firebase-admin": "^12.7.0"
+  },
+  "devDependencies": {
+    "netlify-cli": "^17.23.5"
+  }
+}
