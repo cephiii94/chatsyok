@@ -10,6 +10,29 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"></script>
+
+        <script>
+        // TODO: Ganti dengan konfigurasi proyek Anda
+        const firebaseConfig = {
+        apiKey: "AIzaSyD5dhh4a3835uJGxxvKL27KcTAtu0f7bT4",
+        authDomain: "all-auth-1509.firebaseapp.com",
+        projectId: "all-auth-1509",
+        storageBucket: "all-auth-1509.firebasestorage.app",
+        messagingSenderId: "23681152443",
+        appId: "1:23681152443:web:8f86c9b89e14c90692809e",
+        };
+
+        // Inisialisasi Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        // Inisialisasi Firestore
+        const db = firebase.getFirestore(app);
+        </script>
+        
+    </head>
+
 </head>
 <body>
 

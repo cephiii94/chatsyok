@@ -1,80 +1,98 @@
-// --- (BAGIAN BARU) Database Karakter ---
-// Nanti, ini bisa diambil dari database sungguhan (misal: Firebase)
-const characterData = {
-    '1': {
-        name: 'Profesor Hoot',
-        description: 'Seekor burung hantu bijak yang tahu segalanya tentang sejarah dan sains.',
-        image: 'https://placehold.co/300x250/bbdefb/1e3a5a?text=Hoot',
-        tags: ['Edukasi', 'Sejarah', 'Sains']
-    },
-    '2': {
-        name: 'Koki Bella',
-        description: 'Seorang koki ramah yang ahli membuat resep pasta lezat.',
-        image: 'https://placehold.co/300x250/f8bbd0/880e4f?text=Bella',
-        tags: ['Memasak', 'Resep', 'Italia']
-    },
-    '3': {
-        name: 'Sparky si Robot',
-        description: 'Robot penjelajah yang lucu dan penuh rasa ingin tahu tentang teknologi.',
-        image: 'https://placehold.co/300x250/d1c4e9/311b92?text=Sparky',
-        tags: ['Teknologi', 'Sci-Fi', 'Robot']
-    },
-    '4': {
-        name: 'Kapten Alex',
-        description: 'Penjelajah galaksi pemberani yang telah mengunjungi seratus planet.',
-        image: 'https://placehold.co/300x250/c8e6c9/1b5e20?text=Alex',
-        tags: ['Petualangan', 'Luar Angkasa', 'Fiksi Ilmiah']
-    }
-    // Tambahkan karakter lain di sini
-};
+/* * CATATAN PENTING:
+ * Kode ini mengasumsikan Anda telah menambahkan skrip Firebase SDK
+ * dan menginisialisasi variabel 'db' (database) di file chat.html Anda.
+ * * Kita akan menggunakan sintaks modular Firebase v9+
+ */
 
-// --- (BAGIAN BARU) Fungsi untuk Memuat Profil Karakter ---
-function loadCharacterProfile(id) {
-    // Cari karakter di database, atau gunakan '1' (Hoot) sebagai default jika ID tidak ditemukan
-    const character = characterData[id] || characterData['1'];
+// Dapatkan fungsi-fungsi yang kita butuhkan dari SDK
+const { getDoc, doc } = firebase.firestore;
 
-    // Ambil elemen-elemen di panel kiri
-    const profileImg = document.querySelector('.chat-left-panel .profile-img');
-    const profileName = document.querySelector('.chat-left-panel h4');
-    const profileDesc = document.querySelector('.chat-left-panel p');
-    const tagsContainer = document.querySelector('.chat-left-panel .tags');
-
-    // Update konten di panel kiri
-    if (profileImg) {
-        profileImg.src = character.image;
-        profileImg.alt = character.name; // Baik untuk aksesibilitas
-    }
-    if (profileName) profileName.textContent = character.name;
-    if (profileDesc) profileDesc.textContent = character.description;
+// --- (BARU) Fungsi untuk Memuat Profil Karakter dari Firestore ---
+// Kita mengubahnya menjadi fungsi 'async' agar bisa 'await' (menunggu) data
+async function loadCharacterProfile(characterId) {
+    console.log(`Mencoba memuat karakter ID: ${characterId}`);
     
-    // Update tags
-    if (tagsContainer) {
-        tagsContainer.innerHTML = ''; // Kosongkan tags yang lama
-        character.tags.forEach(tagText => {
-            const tagElement = document.createElement('span');
-            tagElement.textContent = tagText;
-            tagsContainer.appendChild(tagElement);
-        });
-    }
+    // Tentukan referensi dokumen (doc ref)
+    // Ini seperti membuat alamat ke dokumen yang kita inginkan
+    const docRef = doc(db, "characters", characterId);
 
-    // (BAGIAN BARU) Set pesan sapaan bot berdasarkan karakter
-    const initialBotMessage = document.querySelector('.chat-bubble.bot');
-    if (initialBotMessage) {
-        initialBotMessage.textContent = `Halo! Saya ${character.name}. Ada yang bisa saya bantu?`;
+    try {
+        // 'getDoc' adalah perintah untuk mengambil data dokumen tersebut
+        const docSnap = await getDoc(docRef);
+
+        let character;
+
+        if (docSnap.exists()) {
+            // Jika dokumen ada, ambil datanya
+            character = docSnap.data();
+            console.log("Data karakter ditemukan:", character);
+        } else {
+            // Jika ID tidak ada (misal: user mengetik chat.html?id=99)
+            // Kita bisa memuat data default (karakter '1')
+            console.warn("ID karakter tidak ditemukan, memuat default (ID: 1)...");
+            const defaultRef = doc(db, "characters", "1");
+            const defaultSnap = await getDoc(defaultRef);
+            if (defaultSnap.exists()) {
+                character = defaultSnap.data();
+            } else {
+                // Kasus langka: bahkan default pun tidak ada
+                console.error("Data karakter default (ID: 1) tidak ditemukan!");
+                return; // Hentikan fungsi jika data dasar tidak ada
+            }
+        }
+
+        // --- Memuat data ke Halaman (kode ini sama seperti sebelumnya) ---
+        const profileImg = document.querySelector('.chat-left-panel .profile-img');
+        const profileName = document.querySelector('.chat-left-panel h4');
+        const profileDesc = document.querySelector('.chat-left-panel p');
+        const tagsContainer = document.querySelector('.chat-left-panel .tags');
+
+        if (profileImg) {
+            profileImg.src = character.image;
+            profileImg.alt = character.name;
+        }
+        if (profileName) profileName.textContent = character.name;
+        if (profileDesc) profileDesc.textContent = character.description;
+        
+        if (tagsContainer) {
+            tagsContainer.innerHTML = ''; 
+            // Pastikan 'tags' ada dan merupakan array sebelum di-loop
+            if (character.tags && Array.isArray(character.tags)) {
+                character.tags.forEach(tagText => {
+                    const tagElement = document.createElement('span');
+                    tagElement.textContent = tagText;
+                    tagsContainer.appendChild(tagElement);
+                });
+            }
+        }
+
+        const initialBotMessage = document.querySelector('.chat-bubble.bot');
+        if (initialBotMessage) {
+            initialBotMessage.textContent = `Halo! Saya ${character.name}. Ada yang bisa saya bantu?`;
+        }
+
+    } catch (error) {
+        console.error("Error mengambil data karakter:", error);
+        // Tampilkan pesan error jika gagal terhubung ke Firebase
+        const profileName = document.querySelector('.chat-left-panel h4');
+        if (profileName) profileName.textContent = "Gagal memuat";
+        const profileDesc = document.querySelector('.chat-left-panel p');
+        if (profileDesc) profileDesc.textContent = "Tidak dapat terhubung ke database. Pastikan koneksi internet dan konfigurasi Firebase Anda benar.";
     }
 }
 
 
-// --- (BAGIAN INTI) Kode Chat Anda yang Sudah Ada ---
+// --- (BAGIAN INTI) Kode Chat Anda ---
 document.addEventListener('DOMContentLoaded', () => {
 
-    // --- (BAGIAN BARU) Logika untuk Membaca URL ---
-    // 1. Dapatkan parameter dari URL
+    // --- (BERUBAH) Logika untuk Membaca URL ---
+    // Kita panggil fungsi 'loadCharacterProfile' langsung
     const urlParams = new URLSearchParams(window.location.search);
-    // 2. Ambil nilai dari parameter 'id'. Jika tidak ada, gunakan '1' sebagai default.
-    const characterId = urlParams.get('id') || '1';
+    const characterId = urlParams.get('id') || '1'; // Default ke '1'
 
-    // 3. Panggil fungsi untuk memuat profil berdasarkan ID
+    // Panggil fungsi async yang baru.
+    // Kita tidak perlu 'await' di sini karena DOMContentLoaded
+    // tidak perlu menunggunya selesai untuk memasang listener lain.
     loadCharacterProfile(characterId);
     
     // --- Sisa Kode Anda (Tidak Berubah) ---
@@ -125,10 +143,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Tombol kembali ini SEKARANG berfungsi!
+    // Tombol kembali
     backButton.addEventListener('click', () => {
-        // Kembali ke halaman lobby
         window.location.href = 'index.html';
     });
-
 });
