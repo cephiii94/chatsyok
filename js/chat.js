@@ -1,16 +1,32 @@
-// File: js/chat.js (Lengkap + Fitur Upload Gambar)
+// File: js/chat.js (Struktur Scope Diperbaiki)
 
-// Variabel global
+// === 1. GLOBAL VARIABLES ===
 let currentChatbotProfile = "";
 let currentCharacterId = "1"; 
 
-// --- 1. FUNGSI MEMUAT PROFIL ---
+// --- Variabel untuk Elemen DOM ---
+// Kita akan mengisi ini setelah DOM dimuat
+let chatTranscript;
+let chatInput;
+let sendButton;
+let uploadButton;
+let fileInput;
+let backButton;
+
+
+// === 2. FUNGSI UTAMA (GLOBAL) ===
+
+/**
+ * Memuat profil karakter dari server Netlify.
+ */
 async function loadCharacterProfile(characterId) {
   console.log(`Mencoba memuat karakter ID: ${characterId} dari server...`);
   const functionUrl = `/.netlify/functions/get-character?id=${characterId}`;
+  const leftPanel = document.querySelector('.chat-left-panel');
   try {
     const response = await fetch(functionUrl);
     if (!response.ok) throw new Error(`Server error: ${response.statusText}`);
+    
     const character = await response.json();
     console.log("Data karakter diterima:", character);
 
@@ -36,175 +52,240 @@ async function loadCharacterProfile(characterId) {
         });
       }
     }
-    const initialBotMessage = document.querySelector('.chat-bubble.bot');
-    if (initialBotMessage) {
-      initialBotMessage.textContent = `Halo! Saya ${character.name}. Ada yang bisa saya bantu?`;
-    }
+    leftPanel.classList.remove('is-loading');
   } catch (error) {
     console.error("Error mengambil data karakter:", error);
     const profileName = document.querySelector('.chat-left-panel h4');
     if (profileName) profileName.textContent = "Gagal memuat";
+    leftPanel.classList.remove('is-loading');
   }
 }
 
-// --- 2. LOGIKA UTAMA SAAT HALAMAN DIMUAT ---
-document.addEventListener('DOMContentLoaded', () => {
-
-  // Muat Profil
-  const urlParams = new URLSearchParams(window.location.search);
-  currentCharacterId = urlParams.get('id') || '1';
-  loadCharacterProfile(currentCharacterId);
-  
-  // Ambil Elemen-Elemen
-  const chatTranscript = document.getElementById('chat-transcript');
-  const chatInput = document.getElementById('chat-input');
-  const sendButton = document.getElementById('send-button');
-  const backButton = document.getElementById('back-btn');
-  
-  // (BARU) Ambil Elemen Upload
-  const uploadButton = document.getElementById('upload-btn');
-  const fileInput = document.getElementById('file-input');
-
-  // --- 3. FUNGSI-FUNGSI CHAT ---
-
-  // Fungsi kirim pesan TEKS
-  async function handleSendMessage() {
-    const messageText = chatInput.value.trim();
-    if (messageText === '' || !currentChatbotProfile) return; 
+/**
+ * Memuat riwayat obrolan dari server Netlify.
+ */
+async function loadChatHistory(characterId) {
+  console.log(`Memuat riwayat obrolan untuk ID: ${characterId}`);
+  try {
+    const response = await fetch(`/.netlify/functions/get-history?id=${characterId}`);
+    if (!response.ok) throw new Error("Gagal mengambil riwayat.");
     
-    addMessageToTranscript(messageText, 'user');
-    chatInput.value = ''; 
-    setChatInputDisabled(true); // Nonaktifkan input
+    const history = await response.json();
 
-    // Tampilkan indikator "mengetik"
-    const typingBubble = addMessageToTranscript("...", 'bot', 'typing');
-
-    try {
-      // Panggil Netlify Function AI
-      const response = await fetch('/.netlify/functions/get-chat-response', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userMessage: messageText,
-          characterProfile: currentChatbotProfile 
-        })
-      });
-      if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.error || "Gagal mendapat balasan dari server");
-      }
-      
-      const data = await response.json();
-      typingBubble.textContent = data.reply; // Ganti "..." dengan balasan AI
-      typingBubble.classList.remove('typing');
-      
-    } catch (error) {
-      console.error("Error saat mengirim chat:", error);
-      typingBubble.textContent = `Maaf, terjadi error: ${error.message}`;
-      typingBubble.classList.remove('typing');
-    } finally {
-      setChatInputDisabled(false); // Aktifkan input kembali
+    const initialBotMessage = document.querySelector('.chat-bubble.bot');
+    if (history.length > 0 && initialBotMessage) {
+      chatTranscript.innerHTML = ''; // Kosongkan transkrip jika ada riwayat
     }
-  }
 
-  // (BARU) Fungsi saat file dipilih
-  async function handleFileSelected(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    // Tampilkan bubble "Meng-upload..."
-    const uploadBubble = addMessageToTranscript("Meng-upload gambar...", 'user', 'uploading');
-    setChatInputDisabled(true);
-
-    try {
-      // 1. Baca file sebagai Base64
-      const fileBase64 = await readFileAsBase64(file);
-      
-      // 2. Kirim ke Netlify Function 'upload-image'
-      const response = await fetch('/.netlify/functions/upload-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ file: fileBase64 })
-      });
-
-      if (!response.ok) {
-        throw new Error("Gagal meng-upload file ke server.");
-      }
-
-      const data = await response.json();
-      const secureUrl = data.secure_url;
-
-      // 3. Hapus bubble "Meng-upload..."
-      chatTranscript.removeChild(uploadBubble);
-
-      // 4. Tampilkan gambar di chat
-      addMessageWithImage(secureUrl, 'user');
-      
-      // 5. (Opsional) Kirim URL gambar ke Bot untuk direspons
-      // Di sini kita bisa panggil handleSendMessage
-      // dengan pesan khusus seperti "Ini gambar yang saya kirim"
-      // Untuk saat ini, kita anggap bot belum bisa merespons gambar
-
-    } catch (error) {
-      console.error("Error saat upload gambar:", error);
-      uploadBubble.textContent = "Gagal meng-upload gambar.";
-      uploadBubble.classList.remove('uploading');
-    } finally {
-      setChatInputDisabled(false);
-      // Reset input file agar bisa upload file yang sama lagi
-      event.target.value = null;
-    }
-  }
-
-  // (BARU) Fungsi pembantu untuk menonaktifkan/mengaktifkan area input
-  function setChatInputDisabled(disabled) {
-    chatInput.disabled = disabled;
-    sendButton.disabled = disabled;
-    uploadButton.disabled = disabled;
-  }
-
-  // (BARU) Fungsi pembantu untuk membaca file
-  function readFileAsBase64(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = (error) => reject(error);
-      reader.readAsDataURL(file);
+    // Tampilkan semua riwayat pesan (SEKARANG BERHASIL)
+    history.forEach(message => {
+      addMessageToTranscript(message.text, message.sender);
     });
+
+    // Jika TIDAK ada riwayat, set sapaan bot
+    if (history.length === 0 && initialBotMessage) {
+      const profileName = document.querySelector('.chat-left-panel h4').textContent || "Bot";
+      initialBotMessage.textContent = `Halo! Saya ${profileName}. Ada yang bisa saya bantu?`;
+    }
+
+  } catch (error) {
+    console.error("Error memuat riwayat:", error);
+  }
+}
+
+/**
+ * Menyimpan satu pesan ke database.
+ */
+async function saveMessage(sender, text) {
+  // 'Api-key' (fire and forget) - tidak perlu ditunggu (await)
+  fetch('/.netlify/functions/save-message', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      characterId: currentCharacterId,
+      sender: sender,
+      text: text
+    })
+  }).catch(error => {
+    console.error("Gagal menyimpan pesan ke DB:", error);
+  });
+}
+
+/**
+ * Menangani pengiriman pesan TEKS.
+ */
+async function handleSendMessage() {
+  const messageText = chatInput.value.trim();
+  if (messageText === '' || !currentChatbotProfile || chatInput.disabled) return; 
+
+  addMessageToTranscript(messageText, 'user');
+  saveMessage('user', messageText); // Simpan pesan pengguna
+  
+  chatInput.value = ''; 
+  setChatInputDisabled(true); 
+
+  const typingBubble = addMessageToTranscript("...", 'bot', 'typing');
+
+  try {
+    const response = await fetch('/.netlify/functions/get-chat-response', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userMessage: messageText,
+        characterProfile: currentChatbotProfile 
+      })
+    });
+    if (!response.ok) {
+      const errData = await response.json();
+      throw new Error(errData.error || "Gagal mendapat balasan dari server");
+    }
+    
+    const data = await response.json();
+    typingBubble.textContent = data.reply; 
+    typingBubble.classList.remove('typing');
+    
+    saveMessage('bot', data.reply); // Simpan balasan bot
+
+  } catch (error) {
+    console.error("Error saat mengirim chat:", error);
+    typingBubble.textContent = `Maaf, terjadi error: ${error.message}`;
+    typingBubble.classList.remove('typing');
+  } finally {
+    setChatInputDisabled(false); 
+  }
+}
+
+/**
+ * Menangani pengiriman GAMBAR.
+ */
+async function handleFileSelected(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const uploadBubble = addMessageToTranscript("Meng-upload gambar...", 'user', 'uploading');
+  setChatInputDisabled(true);
+
+  try {
+    const fileBase64 = await readFileAsBase64(file);
+    
+    const response = await fetch('/.netlify/functions/upload-image', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ file: fileBase64 })
+    });
+
+    if (!response.ok) throw new Error("Gagal meng-upload file ke server.");
+
+    const data = await response.json();
+    const secureUrl = data.secure_url;
+
+    chatTranscript.removeChild(uploadBubble);
+    addMessageWithImage(secureUrl, 'user');
+    
+    saveMessage('user', secureUrl); // Simpan URL gambar
+    
+    // Respons bot (sementara)
+    const typingBubble = addMessageToTranscript("...", 'bot', 'typing');
+    typingBubble.textContent = "Wah, gambar yang bagus!";
+    typingBubble.classList.remove('typing');
+    saveMessage('bot', typingBubble.textContent); 
+    
+  } catch (error) {
+    console.error("Error saat upload gambar:", error);
+    uploadBubble.textContent = "Gagal meng-upload gambar.";
+    uploadBubble.classList.remove('uploading');
+  } finally {
+    setChatInputDisabled(false);
+    event.target.value = null;
+  }
+}
+
+
+// === 3. FUNGSI PEMBANTU (GLOBAL) ===
+
+/**
+ * Mengubah status area input (aktif/nonaktif).
+ */
+function setChatInputDisabled(disabled) {
+  if (chatInput) chatInput.disabled = disabled;
+  if (sendButton) sendButton.disabled = disabled;
+  if (uploadButton) uploadButton.disabled = disabled;
+}
+
+/**
+ * Membaca file sebagai string Base64.
+ */
+function readFileAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = (error) => reject(error);
+    reader.readAsDataURL(file);
+  });
+}
+
+/**
+ * Menambahkan bubble chat GAMBAR ke transkrip.
+ */
+function addMessageWithImage(imageUrl, sender) {
+  const bubble = document.createElement('div');
+  bubble.classList.add('chat-bubble', sender, 'image-bubble');
+  
+  const img = document.createElement('img');
+  img.src = imageUrl;
+  img.alt = "Gambar yang di-upload";
+  bubble.appendChild(img);
+  
+  chatTranscript.appendChild(bubble);
+  chatTranscript.scrollTop = chatTranscript.scrollHeight;
+  return bubble;
+}
+
+/**
+ * Menambahkan bubble chat TEKS ke transkrip.
+ * Ini juga akan mengarahkan ke addMessageWithImage jika 'text' adalah URL.
+ */
+function addMessageToTranscript(text, sender, extraClass = null) {
+  // Cek jika ini adalah URL gambar dari riwayat
+  if (text.startsWith('https://res.cloudinary.com')) {
+    return addMessageWithImage(text, sender);
   }
 
-  // (BARU) Fungsi untuk menambah bubble chat GAMBAR
-  function addMessageWithImage(imageUrl, sender) {
-    const bubble = document.createElement('div');
-    bubble.classList.add('chat-bubble', sender, 'image-bubble');
-    
-    const img = document.createElement('img');
-    img.src = imageUrl;
-    img.alt = "Gambar yang di-upload";
-    bubble.appendChild(img);
-    
-    chatTranscript.appendChild(bubble);
-    chatTranscript.scrollTop = chatTranscript.scrollHeight;
-    return bubble;
-  }
+  // Jika bukan, lanjutkan sebagai teks
+  const bubble = document.createElement('div');
+  bubble.classList.add('chat-bubble', sender);
+  if (extraClass) bubble.classList.add(extraClass);
   
-  // (DIMODIFIKASI) Fungsi untuk menambah bubble chat TEKS
-  function addMessageToTranscript(text, sender, extraClass = null) {
-    const bubble = document.createElement('div');
-    bubble.classList.add('chat-bubble', sender);
-    if (extraClass) bubble.classList.add(extraClass);
-    
-    bubble.textContent = text; // Tetap set teks
-    
-    chatTranscript.appendChild(bubble);
-    chatTranscript.scrollTop = chatTranscript.scrollHeight;
-    return bubble; 
-  }
+  bubble.textContent = text; 
+  
+  chatTranscript.appendChild(bubble);
+  chatTranscript.scrollTop = chatTranscript.scrollHeight;
+  return bubble; 
+}
 
+
+// === 4. TITIK MASUK APLIKASI ===
+document.addEventListener('DOMContentLoaded', async () => {
   
-  // --- 4. EVENT LISTENERS ---
+  // --- A. Mengisi variabel elemen DOM ---
+  chatTranscript = document.getElementById('chat-transcript');
+  chatInput = document.getElementById('chat-input');
+  sendButton = document.getElementById('send-button');
+  backButton = document.getElementById('back-btn');
+  uploadButton = document.getElementById('upload-btn');
+  fileInput = document.getElementById('file-input');
+
+  // --- B. Logika Startup ---
+  const urlParams = new URLSearchParams(window.location.search);
+  currentCharacterId = urlParams.get('id') || '1'; 
+
+  // Jalankan pemuatan profil dan riwayat secara bersamaan
+  await Promise.all([
+      loadCharacterProfile(currentCharacterId),
+      loadChatHistory(currentCharacterId)
+  ]);
   
-  // Kirim (Teks)
+  // --- C. Memasang Event Listeners ---
   sendButton.addEventListener('click', handleSendMessage);
   chatInput.addEventListener('keydown', (e) => {
     if (chatInput.disabled) return; 
@@ -214,15 +295,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Kembali
   backButton.addEventListener('click', () => {
     window.location.href = 'index.html';
   });
 
-  // (BARU) Upload (Gambar)
   uploadButton.addEventListener('click', () => {
-    fileInput.click(); // Memicu input file yang tersembunyi
+    fileInput.click(); 
   });
+  
   fileInput.addEventListener('change', handleFileSelected);
-
 });

@@ -120,3 +120,47 @@ body {
     .character-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; }
     .character-card img { height: 140px; }
 }
+
+/* --- Tambahkan kode ini di akhir lobby.css --- */
+
+/* 1. Animasi denyut (pulse) untuk skeleton */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* 2. Sembunyikan elemen asli saat loading */
+.character-card.is-loading img {
+  display: none;
+}
+.character-card.is-loading h3,
+.character-card.is-loading p {
+  visibility: hidden; /* Sembunyikan teks, tapi tetap ambil ruang */
+}
+
+/* 3. Tampilkan elemen skeleton */
+.character-card.is-loading .card-img-skeleton {
+  display: block;
+  width: 100%;
+  height: 200px; /* Sesuaikan dengan tinggi gambar Anda */
+  background-color: var(--bg-accent);
+  animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.character-card.is-loading .skeleton-line {
+  display: block;
+  height: 1em; /* Tinggi satu baris teks */
+  background-color: var(--bg-accent);
+  border-radius: 4px;
+  margin-bottom: 8px;
+  animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.character-card.is-loading h3.skeleton-line {
+  height: 1.1rem;
+  margin-bottom: 12px; /* Jarak antara judul dan paragraf */
+}

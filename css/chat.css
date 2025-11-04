@@ -155,3 +155,62 @@ body {
     .chat-main-wrapper { gap: 8px; }
     .chat-input-area { padding: 12px; }
 }
+
+/* --- Tambahkan kode ini di akhir chat.css --- */
+
+/* 1. Animasi denyut (pulse) untuk skeleton */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* 2. Gaya dasar untuk semua elemen skeleton saat loading */
+.chat-left-panel.is-loading .profile-img,
+.chat-left-panel.is-loading h4,
+.chat-left-panel.is-loading p,
+.chat-left-panel.is-loading .tags span {
+  background-color: var(--bg-sidebar); /* Warna abu-abu placeholder */
+  animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  color: transparent; /* Sembunyikan teks jika terlanjur ada */
+  border-radius: 4px;
+}
+
+/* 3. Atur ukuran spesifik untuk setiap placeholder */
+.chat-left-panel.is-loading .profile-img {
+  width: 100%;
+  height: 250px; /* Sesuaikan dengan tinggi gambar Anda */
+  border: none;
+  background-color: var(--bg-sidebar);
+}
+
+.chat-left-panel.is-loading h4 {
+  width: 60%;
+  height: 1.2rem;
+  margin-bottom: 12px;
+}
+
+.chat-left-panel.is-loading p {
+  width: 100%;
+  height: 3em; /* Cukup untuk 2 baris deskripsi */
+}
+
+.chat-left-panel.is-loading .tags span {
+  width: 60px;
+  height: 1.5rem;
+  border: none;
+}
+
+/* 4. Saat loading selesai, kembalikan semuanya seperti normal */
+/* (Ini akan menghapus animasi dan warna latar) */
+.chat-left-panel:not(.is-loading) .profile-img,
+.chat-left-panel:not(.is-loading) h4,
+.chat-left-panel:not(.is-loading) p,
+.chat-left-panel:not(.is-loading) .tags span {
+  animation: none;
+  background-color: transparent;
+  color: inherit; /* Kembalikan warna teks asli */
+}
