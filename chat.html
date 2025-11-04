@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Page</title>
+    <!-- Hubungkan ke file CSS Chat -->
+    <link rel="stylesheet" href="chat.css">
+    <!-- Impor Google Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div id="chat-page">
+        <!-- 1. HEADER / TOP BAR -->
+        <header class="top-bar">
+            <button id="back-btn" aria-label="Kembali">&larr;</button>
+            <div id="profile-icon" aria-label="Profil AI">AI</div>
+        </header>
+
+        <!-- 2. KONTEN UTAMA CHAT -->
+        <main id="chat-content">
+            
+            <!-- Panel Kiri (Profil AI) -->
+            <aside class="chat-left-panel">
+                <h3>Profil Karakter</h3>
+                <img src="https://placehold.co/300x250/bbdefb/1e3a5a?text=AI+Image" alt="Profil AI" class="profile-img">
+                <h4>Profesor Hoot</h4>
+                <p>Seekor burung hantu bijak yang tahu segalanya tentang sejarah dan sains.</p>
+                <div class="tags">
+                    <span>Edukasi</span>
+                    <span>Sejarah</span>
+                    <span>Sains</span>
+                </div>
+            </aside>
+
+            <!-- Wrapper untuk Panel Tengah & Kanan -->
+            <div class="chat-main-wrapper">
+                
+                <!-- Panel Tengah (Obrolan) -->
+                <section class="chat-center-panel">
+                    <div class="chat-transcript" id="chat-transcript">
+                        <div class="chat-bubble bot">Halo! Ada yang bisa saya bantu hari ini?</div>
+                    </div>
+                    <div class="chat-input-area">
+                        <textarea id="chat-input" placeholder="Type a Message..." rows="1"></textarea>
+                        <button id="send-button" aria-label="Kirim">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2 .01 7z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- Panel Kanan (Persona) -->
+                <aside class="chat-right-panel">
+                    <div class="persona-box">
+                        <h3>Persona Anda</h3>
+                        <p>No persona yet... try to create one.</p>
+                        <button>Buat Persona</button>
+                    </div>
+                </aside>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Hubungkan ke file JavaScript Chat -->
+    <script src="chat.js"></script>
+</body>
+</html>

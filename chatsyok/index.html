@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatsYok! - LevelUP</title>
+    <!-- Hubungkan ke CSS Lobby -->
+    <link rel="stylesheet" href="/chatsyok/lobby.css">
+    <!-- Impor Google Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div id="app-container">
+        
+        <!-- Header Mobile (Hanya tampil di mobile) -->
+        <header class="mobile-header">
+            <button id="hamburger-btn">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <h1>ChatApp</h1>
+        </header>
+        
+        <!-- Sidebar Lobby -->
+        <aside class="lobby-sidebar" id="lobby-sidebar">
+            <h1>ChatApp</h1>
+            <nav class="lobby-sidebar-nav">
+                <a href="#" class="active">Home</a>
+                <a href="#">Buat Bot</a>
+                <a href="#">Komunitas</a>
+                <a href="#">Pengaturan</a>
+            </nav>
+        </aside>
+
+        <!-- Konten Utama Lobby -->
+        <main class="lobby-main">
+            <header class="lobby-header">
+                <h2>Temukan Karakter</h2>
+                <p>Mulai percakapan dengan salah satu persona AI kami.</p>
+            </header>
+
+            <section class="character-grid">
+                <!-- Kartu Karakter (bisa di-klik) -->
+                <div class="character-card" data-char-id="1">
+                    <img src="https://placehold.co/300x300/a0c4ff/1e3a5a?text=Hoot" alt="Profesor Hoot">
+                    <div class="character-card-info"><h3>Profesor Hoot</h3><p>Seekor burung hantu bijak...</p></div>
+                </div>
+                <div class="character-card" data-char-id="2">
+                    <img src="https://placehold.co/300x300/f8bbd0/880e4f?text=Bella" alt="Koki Bella">
+                    <div class="character-card-info"><h3>Koki Bella</h3><p>Seorang koki ramah...</p></div>
+                </div>
+                <div class="character-card" data-char-id="3">
+                    <img src="https://placehold.co/300x300/d1c4e9/311b92?text=Sparky" alt="Sparky si Robot">
+                    <div class="character-card-info"><h3>Sparky si Robot</h3><p>Robot penjelajah...</p></div>
+                </div>
+                <div class="character-card" data-char-id="4">
+                    <img src="https://placehold.co/300x300/c8e6c9/1b5e20?text=Alex" alt="Kapten Alex">
+                    <div class="character-card-info"><h3>Kapten Alex</h3><p>Penjelajah galaksi...</p></div>
+                </div>
+            </section>
+        </main>
+
+    </div>
+
+    <!-- Overlay Latar Belakang Menu Mobile -->
+    <div id="menu-overlay" class="overlay"></div>
+
+    <!-- Hubungkan ke JS Lobby -->
+    <script src="lobby.js"></script>
+</body>
+</html>
