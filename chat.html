@@ -29,10 +29,9 @@
             
             <!-- Panel Kiri (Profil AI) -->
             <aside class="chat-left-panel">
-                <h3>Profil Karakter</h3>
                 <img src="https://placehold.co/300x250/bbdefb/1e3a5a?text=AI+Image" alt="Profil AI" class="profile-img">
-                <h4>Profesor Hoot</h4>
-                <p>Seekor burung hantu bijak yang tahu segalanya tentang sejarah dan sains.</p>
+                <h4>Nama_Bot</h4>
+                <p>Deskripsi</p>
                 <div class="tags">
                     <span>Edukasi</span>
                     <span>Sejarah</span>
@@ -49,12 +48,16 @@
                         <div class="chat-bubble bot">Halo! Ada yang bisa saya bantu hari ini?</div>
                     </div>
                     <div class="chat-input-area">
-                        <textarea id="chat-input" placeholder="Type a Message..." rows="1"></textarea>
-                        <button id="send-button" aria-label="Kirim">
+                        <button id="upload-btn" aria-label="Lampirkan Gambar">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-                                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2 .01 7z"/>
+                                <path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5S13.5 3.62 13.5 5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v11.5c0 2.76 2.24 5 5 5s5-2.24 5-5V6h-1.5z"/>
                             </svg>
                         </button>
+                        <input type="file" id="file-input" accept="image/*" style="display: none;">
+                        
+                        <textarea id="chat-input" placeholder="Type a Message..." rows="1"></textarea>
+                        <button id="send-button" aria-label="Kirim">
+                            </button>
                     </div>
                 </section>
 
