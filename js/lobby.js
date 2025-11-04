@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    // --- Navigasi Mobile ---
+    // --- Navigasi Mobile (Tidak berubah) ---
     const hamburgerBtn = document.getElementById('hamburger-btn');
     const lobbySidebar = document.getElementById('lobby-sidebar');
     const menuOverlay = document.getElementById('menu-overlay');
@@ -19,17 +19,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- Navigasi Halaman ---
+    // --- Navigasi Halaman (INI YANG DIPERBARUI) ---
     const characterCards = document.querySelectorAll('.character-card');
 
     characterCards.forEach(card => {
         card.addEventListener('click', () => {
-            // Nanti kita bisa kirim data karakter, untuk sekarang kita pindah halaman saja
-            // const charId = card.dataset.charId;
-            // window.location.href = `chat.html?id=${charId}`;
+            // 1. Ambil ID karakter dari atribut 'data-char-id' di HTML
+            const charId = card.dataset.charId;
             
-            // Untuk sekarang, langsung pindah ke chat.html
-            window.location.href = 'chat.html';
+            // 2. Arahkan ke halaman chat DENGAN menyertakan ID sebagai query parameter
+            window.location.href = `chat.html?id=${charId}`;
         });
     });
 
