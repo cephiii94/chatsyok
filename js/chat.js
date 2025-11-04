@@ -1,10 +1,9 @@
-// File: js/chat.js (Lengkap dan Diperbarui)
+// File: js/chat.js (Lengkap dan Diperbarui dengan 'keydown')
 
 // Variabel global untuk menyimpan profil bot yang sedang aktif
 let currentChatbotProfile = "";
-let currentCharacterId = "1"; // Simpan ID untuk penggunaan di masa depan (misal: simpan chat history)
+let currentCharacterId = "1"; 
 
-// --- Fungsi untuk Memuat Profil Karakter (Sedikit Modifikasi) ---
 async function loadCharacterProfile(characterId) {
   console.log(`Mencoba memuat karakter ID: ${characterId} dari server...`);
   const functionUrl = `/.netlify/functions/get-character?id=${characterId}`;
@@ -16,10 +15,10 @@ async function loadCharacterProfile(characterId) {
     const character = await response.json();
     console.log("Data karakter diterima:", character);
 
-    // --- (MODIFIKASI) Simpan profil ke variabel global ---
-    currentChatbotProfile = character.description; // INI PENTING!
+    // Simpan profil ke variabel global
+    currentChatbotProfile = character.description; 
     
-    // --- Memuat data ke Halaman (Panel Kiri) ---
+    // Memuat data ke Halaman (Panel Kiri)
     const profileImg = document.querySelector('.chat-left-panel .profile-img');
     const profileName = document.querySelector('.chat-left-panel h4');
     const profileDesc = document.querySelector('.chat-left-panel p');
@@ -47,7 +46,6 @@ async function loadCharacterProfile(characterId) {
 
   } catch (error) {
     console.error("Error mengambil data karakter:", error);
-    // Tampilkan error di panel
     const profileName = document.querySelector('.chat-left-panel h4');
     if (profileName) profileName.textContent = "Gagal memuat";
   }
@@ -66,19 +64,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const sendButton = document.getElementById('send-button');
   const backButton = document.getElementById('back-btn');
 
-  // --- (MODIFIKASI) Fungsi untuk mengirim pesan ---
+  // --- Fungsi untuk mengirim pesan ---
   async function handleSendMessage() {
     const messageText = chatInput.value.trim();
-    if (messageText === '' || !currentChatbotProfile) return; // Jangan kirim jika profil belum dimuat
+    if (messageText === '' || !currentChatbotProfile) return; 
 
     addMessageToTranscript(messageText, 'user');
-    chatInput.value = ''; // Kosongkan input
-    chatInput.disabled = true; // Nonaktifkan input saat bot berpikir
+    chatInput.value = ''; 
+    chatInput.disabled = true; 
     sendButton.disabled = true;
 
     // Tampilkan indikator "mengetik"
     const typingBubble = addMessageToTranscript("...", 'bot');
-    typingBubble.classList.add('typing'); // Tambah kelas untuk styling (opsional)
+    typingBubble.classList.add('typing'); 
 
     try {
       // Panggil Netlify Function AI baru Anda
@@ -87,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userMessage: messageText,
-          characterProfile: currentChatbotProfile // Kirim profil yang disimpan
+          characterProfile: currentChatbotProfile 
         })
       });
 
@@ -95,7 +93,6 @@ document.addEventListener('DOMContentLoaded', () => {
       
       const data = await response.json();
       
-      // Hapus "..." dan ganti dengan balasan AI
       typingBubble.textContent = data.reply;
       typingBubble.classList.remove('typing');
 
@@ -111,27 +108,32 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // --- (MODIFIKASI) Fungsi untuk menambahkan bubble chat ---
+  // --- Fungsi untuk menambahkan bubble chat ---
   function addMessageToTranscript(text, sender) {
     const bubble = document.createElement('div');
     bubble.classList.add('chat-bubble', sender);
     bubble.textContent = text;
     chatTranscript.appendChild(bubble);
     chatTranscript.scrollTop = chatTranscript.scrollHeight;
-    return bubble; // Kembalikan elemen bubble (berguna untuk indikator 'typing')
+    return bubble; 
   }
 
-  // --- HAPUS FUNGSI simulateBotResponse() ---
-  // Kita tidak memerlukannya lagi
   
-  // --- Event Listeners (Tidak Berubah) ---
+  // --- Event Listeners ---
   sendButton.addEventListener('click', handleSendMessage);
-  chatInput.addEventListener('keypress', (e) => {
+
+  // ▼▼▼ PERBAIKAN DI SINI ▼▼▼
+  // Mengganti 'keypress' menjadi 'keydown'
+  chatInput.addEventListener('keydown', (e) => {
+    // Jangan kirim jika input sedang dinonaktifkan (bot sedang berpikir)
+    if (chatInput.disabled) return; 
+    
     if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
+      e.preventDefault(); // Mencegah baris baru
       handleSendMessage();
     }
   });
+
   backButton.addEventListener('click', () => {
     window.location.href = 'index.html';
   });

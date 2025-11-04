@@ -27,7 +27,7 @@ exports.handler = async (event, context) => {
 
     let characterData;
 
-    if (docSnap.exists()) {
+    if (docSnap.exists) {
       characterData = docSnap.data();
     } else {
       // Jika ID tidak ada, ambil data default '1'

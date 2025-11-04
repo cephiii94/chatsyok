@@ -1,30 +1,29 @@
 // File: netlify/functions/get-chat-response.js
-
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-
-// Ambil API Key dari environment variables Netlify
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// Versi ini menggunakan 'fetch' (REST API)
 
 exports.handler = async (event, context) => {
-  
   // Hanya izinkan metode POST
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
   try {
-    // 1. Ambil data (pesan & profil) dari frontend
+    // 1. Ambil data dari frontend
     const body = JSON.parse(event.body);
     const userMessage = body.userMessage;
-    const characterProfile = body.characterProfile; // Ini adalah 'description' dari Firebase
+    const characterProfile = body.characterProfile;
 
     if (!userMessage || !characterProfile) {
       return { statusCode: 400, body: 'Missing userMessage or characterProfile' };
     }
 
-    // 2. INI ADALAH LOGIKA ANDA: Buat prompt "Peran"
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    // 2. Ambil Kunci API dari environment
+    const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+    if (!GEMINI_API_KEY) {
+      throw new Error("GEMINI_API_KEY tidak diatur di server.");
+    }
     
+    // 3. Siapkan "Resep" (Struktur JSON) untuk Gemini REST API
     const prompt = `
       PERINTAH SISTEM:
       Anda adalah seorang chatbot. Anda HARUS mengambil peran dan kepribadian berikut:
@@ -39,12 +38,45 @@ exports.handler = async (event, context) => {
       ANDA (sebagai ${characterProfile.split(' ')[0]}):
     `;
 
-    // 3. Panggil Gemini dengan prompt yang sudah "dibungkus"
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const botReply = response.text();
+    const requestBody = {
+      contents: [
+        {
+          parts: [
+            { text: prompt }
+          ]
+        }
+      ]
+    };
 
-    // 4. Kirim balasan bersih dari AI kembali ke frontend
+    // 4. Bangun URL API dan panggil menggunakan 'fetch'
+    // ▼▼▼ PERBAIKAN DI SINI ▼▼▼
+    // Mengganti model ke 'gemini-2.5-flash-preview-09-2025'
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${GEMINI_API_KEY}`;
+
+    const apiResponse = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!apiResponse.ok) {
+      // Jika Gemini error (misal: 400, 500)
+      const errorData = await apiResponse.json();
+      console.error("Error dari Google API:", errorData);
+      throw new Error(`Google API Error: ${errorData.error.message}`);
+    }
+
+    // 5. Ambil balasan bersih dari AI
+    const responseData = await apiResponse.json();
+    
+    if (!responseData.candidates || !responseData.candidates[0] || !responseData.candidates[0].content || !responseData.candidates[0].content.parts[0]) {
+        throw new Error("Struktur balasan API tidak valid.");
+    }
+
+    const botReply = responseData.candidates[0].content.parts[0].text;
+
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
@@ -55,7 +87,7 @@ exports.handler = async (event, context) => {
     console.error("Error di get-chat-response:", error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: "Terjadi kesalahan pada server AI." })
+      body: JSON.stringify({ error: error.message || "Terjadi kesalahan pada server AI." })
     };
   }
 };
