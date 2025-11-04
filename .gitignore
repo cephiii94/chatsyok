@@ -1,0 +1,19 @@
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Netlify
+.netlify/
+.env
+
+# Firebase
+# Abaikan file kunci servis jika ter-download ke folder
+*.json
+
+# Abaikan file config firebase yang mungkin berisi kunci
+firebase-config.js
+
+# OS
+.DS_Store
+Thumbs.db
