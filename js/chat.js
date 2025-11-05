@@ -2,10 +2,11 @@
 
 // === 1. GLOBAL VARIABLES ===
 let currentChatbotProfile = "";
+let currentCharacterName = "";
+let currentCharacterGreeting = ""; // <-- MODIFIKASI: Ditambahkan
 let currentCharacterId = "1"; 
 
 // --- Variabel untuk Elemen DOM ---
-// Kita akan mengisi ini setelah DOM dimuat
 let chatTranscript;
 let chatInput;
 let sendButton;
@@ -30,7 +31,11 @@ async function loadCharacterProfile(characterId) {
     const character = await response.json();
     console.log("Data karakter diterima:", character);
 
+    // ▼▼▼ MODIFIKASI DI SINI ▼▼▼
     currentChatbotProfile = character.description; 
+    currentCharacterName = character.name; 
+    currentCharacterGreeting = character.greeting; // <-- SIMPAN SAPAAN
+    // ▼▼▼ AKHIR MODIFIKASI ▼▼▼
     
     // Memuat data ke Panel Kiri
     const profileImg = document.querySelector('.chat-left-panel .profile-img');
@@ -40,7 +45,10 @@ async function loadCharacterProfile(characterId) {
 
     if (profileImg) profileImg.src = character.image;
     if (profileName) profileName.textContent = character.name;
-    if (profileDesc) profileDesc.textContent = character.description;
+    // ▼▼▼ MODIFIKASI DI SINI ▼▼▼
+    // Tampilkan 'tagline' di panel kiri, BUKAN deskripsi rahasia
+    if (profileDesc) profileDesc.textContent = character.tagline || character.description;
+    // ▼▼▼ AKHIR MODIFIKASI ▼▼▼
     
     if (tagsContainer) {
       tagsContainer.innerHTML = '';
@@ -84,8 +92,10 @@ async function loadChatHistory(characterId) {
 
     // Jika TIDAK ada riwayat, set sapaan bot
     if (history.length === 0 && initialBotMessage) {
-      const profileName = document.querySelector('.chat-left-panel h4').textContent || "Bot";
-      initialBotMessage.textContent = `Halo! Saya ${profileName}. Ada yang bisa saya bantu?`;
+      // ▼▼▼ MODIFIKASI DI SINI ▼▼▼
+      // Gunakan sapaan kustom. Jika tidak ada, buat sapaan default.
+      initialBotMessage.textContent = currentCharacterGreeting || `Halo! Saya ${currentCharacterName || "Bot"}. Ada yang bisa saya bantu?`;
+      // ▼▼▼ AKHIR MODIFIKASI ▼▼▼
     }
 
   } catch (error) {
@@ -97,7 +107,7 @@ async function loadChatHistory(characterId) {
  * Menyimpan satu pesan ke database.
  */
 async function saveMessage(sender, text) {
-  // 'Api-key' (fire and forget) - tidak perlu ditunggu (await)
+  // (Tidak berubah)
   fetch('/.netlify/functions/save-message', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -116,7 +126,9 @@ async function saveMessage(sender, text) {
  */
 async function handleSendMessage() {
   const messageText = chatInput.value.trim();
-  if (messageText === '' || !currentChatbotProfile || chatInput.disabled) return; 
+  
+  // (Tidak berubah dari sebelumnya)
+  if (messageText === '' || !currentChatbotProfile || !currentCharacterName || chatInput.disabled) return; 
 
   addMessageToTranscript(messageText, 'user');
   saveMessage('user', messageText); // Simpan pesan pengguna
@@ -130,9 +142,12 @@ async function handleSendMessage() {
     const response = await fetch('/.netlify/functions/get-chat-response', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      
+      // (Tidak berubah dari sebelumnya)
       body: JSON.stringify({
         userMessage: messageText,
-        characterProfile: currentChatbotProfile 
+        characterProfile: currentChatbotProfile, 
+        characterName: currentCharacterName
       })
     });
     if (!response.ok) {
@@ -159,6 +174,7 @@ async function handleSendMessage() {
  * Menangani pengiriman GAMBAR.
  */
 async function handleFileSelected(event) {
+  // (Tidak berubah)
   const file = event.target.files[0];
   if (!file) return;
 
@@ -207,6 +223,7 @@ async function handleFileSelected(event) {
  * Mengubah status area input (aktif/nonaktif).
  */
 function setChatInputDisabled(disabled) {
+  // (Tidak berubah)
   if (chatInput) chatInput.disabled = disabled;
   if (sendButton) sendButton.disabled = disabled;
   if (uploadButton) uploadButton.disabled = disabled;
@@ -216,6 +233,7 @@ function setChatInputDisabled(disabled) {
  * Membaca file sebagai string Base64.
  */
 function readFileAsBase64(file) {
+  // (Tidak berubah)
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result);
@@ -228,6 +246,7 @@ function readFileAsBase64(file) {
  * Menambahkan bubble chat GAMBAR ke transkrip.
  */
 function addMessageWithImage(imageUrl, sender) {
+  // (Tidak berubah)
   const bubble = document.createElement('div');
   bubble.classList.add('chat-bubble', sender, 'image-bubble');
   
@@ -243,15 +262,13 @@ function addMessageWithImage(imageUrl, sender) {
 
 /**
  * Menambahkan bubble chat TEKS ke transkrip.
- * Ini juga akan mengarahkan ke addMessageWithImage jika 'text' adalah URL.
  */
 function addMessageToTranscript(text, sender, extraClass = null) {
-  // Cek jika ini adalah URL gambar dari riwayat
+  // (Tidak berubah)
   if (text.startsWith('https://res.cloudinary.com')) {
     return addMessageWithImage(text, sender);
   }
 
-  // Jika bukan, lanjutkan sebagai teks
   const bubble = document.createElement('div');
   bubble.classList.add('chat-bubble', sender);
   if (extraClass) bubble.classList.add(extraClass);
@@ -279,11 +296,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const urlParams = new URLSearchParams(window.location.search);
   currentCharacterId = urlParams.get('id') || '1'; 
 
-  // Jalankan pemuatan profil dan riwayat secara bersamaan
-  await Promise.all([
-      loadCharacterProfile(currentCharacterId),
-      loadChatHistory(currentCharacterId)
-  ]);
+  // (Tidak berubah dari sebelumnya)
+  // Pastikan profil (dan nama) dimuat SEBELUM riwayat,
+  await loadCharacterProfile(currentCharacterId);
+  await loadChatHistory(currentCharacterId);
   
   // --- C. Memasang Event Listeners ---
   sendButton.addEventListener('click', handleSendMessage);

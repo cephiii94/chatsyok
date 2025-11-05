@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buat MAI Baru - ChatsYok!</title>
+    <link rel="stylesheet" href="/css/lobby.css">
+    <link rel="stylesheet" href="/css/create-mai.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div id="app-container">
+        
+        <header class="mobile-header">
+            <button id="hamburger-btn">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <h1>Buat MAI</h1>
+        </header>
+        
+        <aside class="lobby-sidebar" id="lobby-sidebar">
+            <h1>ChatApp</h1>
+            <nav class="lobby-sidebar-nav">
+                <a href="index.html">Home</a>
+                <a href="create-mai.html" class="active">Buat Bot</a> <a href="#">Komunitas</a>
+                <a href="#">Pengaturan</a>
+            </nav>
+        </aside>
+
+        <main class="lobby-main">
+            <header class="lobby-header">
+                <h2>Buat Model AI (MAI) Baru</h2>
+                <p>Ciptakan kepribadian unik untuk bot Anda.</p>
+            </header>
+
+            <form id="create-mai-form" class="form-container">
+                
+                <div class="form-group avatar-group">
+                    <label>Avatar MAI</label>
+                    <div class="avatar-upload">
+                        <img src="https://via.placeholder.com/150" alt="Pratinjau Avatar" id="avatar-preview" class="image-preview">
+                        <input type="file" id="mai-image" accept="image/*" aria-label="Upload Avatar" required>
+                        <small>Klik gambar untuk meng-upload (Wajib)</small>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group" style="flex-grow: 1;">
+                        <label for="mai-name">Nama MAI (Wajib)</label>
+                        <input type="text" id="mai-name" placeholder="Mis. 'Koki Rengginang'" required>
+                    </div>
+                    <div class="form-group" style="flex-grow: 2;">
+                        <label for="mai-greeting">Pesan Sapaan (Wajib)</label>
+                        <input type="text" id="mai-greeting" placeholder="Mis. 'Halo! Mau resep apa hari ini?'" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="mai-tagline">Deskripsi Singkat (Publik)</label>
+                    <textarea id="mai-tagline" rows="2" maxlength="150" placeholder="Slogan singkat untuk di lobi (Maks 150 karakter)"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="mai-description">Instruksi Kepribadian (Rahasia)</label>
+                    <textarea id="mai-description" rows="10" placeholder="Jelaskan secara detail siapa bot ini, gaya bicaranya, apa yang ia ketahui, dan apa yang tidak. Ini adalah 'otak' dari MAI Anda." required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="mai-tags">Kategori (Pisahkan dengan koma)</label>
+                    <input type="text" id="mai-tags" placeholder="Mis. Lucu, Sejarah, Teknologi">
+                </div>
+
+                <div class="form-group">
+                    <label>Visibilitas</label>
+                    <div class="radio-group">
+                        <label>
+                            <input type="radio" name="visibility" value="public" checked> Publik (Tampil di lobi)
+                        </label>
+                        <label>
+                            <input type="radio" name="visibility" value="private"> Privat (Hanya Anda)
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <button type="submit" class="submit-btn" id="submit-btn">Buat MAI</button>
+                    <div id="form-status" style="margin-top: 10px;"></div>
+                </div>
+            </form>
+
+        </main>
+    </div>
+
+<div id="menu-overlay" class="overlay"></div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+    
+    <script src="/js/firebase-config.js"></script>
+    <script src="/js/auth-guard.js"></script> <script src="/js/lobby.js"></script>
+    <script src="/js/create-mai.js"></script>
+</body>
+</html>

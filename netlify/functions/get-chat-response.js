@@ -9,11 +9,14 @@ exports.handler = async (event, context) => {
 
   try {
     // 1. Ambil data dari frontend
+    // ▼▼▼ MODIFIKASI DI SINI ▼▼▼
     const body = JSON.parse(event.body);
     const userMessage = body.userMessage;
     const characterProfile = body.characterProfile;
-
+    const characterName = body.characterName || 'Chatbot'; // Ambil nama karakter, beri default 'Chatbot'
+    
     if (!userMessage || !characterProfile) {
+    // ▼▼▼ AKHIR MODIFIKASI ▼▼▼
       return { statusCode: 400, body: 'Missing userMessage or characterProfile' };
     }
 
@@ -24,19 +27,22 @@ exports.handler = async (event, context) => {
     }
     
     // 3. Siapkan "Resep" (Struktur JSON) untuk Gemini REST API
+    // ▼▼▼ MODIFIKASI DI SINI (Prompt diperbarui) ▼▼▼
     const prompt = `
       PERINTAH SISTEM:
+      Nama Anda adalah "${characterName}".
       Anda adalah seorang chatbot. Anda HARUS mengambil peran dan kepribadian berikut:
       "${characterProfile}"
 
       Jaga nada bicara Anda agar selalu konsisten dengan peran tersebut. JANGAN PERNAH keluar dari karakter.
-      Jangan menambahkan kata-kata seperti "(sebagai burung hantu)" di balasan Anda. Cukup *jadilah* karakter itu.
+      Jangan menambahkan kata-kata seperti "(sebagai ${characterName})" di balasan Anda. Cukup *jadilah* karakter itu.
 
       Sekarang, balas pesan pengguna di bawah ini.
       ---
       PENGGUNA: "${userMessage}"
-      ANDA (sebagai ${characterProfile.split(' ')[0]}):
+      ANDA (sebagai ${characterName}):
     `;
+    // ▼▼▼ AKHIR MODIFIKASI ▼▼▼
 
     const requestBody = {
       contents: [
@@ -49,8 +55,7 @@ exports.handler = async (event, context) => {
     };
 
     // 4. Bangun URL API dan panggil menggunakan 'fetch'
-    // ▼▼▼ PERBAIKAN DI SINI ▼▼▼
-    // Mengganti model ke 'gemini-2.5-flash-preview-09-2025'
+    // Menggunakan model 'gemini-2.5-flash-preview-09-2025'
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${GEMINI_API_KEY}`;
 
     const apiResponse = await fetch(apiUrl, {

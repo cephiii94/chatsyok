@@ -1,0 +1,145 @@
+/* File: css/login.css */
+
+:root {
+    --bg-primary: #f0f8ff;
+    --bg-secondary: #ffffff;
+    --bg-button: #90caf9;
+    --bg-button-hover: #64b5f6;
+    --text-primary: #1e3a5a;
+    --text-secondary: #4a658a;
+    --border-color: #d1e5f8;
+    --shadow-light: 0 4px 10px rgba(0, 82, 160, 0.05);
+    --shadow-medium: 0 6px 15px rgba(0, 82, 160, 0.1);
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+}
+
+#login-page {
+    width: 100%;
+    padding: 20px;
+}
+
+.login-container {
+    max-width: 400px;
+    margin: 0 auto;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 32px;
+    box-shadow: var(--shadow-medium);
+    text-align: center;
+}
+
+.login-container h2 {
+    font-size: 1.75rem;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+}
+
+.login-container p {
+    color: var(--text-secondary);
+    margin-bottom: 24px;
+}
+
+.form-group {
+    margin-bottom: 16px;
+    text-align: left;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 6px;
+    font-size: 0.9rem;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 1rem;
+    font-family: 'Inter', sans-serif;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: #f7fbff; /* Sedikit lebih gelap dari bg-primary */
+    box-sizing: border-box; /* Pastikan padding tidak merusak lebar */
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: var(--bg-button-hover);
+    box-shadow: 0 0 0 3px rgba(144, 202, 249, 0.3);
+}
+
+.status-message {
+    font-size: 0.9rem;
+    margin-bottom: 12px;
+    min-height: 1.2em; /* Jaga agar layout tidak lompat */
+}
+#auth-status.error {
+    color: red;
+}
+#auth-status.success {
+    color: green;
+}
+
+.button-group {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.btn {
+    width: 100%;
+    padding: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s, box-shadow 0.2s;
+}
+
+.btn-primary {
+    background-color: var(--bg-button);
+    color: var(--text-primary);
+}
+.btn-primary:hover {
+    background-color: var(--bg-button-hover);
+}
+
+.btn-secondary {
+    background-color: var(--bg-sidebar);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+}
+.btn-secondary:hover {
+    background-color: var(--border-color);
+}
+
+.divider {
+    color: var(--text-secondary);
+    margin: 24px 0;
+    font-size: 0.85rem;
+}
+
+.btn-google {
+    background-color: #fff;
+    color: #444;
+    border: 1px solid #ccc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+.btn-google:hover {
+    background-color: #f9f9f9;
+}

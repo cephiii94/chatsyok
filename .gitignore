@@ -12,7 +12,7 @@ yarn-error.log
 
 
 # Abaikan file config firebase yang mungkin berisi kunci
-firebase-config.js
+firebase-config
 
 # OS
 .DS_Store

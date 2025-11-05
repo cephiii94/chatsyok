@@ -21,6 +21,11 @@ async function loadCharacters() {
 
     // 2. Loop data dari Firestore dan buat kartu baru
     characters.forEach(char => {
+      // (Opsional) Hanya tampilkan MAI yang 'public'
+      if (char.visibility === 'private') {
+        return; // Lewati bot privat
+      }
+
       // Buat elemen kartu
       const card = document.createElement('div');
       card.className = 'character-card';
@@ -39,8 +44,12 @@ async function loadCharacters() {
       const h3 = document.createElement('h3');
       h3.textContent = char.name; // Data dari Firestore
 
+      // ▼▼▼ MODIFIKASI DI SINI ▼▼▼
+      // Gunakan 'tagline' (deskripsi singkat) untuk kartu.
+      // Jika 'tagline' tidak ada, gunakan 'description' sebagai cadangan.
       const p = document.createElement('p');
-      p.textContent = char.description; // Data dari Firestore
+      p.textContent = char.tagline || char.description; 
+      // ▼▼▼ AKHIR MODIFIKASI ▼▼▼
 
       // Susun elemen-elemen
       infoDiv.appendChild(h3);
@@ -94,4 +103,4 @@ document.addEventListener('DOMContentLoaded', () => {
   // Jalankan kedua fungsi saat halaman dimuat
   setupMobileNav();
   loadCharacters();
-}); 
+});
