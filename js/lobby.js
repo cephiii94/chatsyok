@@ -1,15 +1,31 @@
-// File: js/lobby.js (Lengkap dan Diperbarui)
+// File: js/lobby.js (DIMODIFIKASI)
 
 /**
- * Fungsi baru untuk mengambil data semua karakter dari server
- * dan membangun kartu-kartu di halaman.
+ * Mengambil data karakter dan membangun kartu di halaman.
  */
 async function loadCharacters() {
   const grid = document.getElementById('character-grid');
   if (!grid) return; // Hentikan jika grid tidak ditemukan
 
+  // BARU: Dapatkan status login
+  // Kita akan menunggu event 'authReady' dari auth-guard.js
+  if (!authInitializationDone) {
+      console.log("Lobby: Menunggu authReady...");
+      await new Promise(resolve => document.addEventListener('authReady', resolve, { once: true }));
+      console.log("Lobby: authReady diterima.");
+  }
+    
+  const user = window.currentUser; // Ambil dari flag global yang di-set oleh auth-guard
+  const isGuest = !user;
+  console.log("Lobby: Status user: ", isGuest ? "Tamu" : "Login");
+
+  // BARU: Tentukan URL berdasarkan status login
+  const fetchUrl = isGuest 
+      ? '/.netlify/functions/get-all-characters?guest=true' 
+      : '/.netlify/functions/get-all-characters';
+
   try {
-    const response = await fetch('/.netlify/functions/get-all-characters');
+    const response = await fetch(fetchUrl);
     if (!response.ok) {
       throw new Error("Gagal mengambil data karakter dari server.");
     }
@@ -19,47 +35,50 @@ async function loadCharacters() {
     // 1. Kosongkan skeleton loader
     grid.innerHTML = ''; 
 
+    if (characters.length === 0) {
+        if (isGuest) {
+             grid.innerHTML = '<p style="color: var(--text-secondary);">Tidak ada MAI default ditemukan. Silakan login untuk melihat lebih banyak.</p>';
+        } else {
+             grid.innerHTML = '<p style="color: var(--text-secondary);">Belum ada MAI publik. Jadilah yang pertama membuatnya!</p>';
+        }
+        return;
+    }
+
     // 2. Loop data dari Firestore dan buat kartu baru
     characters.forEach(char => {
-      // (Opsional) Hanya tampilkan MAI yang 'public'
-      if (char.visibility === 'private') {
-        return; // Lewati bot privat
-      }
-
-      // Buat elemen kartu
+      // (Logika rendering kartu tidak berubah)
       const card = document.createElement('div');
       card.className = 'character-card';
-      // (PENTING) Set ID karakter untuk link
       card.dataset.charId = char.id; 
 
-      // Buat elemen gambar
       const img = document.createElement('img');
-      img.src = char.image; // Data dari Firestore
-      img.alt = char.name;  // Data dari Firestore
+      img.src = char.image; 
+      img.alt = char.name;  
 
-      // Buat elemen info
       const infoDiv = document.createElement('div');
       infoDiv.className = 'character-card-info';
 
       const h3 = document.createElement('h3');
-      h3.textContent = char.name; // Data dari Firestore
+      h3.textContent = char.name; 
 
-      // ▼▼▼ MODIFIKASI DI SINI ▼▼▼
-      // Gunakan 'tagline' (deskripsi singkat) untuk kartu.
-      // Jika 'tagline' tidak ada, gunakan 'description' sebagai cadangan.
       const p = document.createElement('p');
       p.textContent = char.tagline || char.description; 
-      // ▼▼▼ AKHIR MODIFIKASI ▼▼▼
-
-      // Susun elemen-elemen
+      
       infoDiv.appendChild(h3);
       infoDiv.appendChild(p);
       card.appendChild(img);
       card.appendChild(infoDiv);
 
-      // (PENTING) Tambahkan event listener ke kartu yang baru dibuat
+      // (PENTING) Modifikasi event listener
       card.addEventListener('click', () => {
-        window.location.href = `chat.html?id=${char.id}`;
+        if (isGuest) {
+            // Jika tamu, jangan biarkan chat, minta login
+            alert('Silakan login untuk memulai obrolan.');
+            window.location.href = 'login.html';
+        } else {
+            // Jika login, arahkan ke chat
+            window.location.href = `chat.html?id=${char.id}`;
+        }
       });
 
       // Tambahkan kartu baru ke grid
@@ -102,5 +121,5 @@ function setupMobileNav() {
 document.addEventListener('DOMContentLoaded', () => {
   // Jalankan kedua fungsi saat halaman dimuat
   setupMobileNav();
-  loadCharacters();
+  loadCharacters(); // loadCharacters sekarang akan menunggu auth siap
 });

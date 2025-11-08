@@ -1,4 +1,28 @@
-// File: js/create-mai.js
+// File: js/create-mai.js (DIMODIFIKASI untuk keamanan)
+
+// BARU: Helper untuk mendapatkan token
+// (Kita tidak bisa pakai window.currentUser karena auth-guard.js mungkin belum selesai)
+function getAuthTokenSafe() {
+    return new Promise((resolve, reject) => {
+        const auth = firebase.auth();
+        const user = auth.currentUser;
+
+        if (user) {
+            user.getIdToken(true).then(resolve).catch(reject);
+        } else {
+            // Jika user null, tunggu auth state berubah
+            const unsubscribe = auth.onAuthStateChanged((user) => {
+                unsubscribe(); // Berhenti memantau
+                if (user) {
+                    user.getIdToken(true).then(resolve).catch(reject);
+                } else {
+                    reject(new Error("User tidak login."));
+                }
+            });
+        }
+    });
+}
+
 
 document.addEventListener('DOMContentLoaded', () => {
     // --- Elemen DOM ---
@@ -9,16 +33,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const formStatus = document.getElementById('form-status');
 
     // --- Cek Status Login ---
+    // (auth-guard.js sudah mengamankan halaman ini, 
+    // jadi kita bisa asumsikan user sudah login saat submit)
     const auth = firebase.auth();
-    let currentUser = null;
-
     auth.onAuthStateChanged((user) => {
-        if (user) {
-            // User login, simpan data user
-            currentUser = user;
-            console.log('User terautentikasi:', user.uid);
-        } else {
-            // User tidak login, tendang ke halaman login
+        if (!user) {
             console.log('User tidak login, mengalihkan...');
             alert('Anda harus login untuk membuat MAI!');
             window.location.href = 'login.html';
@@ -27,12 +46,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 1. Logika Pratinjau Gambar ---
     
-    // Fungsi untuk memicu klik pada input file
     avatarPreview.addEventListener('click', () => {
         imageInput.click();
     });
 
-    // Saat gambar dipilih, tampilkan pratinjaunya
     imageInput.addEventListener('change', () => {
         const file = imageInput.files[0];
         if (file) {
@@ -46,22 +63,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 2. Logika Submit Formulir ---
     form.addEventListener('submit', async (e) => {
-        e.preventDefault(); // Mencegah form submit secara normal
+        e.preventDefault(); 
         
-        if (!currentUser) {
+        let token;
+        try {
+            // BARU: Dapatkan token dulu
+            token = await getAuthTokenSafe();
+        } catch (error) {
             showError('Sesi Anda berakhir. Silakan login kembali.');
             return;
         }
 
-        // Nonaktifkan tombol
         submitButton.disabled = true;
         submitButton.textContent = 'Memproses...';
         formStatus.textContent = '';
         formStatus.className = '';
 
         const file = imageInput.files[0];
-
-        // Validasi: Pastikan gambar sudah di-upload
         if (!file) {
             showError('Anda harus meng-upload gambar avatar.');
             return;
@@ -72,10 +90,12 @@ document.addEventListener('DOMContentLoaded', () => {
             formStatus.textContent = 'Meng-upload avatar...';
             const fileBase64 = await readFileAsBase64(file);
             
-            // Memanggil Netlify Function 'upload-image' yang sudah ada
             const uploadResponse = await fetch('/.netlify/functions/upload-image', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` // BARU: Kirim token
+                },
                 body: JSON.stringify({ file: fileBase64 })
             });
 
@@ -85,7 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const uploadData = await uploadResponse.json();
-            const imageUrl = uploadData.secure_url; // URL gambar dari Cloudinary
+            const imageUrl = uploadData.secure_url; 
 
             // --- Langkah B: Kumpulkan Data MAI ---
             formStatus.textContent = 'Menyimpan data MAI...';
@@ -100,14 +120,17 @@ document.addEventListener('DOMContentLoaded', () => {
                          .map(tag => tag.trim())
                          .filter(tag => tag.length > 0),
                 visibility: document.querySelector('input[name="visibility"]:checked').value,
-                image: imageUrl, // Gunakan URL dari Langkah A
-                creatorId: currentUser.uid // Simpan ID user yang membuat
+                image: imageUrl,
+                // 'creatorId' TIDAK PERLU dikirim, backend akan mengambilnya dari token
             };
             
             // --- Langkah C: Simpan Data MAI ke Firestore ---
             const saveResponse = await fetch('/.netlify/functions/save-mai', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` // BARU: Kirim token
+                },
                 body: JSON.stringify(maiData)
             });
 
@@ -120,7 +143,6 @@ document.addEventListener('DOMContentLoaded', () => {
             formStatus.textContent = 'MAI berhasil dibuat! Mengalihkan ke lobi...';
             formStatus.className = 'success';
             
-            // Arahkan kembali ke Lobi setelah 2 detik
             setTimeout(() => {
                 window.location.href = 'index.html';
             }, 2000);
@@ -140,10 +162,6 @@ document.addEventListener('DOMContentLoaded', () => {
         submitButton.textContent = 'Buat MAI';
     }
 
-    /**
-     * Membaca file sebagai string Base64.
-     * (Helper function yang sama dari chat.js)
-     */
     function readFileAsBase64(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -153,4 +171,4 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-}); // Akhir DOMContentLoaded
+});

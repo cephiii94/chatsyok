@@ -1,33 +1,67 @@
-// File: netlify/functions/get-chat-response.js
-// Versi ini menggunakan 'fetch' (REST API)
+// File: netlify/functions/get-chat-response.js (DIMODIFIKASI untuk keamanan)
+
+const admin = require('firebase-admin');
+
+// Inisialisasi Firebase Admin
+if (!admin.apps.length) {
+  try {
+    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount)
+    });
+  } catch (e) {
+    console.error("Gagal inisialisasi Firebase Admin:", e);
+  }
+}
+
+// BARU: Fungsi helper untuk verifikasi token
+async function getUserIdFromToken(event) {
+  const authHeader = event.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    throw new Error('Header Otorisasi tidak ditemukan atau tidak valid.');
+  }
+  const token = authHeader.split('Bearer ')[1];
+  
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    return decodedToken.uid; // Ini adalah ID user yang AMAN
+  } catch (error) {
+    console.error("Verifikasi token gagal:", error);
+    throw new Error('Token tidak valid atau kedaluwarsa.');
+  }
+}
 
 exports.handler = async (event, context) => {
-  // Hanya izinkan metode POST
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
   try {
+    // BARU: Verifikasi user dulu
+    // Kita tidak pakai userId-nya, tapi ini memastikan hanya user login yang bisa pakai
+    await getUserIdFromToken(event); 
+  } catch (error) {
+    return { statusCode: 401, body: JSON.stringify({ error: error.message }) };
+  }
+
+  try {
     // 1. Ambil data dari frontend
-    // ▼▼▼ MODIFIKASI DI SINI ▼▼▼
     const body = JSON.parse(event.body);
     const userMessage = body.userMessage;
     const characterProfile = body.characterProfile;
-    const characterName = body.characterName || 'Chatbot'; // Ambil nama karakter, beri default 'Chatbot'
+    const characterName = body.characterName || 'Chatbot';
     
     if (!userMessage || !characterProfile) {
-    // ▼▼▼ AKHIR MODIFIKASI ▼▼▼
       return { statusCode: 400, body: 'Missing userMessage or characterProfile' };
     }
 
-    // 2. Ambil Kunci API dari environment
+    // 2. Ambil Kunci API
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
     if (!GEMINI_API_KEY) {
       throw new Error("GEMINI_API_KEY tidak diatur di server.");
     }
     
-    // 3. Siapkan "Resep" (Struktur JSON) untuk Gemini REST API
-    // ▼▼▼ MODIFIKASI DI SINI (Prompt diperbarui) ▼▼▼
+    // 3. Siapkan "Resep" (Prompt)
     const prompt = `
       PERINTAH SISTEM:
       Nama Anda adalah "${characterName}".
@@ -42,7 +76,6 @@ exports.handler = async (event, context) => {
       PENGGUNA: "${userMessage}"
       ANDA (sebagai ${characterName}):
     `;
-    // ▼▼▼ AKHIR MODIFIKASI ▼▼▼
 
     const requestBody = {
       contents: [
@@ -54,8 +87,7 @@ exports.handler = async (event, context) => {
       ]
     };
 
-    // 4. Bangun URL API dan panggil menggunakan 'fetch'
-    // Menggunakan model 'gemini-2.5-flash-preview-09-2025'
+    // 4. Bangun URL API dan panggil
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${GEMINI_API_KEY}`;
 
     const apiResponse = await fetch(apiUrl, {
@@ -67,13 +99,12 @@ exports.handler = async (event, context) => {
     });
 
     if (!apiResponse.ok) {
-      // Jika Gemini error (misal: 400, 500)
       const errorData = await apiResponse.json();
       console.error("Error dari Google API:", errorData);
       throw new Error(`Google API Error: ${errorData.error.message}`);
     }
 
-    // 5. Ambil balasan bersih dari AI
+    // 5. Ambil balasan bersih
     const responseData = await apiResponse.json();
     
     if (!responseData.candidates || !responseData.candidates[0] || !responseData.candidates[0].content || !responseData.candidates[0].content.parts[0]) {

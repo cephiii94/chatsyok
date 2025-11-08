@@ -6,6 +6,10 @@
     <title>ChatsYok! - LevelUP</title>
     <!-- Hubungkan ke CSS Lobby -->
     <link rel="stylesheet" href="/css/lobby.css">
+    
+    <!-- ▼▼▼ TAMBAHKAN LINK CSS MODAL BARU INI ▼▼▼ -->
+    <link rel="stylesheet" href="/css/modal.css">
+    
     <!-- Impor Google Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -33,6 +37,7 @@
                 <a href="create-mai.html">Buat Bot</a>
                 <a href="#">Komunitas</a>
                 <a href="#">Pengaturan</a>
+                <!-- Link Login/Logout akan ditambahkan oleh auth-guard.js -->
             </nav>
         </aside>
 
@@ -44,6 +49,7 @@
             </header>
 
             <section class="character-grid" id="character-grid">
+                <!-- Skeleton loader (tidak berubah) -->
                 <div class="character-card is-loading">
                     <div class="card-img-skeleton"></div>
                     <div class="character-card-info">
@@ -52,34 +58,7 @@
                         <p class="skeleton-line" style="width: 90%;"></p>
                     </div>
                 </div>
-
-                <div class="character-card is-loading">
-                    <div class="card-img-skeleton"></div>
-                    <div class="character-card-info">
-                        <h3 class="skeleton-line" style="width: 60%;"></h3>
-                        <p class="skeleton-line" style="width: 100%;"></p>
-                        <p class="skeleton-line" style="width: 80%;"></p>
-                    </div>
-                </div>
-
-                <div class="character-card is-loading">
-                    <div class="card-img-skeleton"></div>
-                    <div class="character-card-info">
-                        <h3 class="skeleton-line" style="width: 75%;"></h3>
-                        <p class="skeleton-line" style="width: 100%;"></p>
-                        <p class="skeleton-line" style="width: 85%;"></p>
-                    </div>
-                </div>
-
-                <div class="character-card is-loading">
-                    <div class="card-img-skeleton"></div>
-                    <div class="character-card-info">
-                        <h3 class="skeleton-line" style="width: 65%;"></h3>
-                        <p class="skeleton-line" style="width: 100%;"></p>
-                        <p class="skeleton-line" style="width: 90%;"></p>
-                    </div>
-                </div>
-
+                <!-- ... sisa skeleton loader ... -->
             </section>
         </main>
 
@@ -87,6 +66,18 @@
 
     <!-- Overlay Latar Belakang Menu Mobile -->
     <div id="menu-overlay" class="overlay"></div>
+
+    <!-- ▼▼▼ TAMBAHKAN HTML MODAL INI DI AKHIR <body> ▼▼▼ -->
+    <div id="guest-login-modal" class="guest-modal-overlay">
+        <div class="guest-modal-content">
+            <button id="close-guest-modal" class="close-btn" aria-label="Tutup">&times;</button>
+            <h2>Selamat Datang!</h2>
+            <p>Anda saat ini menjelajah sebagai tamu dan hanya dapat melihat MAI default. Silakan login untuk membuat MAI Anda sendiri dan melihat semua karakter publik.</p>
+            <a href="login.html" class="btn btn-primary">Login atau Daftar</a>
+        </div>
+    </div>
+    <!-- ▲▲▲ AKHIR DARI MODAL ▲▲▲ -->
+
 
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>

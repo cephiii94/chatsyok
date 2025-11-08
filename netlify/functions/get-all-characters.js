@@ -1,6 +1,8 @@
+// File: netlify/functions/get-all-characters.js (DIMODIFIKASI)
+
 const admin = require('firebase-admin');
 
-// Inisialisasi Firebase Admin (hanya jika belum ada)
+// Inisialisasi Firebase Admin
 if (!admin.apps.length) {
   try {
     const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
@@ -16,28 +18,42 @@ const db = admin.firestore();
 
 exports.handler = async (event, context) => {
   try {
-    // 1. Ambil semua dokumen dari koleksi 'characters'
-    // 2. Urutkan berdasarkan 'document ID' (yaitu '1', '2', '3')
-    const snapshot = await db.collection('characters')
+    // BARU: Cek apakah ini permintaan tamu
+    const isGuest = event.queryStringParameters.guest === 'true';
+
+    let query = db.collection('characters');
+
+    if (isGuest) {
+      // MODIFIKASI: Tamu hanya lihat 'default'
+      console.log("Mengambil MAI untuk Tamu (visibility: default)");
+      query = query.where('visibility', '==', 'default');
+    } else {
+      // MODIFIKASI: User login lihat 'default' dan 'public'
+      console.log("Mengambil MAI untuk User Login (visibility: default, public)");
+      query = query.where('visibility', 'in', ['default', 'public']);
+    }
+
+    // Urutkan berdasarkan 'document ID' (yaitu '1', '2', '3')
+    const snapshot = await query
                              .orderBy(admin.firestore.FieldPath.documentId())
                              .get();
 
     if (snapshot.empty) {
+      console.log("Tidak ada karakter ditemukan dengan filter tersebut.");
       return {
-        statusCode: 404,
-        body: JSON.stringify({ error: "Tidak ada karakter ditemukan." })
+        statusCode: 200, // Bukan error, hanya kosong
+        body: JSON.stringify([]) // Kirim array kosong
       };
     }
 
-    // 3. Ubah data snapshot menjadi array yang rapi
+    // Ubah data snapshot menjadi array
     const characters = snapshot.docs.map(doc => {
       return {
-        id: doc.id, // <-- Penting untuk link (cth: '1', '2')
-        ...doc.data() // <-- name, description, image, etc.
+        id: doc.id, 
+        ...doc.data()
       };
     });
 
-    // 4. Kirim array karakter sebagai JSON
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },

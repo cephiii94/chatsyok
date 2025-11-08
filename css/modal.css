@@ -1,0 +1,86 @@
+/* File: css/modal.css
+  File baru untuk memberi gaya pada popup login di index.html.
+  Gunakan skema warna soft blue seperti yang Anda suka.
+*/
+.guest-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(30, 58, 90, 0.6); /* Warna teks primer dengan transparansi */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.guest-modal-overlay.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.guest-modal-content {
+    background: var(--bg-secondary, #ffffff);
+    padding: 28px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    max-width: 450px;
+    width: 90%;
+    text-align: center;
+    position: relative;
+    transform: scale(0.95);
+    transition: transform 0.3s ease;
+}
+
+.guest-modal-overlay.visible .guest-modal-content {
+    transform: scale(1);
+}
+
+.guest-modal-content h2 {
+    color: var(--text-primary, #1e3a5a);
+    margin-bottom: 12px;
+    font-size: 1.5rem;
+}
+
+.guest-modal-content p {
+    color: var(--text-secondary, #4a658a);
+    margin-bottom: 24px;
+    line-height: 1.6;
+    font-size: 0.95rem;
+}
+
+.guest-modal-content .btn-primary {
+    display: inline-block;
+    text-decoration: none;
+    padding: 12px 24px;
+    background-color: var(--bg-button, #90caf9);
+    color: var(--text-primary, #1e3a5a);
+    border-radius: 8px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.guest-modal-content .btn-primary:hover {
+     background-color: var(--bg-button-hover, #64b5f6);
+}
+
+.guest-modal-content .close-btn {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 1.75rem;
+    color: var(--text-secondary, #4a658a);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+    line-height: 1;
+}
+.guest-modal-content .close-btn:hover {
+    color: var(--text-primary, #1e3a5a);
+}

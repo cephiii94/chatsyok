@@ -1,10 +1,12 @@
-// File: js/chat.js (Struktur Scope Diperbaiki)
+// File: js/chat.js (DIMODIFIKASI BESAR)
 
 // === 1. GLOBAL VARIABLES ===
 let currentChatbotProfile = "";
 let currentCharacterName = "";
-let currentCharacterGreeting = ""; // <-- MODIFIKASI: Ditambahkan
+let currentCharacterGreeting = "";
 let currentCharacterId = "1"; 
+let currentUser = null; // BARU: Untuk menyimpan data user
+let currentAuthToken = null; // BARU: Untuk menyimpan token
 
 // --- Variabel untuk Elemen DOM ---
 let chatTranscript;
@@ -15,10 +17,37 @@ let fileInput;
 let backButton;
 
 
-// === 2. FUNGSI UTAMA (GLOBAL) ===
+// === 2. FUNGSI BARU UNTUK OTENTIKASI ===
+
+/**
+ * Mengambil Firebase Auth Token yang valid.
+ * Akan me-refresh jika perlu.
+ */
+async function getAuthToken() {
+    if (!currentUser) {
+        console.error("getAuthToken: Dipanggil saat user null.");
+        alert("Sesi Anda tidak valid. Mengalihkan ke login.");
+        window.location.href = 'login.html';
+        throw new Error("User tidak login.");
+    }
+    try {
+        // 'true' memaksa refresh token jika sudah kedaluwarsa
+        currentAuthToken = await currentUser.getIdToken(true); 
+        return currentAuthToken;
+    } catch (error) {
+        console.error("Gagal mendapatkan auth token:", error);
+        alert("Sesi Anda berakhir. Harap login kembali.");
+        window.location.href = 'login.html';
+        throw error; // Lempar error untuk menghentikan proses selanjutnya
+    }
+}
+
+
+// === 3. FUNGSI UTAMA (DIMODIFIKASI) ===
 
 /**
  * Memuat profil karakter dari server Netlify.
+ * (Fungsi ini tidak perlu token, karena profil MAI bersifat publik)
  */
 async function loadCharacterProfile(characterId) {
   console.log(`Mencoba memuat karakter ID: ${characterId} dari server...`);
@@ -31,11 +60,9 @@ async function loadCharacterProfile(characterId) {
     const character = await response.json();
     console.log("Data karakter diterima:", character);
 
-    // ▼▼▼ MODIFIKASI DI SINI ▼▼▼
     currentChatbotProfile = character.description; 
     currentCharacterName = character.name; 
-    currentCharacterGreeting = character.greeting; // <-- SIMPAN SAPAAN
-    // ▼▼▼ AKHIR MODIFIKASI ▼▼▼
+    currentCharacterGreeting = character.greeting;
     
     // Memuat data ke Panel Kiri
     const profileImg = document.querySelector('.chat-left-panel .profile-img');
@@ -45,10 +72,7 @@ async function loadCharacterProfile(characterId) {
 
     if (profileImg) profileImg.src = character.image;
     if (profileName) profileName.textContent = character.name;
-    // ▼▼▼ MODIFIKASI DI SINI ▼▼▼
-    // Tampilkan 'tagline' di panel kiri, BUKAN deskripsi rahasia
     if (profileDesc) profileDesc.textContent = character.tagline || character.description;
-    // ▼▼▼ AKHIR MODIFIKASI ▼▼▼
     
     if (tagsContainer) {
       tagsContainer.innerHTML = '';
@@ -71,12 +95,26 @@ async function loadCharacterProfile(characterId) {
 
 /**
  * Memuat riwayat obrolan dari server Netlify.
+ * (Sekarang aman dan privat per user)
  */
 async function loadChatHistory(characterId) {
   console.log(`Memuat riwayat obrolan untuk ID: ${characterId}`);
   try {
-    const response = await fetch(`/.netlify/functions/get-history?id=${characterId}`);
-    if (!response.ok) throw new Error("Gagal mengambil riwayat.");
+    // MODIFIKASI: Dapatkan token dulu
+    const token = await getAuthToken();
+    
+    const response = await fetch(`/.netlify/functions/get-history?id=${characterId}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}` // BARU: Kirim token
+        }
+    });
+
+    if (!response.ok) {
+        if (response.status === 401) throw new Error("Otentikasi gagal.");
+        throw new Error("Gagal mengambil riwayat.");
+    }
     
     const history = await response.json();
 
@@ -85,17 +123,12 @@ async function loadChatHistory(characterId) {
       chatTranscript.innerHTML = ''; // Kosongkan transkrip jika ada riwayat
     }
 
-    // Tampilkan semua riwayat pesan (SEKARANG BERHASIL)
     history.forEach(message => {
       addMessageToTranscript(message.text, message.sender);
     });
 
-    // Jika TIDAK ada riwayat, set sapaan bot
     if (history.length === 0 && initialBotMessage) {
-      // ▼▼▼ MODIFIKASI DI SINI ▼▼▼
-      // Gunakan sapaan kustom. Jika tidak ada, buat sapaan default.
       initialBotMessage.textContent = currentCharacterGreeting || `Halo! Saya ${currentCharacterName || "Bot"}. Ada yang bisa saya bantu?`;
-      // ▼▼▼ AKHIR MODIFIKASI ▼▼▼
     }
 
   } catch (error) {
@@ -105,45 +138,61 @@ async function loadChatHistory(characterId) {
 
 /**
  * Menyimpan satu pesan ke database.
+ * (Sekarang aman dan privat per user)
  */
 async function saveMessage(sender, text) {
-  // (Tidak berubah)
-  fetch('/.netlify/functions/save-message', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      characterId: currentCharacterId,
-      sender: sender,
-      text: text
-    })
-  }).catch(error => {
-    console.error("Gagal menyimpan pesan ke DB:", error);
-  });
+  try {
+    // MODIFIKASI: Dapatkan token (gunakan yang sudah ada jika masih baru)
+    const token = currentAuthToken || await getAuthToken();
+
+    const response = await fetch('/.netlify/functions/save-message', {
+        method: 'POST',
+        headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}` // BARU: Kirim token
+        },
+        body: JSON.stringify({
+            characterId: currentCharacterId,
+            sender: sender,
+            text: text
+        })
+    });
+
+    if (!response.ok) {
+        throw new Error("Gagal menyimpan pesan ke server.");
+    }
+
+  } catch (error) {
+     console.error("Gagal menyimpan pesan ke DB:", error);
+  }
 }
 
 /**
  * Menangani pengiriman pesan TEKS.
+ * (Sekarang aman)
  */
 async function handleSendMessage() {
   const messageText = chatInput.value.trim();
   
-  // (Tidak berubah dari sebelumnya)
   if (messageText === '' || !currentChatbotProfile || !currentCharacterName || chatInput.disabled) return; 
 
   addMessageToTranscript(messageText, 'user');
-  saveMessage('user', messageText); // Simpan pesan pengguna
+  await saveMessage('user', messageText); // Tunggu simpan selesai
   
   chatInput.value = ''; 
   setChatInputDisabled(true); 
-
   const typingBubble = addMessageToTranscript("...", 'bot', 'typing');
 
   try {
+    // MODIFIKASI: Dapatkan token
+    const token = await getAuthToken();
+
     const response = await fetch('/.netlify/functions/get-chat-response', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      
-      // (Tidak berubah dari sebelumnya)
+      headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` // BARU: Kirim token
+      },
       body: JSON.stringify({
         userMessage: messageText,
         characterProfile: currentChatbotProfile, 
@@ -159,7 +208,7 @@ async function handleSendMessage() {
     typingBubble.textContent = data.reply; 
     typingBubble.classList.remove('typing');
     
-    saveMessage('bot', data.reply); // Simpan balasan bot
+    await saveMessage('bot', data.reply); // Tunggu simpan balasan bot
 
   } catch (error) {
     console.error("Error saat mengirim chat:", error);
@@ -167,14 +216,15 @@ async function handleSendMessage() {
     typingBubble.classList.remove('typing');
   } finally {
     setChatInputDisabled(false); 
+    if (chatInput) chatInput.focus();
   }
 }
 
 /**
  * Menangani pengiriman GAMBAR.
+ * (Sekarang aman)
  */
 async function handleFileSelected(event) {
-  // (Tidak berubah)
   const file = event.target.files[0];
   if (!file) return;
 
@@ -184,9 +234,15 @@ async function handleFileSelected(event) {
   try {
     const fileBase64 = await readFileAsBase64(file);
     
+    // MODIFIKASI: Dapatkan token
+    const token = await getAuthToken();
+
     const response = await fetch('/.netlify/functions/upload-image', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}` // BARU: Kirim token
+      },
       body: JSON.stringify({ file: fileBase64 })
     });
 
@@ -198,13 +254,13 @@ async function handleFileSelected(event) {
     chatTranscript.removeChild(uploadBubble);
     addMessageWithImage(secureUrl, 'user');
     
-    saveMessage('user', secureUrl); // Simpan URL gambar
+    await saveMessage('user', secureUrl); // Simpan URL gambar
     
     // Respons bot (sementara)
     const typingBubble = addMessageToTranscript("...", 'bot', 'typing');
     typingBubble.textContent = "Wah, gambar yang bagus!";
     typingBubble.classList.remove('typing');
-    saveMessage('bot', typingBubble.textContent); 
+    await saveMessage('bot', typingBubble.textContent); 
     
   } catch (error) {
     console.error("Error saat upload gambar:", error);
@@ -212,28 +268,20 @@ async function handleFileSelected(event) {
     uploadBubble.classList.remove('uploading');
   } finally {
     setChatInputDisabled(false);
-    event.target.value = null;
+    event.target.value = null; // Reset input file
   }
 }
 
 
-// === 3. FUNGSI PEMBANTU (GLOBAL) ===
+// === 4. FUNGSI PEMBANTU (Tidak Berubah) ===
 
-/**
- * Mengubah status area input (aktif/nonaktif).
- */
 function setChatInputDisabled(disabled) {
-  // (Tidak berubah)
   if (chatInput) chatInput.disabled = disabled;
   if (sendButton) sendButton.disabled = disabled;
   if (uploadButton) uploadButton.disabled = disabled;
 }
 
-/**
- * Membaca file sebagai string Base64.
- */
 function readFileAsBase64(file) {
-  // (Tidak berubah)
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result);
@@ -242,46 +290,35 @@ function readFileAsBase64(file) {
   });
 }
 
-/**
- * Menambahkan bubble chat GAMBAR ke transkrip.
- */
 function addMessageWithImage(imageUrl, sender) {
-  // (Tidak berubah)
+  // (Sama seperti sebelumnya)
   const bubble = document.createElement('div');
   bubble.classList.add('chat-bubble', sender, 'image-bubble');
-  
   const img = document.createElement('img');
   img.src = imageUrl;
   img.alt = "Gambar yang di-upload";
   bubble.appendChild(img);
-  
   chatTranscript.appendChild(bubble);
   chatTranscript.scrollTop = chatTranscript.scrollHeight;
   return bubble;
 }
 
-/**
- * Menambahkan bubble chat TEKS ke transkrip.
- */
 function addMessageToTranscript(text, sender, extraClass = null) {
-  // (Tidak berubah)
+  // (Sama seperti sebelumnya)
   if (text.startsWith('https://res.cloudinary.com')) {
     return addMessageWithImage(text, sender);
   }
-
   const bubble = document.createElement('div');
   bubble.classList.add('chat-bubble', sender);
   if (extraClass) bubble.classList.add(extraClass);
-  
   bubble.textContent = text; 
-  
   chatTranscript.appendChild(bubble);
   chatTranscript.scrollTop = chatTranscript.scrollHeight;
   return bubble; 
 }
 
 
-// === 4. TITIK MASUK APLIKASI ===
+// === 5. TITIK MASUK APLIKASI ===
 document.addEventListener('DOMContentLoaded', async () => {
   
   // --- A. Mengisi variabel elemen DOM ---
@@ -293,31 +330,65 @@ document.addEventListener('DOMContentLoaded', async () => {
   fileInput = document.getElementById('file-input');
 
   // --- B. Logika Startup ---
+  
+  // BARU: Cek Auth dulu
+  // Kita tunggu auth-guard.js selesai
+  if (!authInitializationDone) {
+      console.log("Chat: Menunggu authReady...");
+      await new Promise(resolve => document.addEventListener('authReady', resolve, { once: true }));
+      console.log("Chat: authReady diterima.");
+  }
+
+  currentUser = window.currentUser; // Ambil user yang sudah login
+  
+  // (PENTING) auth-guard.js sudah mengamankan halaman ini,
+  // tapi kita cek lagi untuk keamanan ganda.
+  if (!currentUser) {
+       console.error("Auth Guard gagal. User tidak ditemukan.");
+       if(chatTranscript) {
+         chatTranscript.innerHTML = '<div class="chat-bubble bot">Error: Gagal memverifikasi user. Silakan login kembali.</div>';
+       }
+       setChatInputDisabled(true);
+       return;
+  }
+  
+  console.log("Chat: User terautentikasi:", currentUser.uid);
+
   const urlParams = new URLSearchParams(window.location.search);
   currentCharacterId = urlParams.get('id') || '1'; 
 
-  // (Tidak berubah dari sebelumnya)
-  // Pastikan profil (dan nama) dimuat SEBELUM riwayat,
+  // Muat profil (publik) dan riwayat (privat)
   await loadCharacterProfile(currentCharacterId);
   await loadChatHistory(currentCharacterId);
   
   // --- C. Memasang Event Listeners ---
-  sendButton.addEventListener('click', handleSendMessage);
-  chatInput.addEventListener('keydown', (e) => {
-    if (chatInput.disabled) return; 
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  });
-
-  backButton.addEventListener('click', () => {
-    window.location.href = 'index.html';
-  });
-
-  uploadButton.addEventListener('click', () => {
-    fileInput.click(); 
-  });
+  if (sendButton) {
+    sendButton.addEventListener('click', handleSendMessage);
+  }
   
-  fileInput.addEventListener('change', handleFileSelected);
+  if (chatInput) {
+    chatInput.addEventListener('keydown', (e) => {
+      if (chatInput.disabled) return; 
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSendMessage();
+      }
+    });
+  }
+
+  if (backButton) {
+    backButton.addEventListener('click', () => {
+      window.location.href = 'index.html';
+    });
+  }
+
+  if (uploadButton) {
+    uploadButton.addEventListener('click', () => {
+      fileInput.click(); 
+    });
+  }
+  
+  if (fileInput) {
+    fileInput.addEventListener('change', handleFileSelected);
+  }
 });
