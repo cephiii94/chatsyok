@@ -15,6 +15,9 @@ window.currentUser = null;
 function setupAuthUI(user) {
     const navBuatBot = document.querySelector('a[href="create-mai.html"]');
     const navContainer = document.querySelector('.lobby-sidebar-nav');
+    
+    // BARU: Ambil link admin
+    const adminLink = document.getElementById('nav-admin-link');
 
     if (!navContainer) {
         console.warn("Auth Guard: Tidak menemukan '.lobby-sidebar-nav'.");
@@ -45,13 +48,20 @@ function setupAuthUI(user) {
             navContainer.appendChild(logoutBtn);
         }
 
-        // Cek custom claims untuk Admin
+        // MODIFIKASI: Cek custom claims untuk Admin
+        // 'true' memaksa refresh token untuk mendapatkan claims terbaru
         user.getIdTokenResult(true).then((idTokenResult) => {
             if (idTokenResult.claims.admin) {
                 console.log('Auth Guard: ADMIN user terdeteksi!');
-                // Di sini Anda bisa menambahkan tombol/link ke panel admin
-                // Cth: const adminBtn = document.getElementById('nav-admin-btn');
-                // if (adminBtn) adminBtn.style.display = 'block';
+                // Tampilkan link Admin jika ada
+                if (adminLink) {
+                    adminLink.style.display = 'block';
+                }
+            } else {
+                // Pastikan link admin tersembunyi jika bukan admin
+                if (adminLink) {
+                    adminLink.style.display = 'none';
+                }
             }
         });
 
@@ -60,6 +70,11 @@ function setupAuthUI(user) {
         console.log('Auth Guard: User logout (Tamu)');
         window.currentUser = null;
         if (navBuatBot) navBuatBot.style.display = 'none'; // Sembunyikan "Buat Bot"
+
+        // Sembunyikan link admin jika user adalah tamu
+        if (adminLink) {
+            adminLink.style.display = 'none';
+        }
 
         // Hapus tombol "Logout" jika ada
         const logoutBtn = document.getElementById('nav-logout-btn');
@@ -99,37 +114,40 @@ function showGuestLoginPopup() {
     const modal = document.getElementById('guest-login-modal');
     const closeModalBtn = document.getElementById('close-guest-modal');
     
-    // Cek sessionStorage
     if (sessionStorage.getItem('loginPopupShown')) {
-        return; // Sudah ditampilkan di sesi ini
+        return;
     }
 
     if (modal && closeModalBtn) {
-        modal.style.display = 'flex'; // Tampilkan modal
-        setTimeout(() => modal.classList.add('visible'), 10); // Trigger animasi fade-in
+        modal.style.display = 'flex'; 
+        setTimeout(() => modal.classList.add('visible'), 10); 
 
         const closeModal = () => {
             modal.classList.remove('visible');
             setTimeout(() => {
-                if (modal.style.display !== 'none') { // Cek jika belum ditutup
+                if (modal.style.display !== 'none') {
                     modal.style.display = 'none';
-                    sessionStorage.setItem('loginPopupShown', 'true'); // Tandai sudah tampil
+                    sessionStorage.setItem('loginPopupShown', 'true');
+
+                    // Hapus event listener setelah ditutup
+                    closeModalBtn.removeEventListener('click', closeModal);
+                    modal.removeEventListener('click', overlayClick);
                 }
-            }, 300); // Sembunyikan setelah transisi
+            }, 300); 
         };
         
-        closeModalBtn.addEventListener('click', closeModal, { once: true });
-        
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) { // Hanya tutup jika klik di overlay
+        const overlayClick = (e) => {
+            if (e.target === modal) {
                 closeModal();
             }
-        }, { once: true });
+        };
+
+        closeModalBtn.addEventListener('click', closeModal);
+        modal.addEventListener('click', overlayClick);
     }
 }
 
 // Panggil fungsi ini saat DOM dimuat
 document.addEventListener('DOMContentLoaded', () => {
-    // Pantau status auth
     auth.onAuthStateChanged(setupAuthUI);
 });
