@@ -26,51 +26,104 @@
 
         <!-- 2. KONTEN UTAMA CHAT -->
         <main id="chat-content">
-            
-            <!-- Panel Kiri (Profil AI) -->
-            <aside class="chat-left-panel is-loading">
-                <img src="" alt="Profil AI" class="profile-img">
-                <h4></h4> <p></p> <div class="tags">
-                    <span></span>
-                    <span></span>
-                    <span></span>
+            <!-- PANEL KIRI -->
+            <aside class="chat-left-panel">
+                <button id="close-left-panel" class="mobile-close-btn">&times;</button>
+
+                <div class="character-stage-left">
+                    <img id="mai-sprite" src="" alt="Avatar MAI" class="anim-idle">
+                </div>
+
+                <div class="profile-info-container">
+                    <h4 class="profile-name">Loading...</h4>
+                    <span class="status-badge">Online</span>
+                    
+                    <button id="mobile-persona-trigger" style="display: none;">🎭 Atur Peran Saya</button>
+                </div>
+
+                <hr class="panel-divider">
+
+                <div class="chat-sessions-container">
+                    <h5>Riwayat Chat</h5>
+                    <div id="chat-history-list">
+                        <p class="empty-state">Belum ada riwayat.</p>
+                    </div>
                 </div>
             </aside>
 
-            <!-- Wrapper untuk Panel Tengah & Kanan -->
+            <!-- PANEL TENGAH -->
+
             <div class="chat-main-wrapper">
                 
-                <!-- Panel Tengah (Obrolan) -->
                 <section class="chat-center-panel">
-                    <div class="chat-transcript" id="chat-transcript">
-                        <div class="chat-bubble bot">Halo! Ada yang bisa saya bantu hari ini?</div>
-                    </div>
+                    <div class="chat-transcript" id="chat-transcript"></div>
                     <div class="chat-input-area">
                         <button id="upload-btn" aria-label="Lampirkan Gambar">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-                                <path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5S13.5 3.62 13.5 5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v11.5c0 2.76 2.24 5 5 5s5-2.24 5-5V6h-1.5z"/>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
                             </svg>
                         </button>
+                        
                         <input type="file" id="file-input" accept="image/*" style="display: none;">
                         
-                        <textarea id="chat-input" placeholder="Type a Message..." rows="1"></textarea>
+                        <textarea id="chat-input" placeholder="Ketik pesan..." rows="1"></textarea>
+                        
                         <button id="send-button" aria-label="Kirim">
-                            </button>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="22" y1="2" x2="11" y2="13"></line>
+                                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                            </svg>
+                        </button>
                     </div>
                 </section>
 
-                <!-- Panel Kanan (Persona) -->
-                <aside class="chat-right-panel">
-                    <div class="persona-box">
-                        <h3>Persona Anda</h3>
-                        <p>No persona yet... try to create one.</p>
-                        <button>Buat Persona</button>
+            <!-- PANEL KANAN -->
+
+            <aside class="chat-right-panel">
+                <div class="persona-box">
+                    <div class="persona-header">
+                        <h3>🎭 Peran Anda</h3>
+                        <p>Identitas dalam cerita ini:</p>
                     </div>
-                </aside>
+                    
+                    <div id="persona-display-container">
+                        <div id="persona-text-display" class="persona-content">
+                            <em class="text-muted">Belum ada peran yang diatur.</em>
+                        </div>
+                        <button id="edit-persona-btn" class="action-btn outline-btn">
+                            Ubah Peran
+                        </button>
+                    </div>
+
+                    <div id="persona-edit-container" class="hidden">
+                        <textarea id="user-persona-input" placeholder="Contoh: Saya adalah detektif..."></textarea>
+                        
+                        <div class="persona-actions">
+                            <button id="save-persona-btn" class="action-btn">Simpan</button>
+                            <button id="cancel-persona-btn" class="action-btn secondary-btn">Batal</button>
+                        </div>
+                    </div>
+
+                    <p id="persona-status" class="status-text"></p>
+                </div>
+            </aside>
 
             </div>
         </main>
     </div>
+
+    <!-- MODAL -->
+     <div id="mobile-backdrop" class="mobile-overlay-backdrop"></div>
+    
+    <div id="mobile-persona-popup" class="persona-popup-mobile">
+        <button id="close-persona-popup" style="position:absolute; right:10px; top:10px; border:none; background:none; font-size:1.5rem;">&times;</button>
+        <div id="mobile-persona-content-area"></div>
+    </div>
+
+    
+
+    <!-- END MODAL -->
+
 
 <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>

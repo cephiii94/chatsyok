@@ -1,8 +1,7 @@
-// File: netlify/functions/get-chat-response.js (DIMODIFIKASI untuk keamanan)
+// File: netlify/functions/get-chat-response.js (UPDATE: DENGAN USER PERSONA)
 
 const admin = require('firebase-admin');
 
-// Inisialisasi Firebase Admin
 if (!admin.apps.length) {
   try {
     const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
@@ -10,120 +9,111 @@ if (!admin.apps.length) {
       credential: admin.credential.cert(serviceAccount)
     });
   } catch (e) {
-    console.error("Gagal inisialisasi Firebase Admin:", e);
+    console.error("Firebase Init Error:", e);
   }
 }
 
-// BARU: Fungsi helper untuk verifikasi token
+const db = admin.firestore();
+
 async function getUserIdFromToken(event) {
   const authHeader = event.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    throw new Error('Header Otorisasi tidak ditemukan atau tidak valid.');
-  }
+  if (!authHeader || !authHeader.startsWith('Bearer ')) throw new Error('No Token');
   const token = authHeader.split('Bearer ')[1];
-  
-  try {
-    const decodedToken = await admin.auth().verifyIdToken(token);
-    return decodedToken.uid; // Ini adalah ID user yang AMAN
-  } catch (error) {
-    console.error("Verifikasi token gagal:", error);
-    throw new Error('Token tidak valid atau kedaluwarsa.');
-  }
+  const decodedToken = await admin.auth().verifyIdToken(token);
+  return decodedToken.uid;
 }
 
 exports.handler = async (event, context) => {
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Method Not Allowed' };
-  }
+  if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
 
+  let userId;
   try {
-    // BARU: Verifikasi user dulu
-    // Kita tidak pakai userId-nya, tapi ini memastikan hanya user login yang bisa pakai
-    await getUserIdFromToken(event); 
+    userId = await getUserIdFromToken(event);
   } catch (error) {
     return { statusCode: 401, body: JSON.stringify({ error: error.message }) };
   }
 
   try {
-    // 1. Ambil data dari frontend
     const body = JSON.parse(event.body);
-    const userMessage = body.userMessage;
-    const characterProfile = body.characterProfile;
+    const { userMessage, characterProfile, characterId, userPersona } = body; // <--- ADA userPersona
     const characterName = body.characterName || 'Chatbot';
     
-    if (!userMessage || !characterProfile) {
-      return { statusCode: 400, body: 'Missing userMessage or characterProfile' };
+    if (!userMessage || !characterProfile || !characterId) {
+      return { statusCode: 400, body: 'Data tidak lengkap.' };
     }
 
-    // 2. Ambil Kunci API
-    const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-    if (!GEMINI_API_KEY) {
-      throw new Error("GEMINI_API_KEY tidak diatur di server.");
+    // Ambil Riwayat Chat
+    const historySnapshot = await db.collection('characters')
+                                    .doc(characterId)
+                                    .collection('chats')
+                                    .doc(userId)
+                                    .collection('messages')
+                                    .orderBy('timestamp', 'desc')
+                                    .limit(10)
+                                    .get();
+
+    const historyDocs = historySnapshot.docs.reverse();
+    let historyContext = "";
+    if (!historyDocs.empty) {
+        historyContext = "RIWAYAT OBROLAN SEBELUMNYA:\n";
+        historyDocs.forEach(doc => {
+            const data = doc.data();
+            const role = data.sender === 'user' ? 'PENGGUNA' : `ANDA (${characterName})`;
+            const cleanText = (data.text || "").replace(/\n/g, " ");
+            historyContext += `${role}: "${cleanText}"\n`;
+        });
+        historyContext += "\n--- BATAS RIWAYAT ---\n";
     }
-    
-    // 3. Siapkan "Resep" (Prompt)
-    const prompt = `
+
+    // PROMPT SYSTEM YANG BARU
+    const userRoleText = userPersona 
+        ? `PENGGUNA YANG ANDA AJAK BICARA MEMILIKI PERAN/BIO:\n"${userPersona}"\n(Sesuaikan respon Anda dengan fakta ini!)` 
+        : "Pengguna adalah orang asing/umum.";
+
+    const finalPrompt = `
       PERINTAH SISTEM:
-      Nama Anda adalah "${characterName}".
-      Anda adalah seorang chatbot. Anda HARUS mengambil peran dan kepribadian berikut:
-      "${characterProfile}"
+      Nama Anda: "${characterName}"
+      Kepribadian Anda: "${characterProfile}"
 
-      Jaga nada bicara Anda agar selalu konsisten dengan peran tersebut. JANGAN PERNAH keluar dari karakter.
-      Jangan menambahkan kata-kata seperti "(sebagai ${characterName})" di balasan Anda. Cukup *jadilah* karakter itu.
+      ${userRoleText}
 
-      Sekarang, balas pesan pengguna di bawah ini.
-      ---
+      ATURAN:
+      1. Tetaplah dalam karakter "${characterName}".
+      2. Responlah sesuai dengan kepribadian Anda DAN siapa lawan bicara Anda (lihat info pengguna di atas).
+      3. Gunakan konteks riwayat di bawah ini.
+
+      ${historyContext}
+
+      PESAN BARU:
       PENGGUNA: "${userMessage}"
-      ANDA (sebagai ${characterName}):
+      
+      JAWABAN ANDA:
     `;
 
-    const requestBody = {
-      contents: [
-        {
-          parts: [
-            { text: prompt }
-          ]
-        }
-      ]
-    };
-
-    // 4. Bangun URL API dan panggil
+    const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${GEMINI_API_KEY}`;
 
     const apiResponse = await fetch(apiUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(requestBody)
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: finalPrompt }] }] })
     });
 
     if (!apiResponse.ok) {
-      const errorData = await apiResponse.json();
-      console.error("Error dari Google API:", errorData);
-      throw new Error(`Google API Error: ${errorData.error.message}`);
+        const err = await apiResponse.json();
+        throw new Error(err.error.message);
     }
 
-    // 5. Ambil balasan bersih
     const responseData = await apiResponse.json();
-    
-    if (!responseData.candidates || !responseData.candidates[0] || !responseData.candidates[0].content || !responseData.candidates[0].content.parts[0]) {
-        throw new Error("Struktur balasan API tidak valid.");
-    }
-
     const botReply = responseData.candidates[0].content.parts[0].text;
 
     return {
       statusCode: 200,
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ reply: botReply })
     };
 
   } catch (error) {
-    console.error("Error di get-chat-response:", error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: error.message || "Terjadi kesalahan pada server AI." })
-    };
+    console.error("Error:", error);
+    return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
   }
 };

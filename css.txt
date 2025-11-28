@@ -1,0 +1,4 @@
+.chat-left-panel {
+    width: 300px; flex-shrink: 0; background: var(--bg-secondary);
+    border: 1px solid var(--border-color); border-radius: 12px;
+    padding: 20px; overflow-y: auto; box-shadow: var(--shadow-light);

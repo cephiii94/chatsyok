@@ -1,56 +1,52 @@
-// File: js/lobby.js (DIMODIFIKASI)
+// File: js/lobby.js (UPDATE LENGKAP DENGAN MODAL PROFIL)
+
+// Variabel global untuk menyimpan data karakter sementara
+let selectedCharacterId = null;
 
 /**
  * Mengambil data karakter dan membangun kartu di halaman.
  */
 async function loadCharacters() {
   const grid = document.getElementById('character-grid');
-  if (!grid) return; // Hentikan jika grid tidak ditemukan
+  if (!grid) return; 
 
-  // BARU: Dapatkan status login
-  // Kita akan menunggu event 'authReady' dari auth-guard.js
+  // Menunggu auth siap
   if (!authInitializationDone) {
       console.log("Lobby: Menunggu authReady...");
       await new Promise(resolve => document.addEventListener('authReady', resolve, { once: true }));
-      console.log("Lobby: authReady diterima.");
   }
     
-  const user = window.currentUser; // Ambil dari flag global yang di-set oleh auth-guard
+  const user = window.currentUser; 
   const isGuest = !user;
   console.log("Lobby: Status user: ", isGuest ? "Tamu" : "Login");
 
-  // BARU: Tentukan URL berdasarkan status login
+  // Tentukan URL API
   const fetchUrl = isGuest 
       ? '/.netlify/functions/get-all-characters?guest=true' 
       : '/.netlify/functions/get-all-characters';
 
   try {
     const response = await fetch(fetchUrl);
-    if (!response.ok) {
-      throw new Error("Gagal mengambil data karakter dari server.");
-    }
+    if (!response.ok) throw new Error("Gagal mengambil data karakter.");
     
     const characters = await response.json();
 
-    // 1. Kosongkan skeleton loader
+    // Kosongkan grid (hapus skeleton loader)
     grid.innerHTML = ''; 
 
     if (characters.length === 0) {
-        if (isGuest) {
-             grid.innerHTML = '<p style="color: var(--text-secondary);">Tidak ada MAI default ditemukan. Silakan login untuk melihat lebih banyak.</p>';
-        } else {
-             grid.innerHTML = '<p style="color: var(--text-secondary);">Belum ada MAI publik. Jadilah yang pertama membuatnya!</p>';
-        }
+        grid.innerHTML = isGuest 
+            ? '<p style="color: var(--text-secondary);">Tidak ada MAI default ditemukan.</p>' 
+            : '<p style="color: var(--text-secondary);">Belum ada MAI publik.</p>';
         return;
     }
 
-    // 2. Loop data dari Firestore dan buat kartu baru
+    // Loop dan buat kartu
     characters.forEach(char => {
-      // (Logika rendering kartu tidak berubah)
       const card = document.createElement('div');
       card.className = 'character-card';
-      card.dataset.charId = char.id; 
-
+      // Simpan seluruh data char di dataset elemen agar mudah diambil nanti (opsional, tapi kita pakai passing object langsung)
+      
       const img = document.createElement('img');
       img.src = char.image; 
       img.alt = char.name;  
@@ -69,34 +65,103 @@ async function loadCharacters() {
       card.appendChild(img);
       card.appendChild(infoDiv);
 
-      // (PENTING) Modifikasi event listener
+      // ▼▼▼ MODIFIKASI: Klik kartu membuka MODAL PROFIL, bukan langsung chat ▼▼▼
       card.addEventListener('click', () => {
-        if (isGuest) {
-            // Jika tamu, jangan biarkan chat, minta login
-            alert('Silakan login untuk memulai obrolan.');
-            window.location.href = 'login.html';
-        } else {
-            // Jika login, arahkan ke chat
-            window.location.href = `chat.html?id=${char.id}`;
-        }
+          openProfileModal(char, isGuest);
       });
+      // ▲▲▲
 
-      // Tambahkan kartu baru ke grid
       grid.appendChild(card);
     });
 
   } catch (error) {
     console.error(error);
-    // Tampilkan pesan error jika gagal
-    grid.innerHTML = '<p style="color: red;">Gagal memuat karakter. Coba muat ulang halaman.</p>';
+    grid.innerHTML = '<p style="color: red;">Gagal memuat karakter.</p>';
   }
 }
 
+/**
+ * Fungsi BARU: Membuka Modal Profil MAI
+ * @param {Object} char - Data karakter (nama, img, desc, tags, id)
+ * @param {Boolean} isGuest - Status login user
+ */
+function openProfileModal(char, isGuest) {
+    const modal = document.getElementById('character-profile-modal');
+    const imgEl = document.getElementById('modal-char-img');
+    const nameEl = document.getElementById('modal-char-name');
+    const descEl = document.getElementById('modal-char-desc');
+    const tagsContainer = document.getElementById('modal-char-tags');
+    const startBtn = document.getElementById('btn-start-chat');
+
+    // 1. Isi Data ke dalam Modal
+    imgEl.src = char.image;
+    nameEl.textContent = char.name;
+    descEl.textContent = char.tagline || char.description; // Prioritaskan tagline jika ada
+    
+    // Simpan ID karakter yang sedang dilihat ke variabel global
+    selectedCharacterId = char.id;
+
+    // Render Tags (chip)
+    tagsContainer.innerHTML = ''; // Bersihkan tag lama
+    if (char.tags && Array.isArray(char.tags)) {
+        char.tags.forEach(tag => {
+            const span = document.createElement('span');
+            span.textContent = tag;
+            tagsContainer.appendChild(span);
+        });
+    }
+
+    // 2. Tampilkan Modal
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('visible'), 10); // Delay dikit biar animasi CSS jalan
+
+    // 3. Atur Logika Tombol "Mulai Chat"
+    // Kita hapus listener lama (kloning elemen) agar tidak menumpuk event click berkali-kali
+    const newStartBtn = startBtn.cloneNode(true);
+    startBtn.parentNode.replaceChild(newStartBtn, startBtn);
+
+    newStartBtn.addEventListener('click', () => {
+        if (isGuest) {
+            // Logika Tamu: Tampilkan alert atau arahkan login
+            // (Atau bisa trigger modal guest yang sudah ada)
+            alert('Fitur Chat hanya untuk pengguna terdaftar. Silakan login.');
+            window.location.href = 'login.html';
+        } else {
+            // Logika User: Pergi ke halaman chat
+            window.location.href = `chat.html?id=${selectedCharacterId}`;
+        }
+    });
+}
 
 /**
- * Logika untuk navigasi mobile (Hamburger Menu)
- * (Kode ini tidak berubah)
+ * Menyiapkan Event Listener untuk menutup Modal Profil
  */
+function setupModalEvents() {
+    const modal = document.getElementById('character-profile-modal');
+    const closeBtn = document.getElementById('close-profile-modal');
+
+    // Fungsi tutup modal
+    const closeModal = () => {
+        modal.classList.remove('visible');
+        setTimeout(() => {
+            modal.style.display = 'none';
+        }, 300); // Sesuaikan dengan durasi transition CSS
+    };
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeModal);
+    }
+
+    // Tutup jika klik di area gelap (overlay)
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+    }
+}
+
 function setupMobileNav() {
   const hamburgerBtn = document.getElementById('hamburger-btn');
   const lobbySidebar = document.getElementById('lobby-sidebar');
@@ -119,7 +184,7 @@ function setupMobileNav() {
 
 // --- Titik Masuk Aplikasi ---
 document.addEventListener('DOMContentLoaded', () => {
-  // Jalankan kedua fungsi saat halaman dimuat
   setupMobileNav();
-  loadCharacters(); // loadCharacters sekarang akan menunggu auth siap
+  setupModalEvents(); // Inisialisasi event modal (tutup/overlay)
+  loadCharacters(); 
 });

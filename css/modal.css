@@ -84,3 +84,71 @@
 .guest-modal-content .close-btn:hover {
     color: var(--text-primary, #1e3a5a);
 }
+
+/* ... kode css modal sebelumnya ... */
+
+/* ▼▼▼ TAMBAHAN GAYA UNTUK MODAL PROFIL MAI ▼▼▼ */
+
+/* Penyesuaian khusus untuk konten profil */
+.profile-content {
+    max-width: 400px; /* Sedikit lebih ramping */
+    padding-top: 40px; /* Ruang untuk gambar yang menonjol */
+    margin-top: 20px;
+}
+
+/* Gaya Gambar Avatar */
+.profile-header-img {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    margin: -60px auto 16px auto; /* Membuat gambar "keluar" sedikit ke atas */
+    border-radius: 50%;
+    border: 4px solid var(--bg-secondary, #ffffff);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    background-color: var(--bg-sidebar, #e3f2fd);
+    overflow: hidden;
+}
+
+.profile-header-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Deskripsi */
+.profile-desc {
+    font-size: 0.95rem;
+    color: var(--text-secondary, #4a658a);
+    margin-bottom: 16px;
+    line-height: 1.5;
+}
+
+/* Wadah Tags */
+.profile-tags {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 24px;
+}
+
+/* Chip Tag */
+.profile-tags span {
+    background-color: var(--bg-primary, #f0f8ff);
+    color: var(--text-secondary, #4a658a);
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    border: 1px solid var(--border-color, #d1e5f8);
+}
+
+.modal-actions {
+    margin-top: 8px;
+}
+
+/* Animasi halus saat muncul */
+.guest-modal-overlay {
+    transition: opacity 0.3s ease, visibility 0.3s ease, backdrop-filter 0.3s;
+    backdrop-filter: blur(2px); /* Efek blur di latar belakang */
+}

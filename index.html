@@ -45,7 +45,7 @@
         <main class="lobby-main">
             <header class="lobby-header">
                 <h2>Temukan Karakter</h2>
-                <p>Mulai percakapan dengan salah satu persona AI kami.</p>
+                <p>Mulai percakapan dengan salah satu MAI kami.</p>
             </header>
 
             <section class="character-grid" id="character-grid">
@@ -76,6 +76,28 @@
             <a href="login.html" class="btn btn-primary">Login atau Daftar</a>
         </div>
     </div>
+
+    <div id="character-profile-modal" class="guest-modal-overlay">
+    <div class="guest-modal-content profile-content">
+        <button id="close-profile-modal" class="close-btn" aria-label="Tutup">&times;</button>
+        
+        <div class="profile-header-img">
+            <img id="modal-char-img" src="" alt="Avatar MAI">
+        </div>
+
+        <h2 id="modal-char-name">Nama Karakter</h2>
+        <p id="modal-char-desc" class="profile-desc">Deskripsi singkat karakter akan muncul di sini.</p>
+        
+        <div id="modal-char-tags" class="profile-tags">
+            </div>
+
+        <div class="modal-actions">
+            <button id="btn-start-chat" class="btn-primary">Mulai Chat</button>
+        </div>
+        </div>
+    </div>
+
+    
     <!-- ▲▲▲ AKHIR DARI MODAL ▲▲▲ -->
 
 

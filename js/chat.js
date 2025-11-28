@@ -1,394 +1,302 @@
-// File: js/chat.js (DIMODIFIKASI BESAR)
+// File: js/chat.js (VERSI FINAL: MOBILE SUPPORT)
 
 // === 1. GLOBAL VARIABLES ===
-let currentChatbotProfile = "";
-let currentCharacterName = "";
-let currentCharacterGreeting = "";
-let currentCharacterId = "1"; 
-let currentUser = null; // BARU: Untuk menyimpan data user
-let currentAuthToken = null; // BARU: Untuk menyimpan token
+let currentChatbotProfile = "", currentCharacterName = "", currentCharacterGreeting = "", currentCharacterId = "1";
+let currentUser = null, currentAuthToken = null, currentUserPersona = "";
+let chatTranscript, chatInput, sendButton, uploadButton, fileInput, backButton, maiSprite;
+let personaDisplayContainer, personaEditContainer, personaTextDisplay, editPersonaBtn, savePersonaBtn, cancelPersonaBtn, personaInput, personaStatus;
 
-// --- Variabel untuk Elemen DOM ---
-let chatTranscript;
-let chatInput;
-let sendButton;
-let uploadButton;
-let fileInput;
-let backButton;
+// Variabel Mobile
+let profileIcon, leftPanel, mobileBackdrop, closeLeftPanelBtn, mobilePersonaTrigger, mobilePersonaPopup, closePersonaPopupBtn, mobilePersonaContentArea;
 
-
-// === 2. FUNGSI BARU UNTUK OTENTIKASI ===
-
-/**
- * Mengambil Firebase Auth Token yang valid.
- * Akan me-refresh jika perlu.
- */
+// === 2. AUTH ===
 async function getAuthToken() {
-    if (!currentUser) {
-        console.error("getAuthToken: Dipanggil saat user null.");
-        alert("Sesi Anda tidak valid. Mengalihkan ke login.");
-        window.location.href = 'login.html';
-        throw new Error("User tidak login.");
+    if (!currentUser) { window.location.href = 'login.html'; throw new Error("User null"); }
+    try { currentAuthToken = await currentUser.getIdToken(true); return currentAuthToken; } 
+    catch (error) { window.location.href = 'login.html'; throw error; }
+}
+
+// === 3. LOGIKA PERSONA ===
+function togglePersonaMode(isEditing) {
+    if (isEditing) {
+        personaDisplayContainer.classList.add('hidden');
+        personaEditContainer.classList.remove('hidden');
+        personaInput.value = currentUserPersona;
+        personaInput.focus();
+    } else {
+        personaDisplayContainer.classList.remove('hidden');
+        personaEditContainer.classList.add('hidden');
+        personaStatus.textContent = "";
     }
+}
+
+function updatePersonaDisplay(text) {
+    if (!text || text.trim() === "") personaTextDisplay.innerHTML = '<em class="text-muted">Belum ada peran yang diatur.</em>';
+    else personaTextDisplay.textContent = text;
+}
+
+async function loadUserPersona(characterId) {
     try {
-        // 'true' memaksa refresh token jika sudah kedaluwarsa
-        currentAuthToken = await currentUser.getIdToken(true); 
-        return currentAuthToken;
-    } catch (error) {
-        console.error("Gagal mendapatkan auth token:", error);
-        alert("Sesi Anda berakhir. Harap login kembali.");
-        window.location.href = 'login.html';
-        throw error; // Lempar error untuk menghentikan proses selanjutnya
-    }
-}
-
-
-// === 3. FUNGSI UTAMA (DIMODIFIKASI) ===
-
-/**
- * Memuat profil karakter dari server Netlify.
- * (Fungsi ini tidak perlu token, karena profil MAI bersifat publik)
- */
-async function loadCharacterProfile(characterId) {
-  console.log(`Mencoba memuat karakter ID: ${characterId} dari server...`);
-  const functionUrl = `/.netlify/functions/get-character?id=${characterId}`;
-  const leftPanel = document.querySelector('.chat-left-panel');
-  try {
-    const response = await fetch(functionUrl);
-    if (!response.ok) throw new Error(`Server error: ${response.statusText}`);
-    
-    const character = await response.json();
-    console.log("Data karakter diterima:", character);
-
-    currentChatbotProfile = character.description; 
-    currentCharacterName = character.name; 
-    currentCharacterGreeting = character.greeting;
-    
-    // Memuat data ke Panel Kiri
-    const profileImg = document.querySelector('.chat-left-panel .profile-img');
-    const profileName = document.querySelector('.chat-left-panel h4');
-    const profileDesc = document.querySelector('.chat-left-panel p');
-    const tagsContainer = document.querySelector('.chat-left-panel .tags');
-
-    if (profileImg) profileImg.src = character.image;
-    if (profileName) profileName.textContent = character.name;
-    if (profileDesc) profileDesc.textContent = character.tagline || character.description;
-    
-    if (tagsContainer) {
-      tagsContainer.innerHTML = '';
-      if (character.tags && Array.isArray(character.tags)) {
-        character.tags.forEach(tagText => {
-          const tagElement = document.createElement('span');
-          tagElement.textContent = tagText;
-          tagsContainer.appendChild(tagElement);
-        });
-      }
-    }
-    leftPanel.classList.remove('is-loading');
-  } catch (error) {
-    console.error("Error mengambil data karakter:", error);
-    const profileName = document.querySelector('.chat-left-panel h4');
-    if (profileName) profileName.textContent = "Gagal memuat";
-    leftPanel.classList.remove('is-loading');
-  }
-}
-
-/**
- * Memuat riwayat obrolan dari server Netlify.
- * (Sekarang aman dan privat per user)
- */
-async function loadChatHistory(characterId) {
-  console.log(`Memuat riwayat obrolan untuk ID: ${characterId}`);
-  try {
-    // MODIFIKASI: Dapatkan token dulu
-    const token = await getAuthToken();
-    
-    const response = await fetch(`/.netlify/functions/get-history?id=${characterId}`, {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}` // BARU: Kirim token
+        const token = await getAuthToken();
+        const res = await fetch(`/.netlify/functions/manage-persona?charId=${characterId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+        if (res.ok) {
+            const data = await res.json();
+            currentUserPersona = data.persona || "";
+            updatePersonaDisplay(currentUserPersona);
         }
-    });
-
-    if (!response.ok) {
-        if (response.status === 401) throw new Error("Otentikasi gagal.");
-        throw new Error("Gagal mengambil riwayat.");
-    }
-    
-    const history = await response.json();
-
-    const initialBotMessage = document.querySelector('.chat-bubble.bot');
-    if (history.length > 0 && initialBotMessage) {
-      chatTranscript.innerHTML = ''; // Kosongkan transkrip jika ada riwayat
-    }
-
-    history.forEach(message => {
-      addMessageToTranscript(message.text, message.sender);
-    });
-
-    if (history.length === 0 && initialBotMessage) {
-      initialBotMessage.textContent = currentCharacterGreeting || `Halo! Saya ${currentCharacterName || "Bot"}. Ada yang bisa saya bantu?`;
-    }
-
-  } catch (error) {
-    console.error("Error memuat riwayat:", error);
-  }
+    } catch (e) { console.error("Gagal load persona:", e); }
 }
 
-/**
- * Menyimpan satu pesan ke database.
- * (Sekarang aman dan privat per user)
- */
+async function saveUserPersona() {
+    const text = personaInput.value.trim();
+    savePersonaBtn.disabled = true;
+    savePersonaBtn.textContent = "Menyimpan...";
+    try {
+        const token = await getAuthToken();
+        const res = await fetch('/.netlify/functions/manage-persona', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ charId: currentCharacterId, persona: text })
+        });
+        if (res.ok) {
+            currentUserPersona = text;
+            updatePersonaDisplay(text);
+            togglePersonaMode(false);
+            personaStatus.textContent = "Tersimpan!";
+            personaStatus.className = "status-text success";
+            setTimeout(() => { personaStatus.textContent = ""; }, 2000);
+            
+            // Jika di mobile, tutup popup setelah simpan
+            if (window.innerWidth <= 768) toggleMobilePersonaPopup(false);
+        } else throw new Error("Gagal simpan");
+    } catch (e) {
+        personaStatus.textContent = "Gagal menyimpan.";
+        personaStatus.className = "status-text error";
+    } finally {
+        savePersonaBtn.disabled = false;
+        savePersonaBtn.textContent = "Simpan";
+    }
+}
+
+// === 4. LOGIKA MOBILE UI (BARU) ===
+function toggleMobileLeftPanel(show) {
+    if (show) {
+        leftPanel.classList.add('mobile-visible');
+        mobileBackdrop.classList.add('active');
+    } else {
+        leftPanel.classList.remove('mobile-visible');
+        mobileBackdrop.classList.remove('active');
+    }
+}
+
+function toggleMobilePersonaPopup(show) {
+    // Trik: Memindahkan elemen personaBox dari panel kanan ke popup mobile (dan sebaliknya)
+    // Ini agar kita tidak perlu duplikat kode/elemen HTML
+    const personaBox = document.querySelector('.persona-box');
+    const originalParent = document.querySelector('.chat-right-panel');
+    
+    if (show) {
+        if (personaBox && mobilePersonaContentArea) {
+            mobilePersonaContentArea.appendChild(personaBox); // Pindah ke popup
+            mobilePersonaPopup.classList.add('active');
+            mobileBackdrop.classList.add('active'); // Gunakan backdrop yg sama
+            // Tutup panel kiri biar fokus
+            leftPanel.classList.remove('mobile-visible'); 
+        }
+    } else {
+        if (personaBox && originalParent) {
+            originalParent.appendChild(personaBox); // Kembalikan ke panel kanan
+            mobilePersonaPopup.classList.remove('active');
+            mobileBackdrop.classList.remove('active');
+        }
+    }
+}
+
+// === 5. LOGIKA CHAT & KARAKTER ===
+async function loadCharacterProfile(characterId) {
+    try {
+        const res = await fetch(`/.netlify/functions/get-character?id=${characterId}`);
+        if (!res.ok) throw new Error("Gagal load profile");
+        const char = await res.json();
+        currentChatbotProfile = char.description; currentCharacterName = char.name; currentCharacterGreeting = char.greeting;
+        
+        document.querySelector('.profile-info-container .profile-name').textContent = char.name;
+        maiSprite = document.getElementById('mai-sprite');
+        if (maiSprite) { maiSprite.src = char.image; maiSprite.classList.add('anim-idle'); }
+        document.querySelector('.chat-left-panel').classList.remove('is-loading');
+
+        if (currentUser && char.creatorId === currentUser.uid) {
+            const existingBtn = document.getElementById('edit-char-btn');
+            if (!existingBtn) {
+                const btn = document.createElement('button');
+                btn.id = 'edit-char-btn'; btn.textContent = '✏️ Edit Karakter';
+                Object.assign(btn.style, { marginTop: '8px', width: '100%', padding: '8px', backgroundColor: '#ffca28', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' });
+                btn.onclick = () => window.location.href = `edit-mai.html?id=${characterId}`;
+                document.querySelector('.profile-info-container').appendChild(btn);
+            }
+        }
+    } catch (e) { console.error(e); }
+}
+
+async function loadChatHistory(characterId) {
+    try {
+        const token = await getAuthToken();
+        const res = await fetch(`/.netlify/functions/get-history?id=${characterId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+        if (!res.ok) return;
+        const history = await res.json();
+        const botBubble = document.querySelector('.chat-bubble.bot');
+        if (history.length > 0 && botBubble) chatTranscript.innerHTML = '';
+        history.forEach(m => addMessageToTranscript(m.text, m.sender));
+        if (history.length === 0 && botBubble) botBubble.textContent = currentCharacterGreeting;
+        renderHistoryList(history);
+    } catch (e) { console.error(e); }
+}
+
+function renderHistoryList(historyData) {
+    const container = document.getElementById('chat-history-list');
+    if (!container) return;
+    container.innerHTML = '';
+    const msgs = historyData ? historyData.filter(m => m.sender === 'user').reverse().slice(0, 10) : [];
+    if (msgs.length === 0) { container.innerHTML = '<p class="empty-state">Belum ada riwayat.</p>'; return; }
+    msgs.forEach(m => {
+        const d = document.createElement('div'); d.className = 'history-item';
+        d.innerHTML = `<span class="date">User</span><p class="preview">${m.text}</p>`;
+        container.appendChild(d);
+    });
+}
+
 async function saveMessage(sender, text) {
-  try {
-    // MODIFIKASI: Dapatkan token (gunakan yang sudah ada jika masih baru)
-    const token = currentAuthToken || await getAuthToken();
-
-    const response = await fetch('/.netlify/functions/save-message', {
-        method: 'POST',
-        headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}` // BARU: Kirim token
-        },
-        body: JSON.stringify({
-            characterId: currentCharacterId,
-            sender: sender,
-            text: text
-        })
-    });
-
-    if (!response.ok) {
-        throw new Error("Gagal menyimpan pesan ke server.");
-    }
-
-  } catch (error) {
-     console.error("Gagal menyimpan pesan ke DB:", error);
-  }
+    try {
+        const token = currentAuthToken || await getAuthToken();
+        await fetch('/.netlify/functions/save-message', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ characterId: currentCharacterId, sender, text })
+        });
+    } catch (e) { console.error(e); }
 }
 
-/**
- * Menangani pengiriman pesan TEKS.
- * (Sekarang aman)
- */
+function typeText(element, text, speed = 25) {
+    element.textContent = ""; element.classList.add('typing-cursor');
+    let i = 0; if (maiSprite) maiSprite.classList.add('anim-idle');
+    function type() {
+        if (i < text.length) {
+            element.textContent += text.charAt(i); i++;
+            if (chatTranscript) chatTranscript.scrollTop = chatTranscript.scrollHeight;
+            setTimeout(type, speed + (Math.random() * 15 - 5));
+        } else { element.classList.remove('typing-cursor'); }
+    } type();
+}
+
 async function handleSendMessage() {
-  const messageText = chatInput.value.trim();
-  
-  if (messageText === '' || !currentChatbotProfile || !currentCharacterName || chatInput.disabled) return; 
-
-  addMessageToTranscript(messageText, 'user');
-  await saveMessage('user', messageText); // Tunggu simpan selesai
-  
-  chatInput.value = ''; 
-  setChatInputDisabled(true); 
-  const typingBubble = addMessageToTranscript("...", 'bot', 'typing');
-
-  try {
-    // MODIFIKASI: Dapatkan token
-    const token = await getAuthToken();
-
-    const response = await fetch('/.netlify/functions/get-chat-response', {
-      method: 'POST',
-      headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` // BARU: Kirim token
-      },
-      body: JSON.stringify({
-        userMessage: messageText,
-        characterProfile: currentChatbotProfile, 
-        characterName: currentCharacterName
-      })
-    });
-    if (!response.ok) {
-      const errData = await response.json();
-      throw new Error(errData.error || "Gagal mendapat balasan dari server");
+    const text = chatInput.value.trim();
+    if (!text || chatInput.disabled) return;
+    addMessageToTranscript(text, 'user');
+    const list = document.getElementById('chat-history-list');
+    if (list) {
+        const empty = list.querySelector('.empty-state'); if (empty) empty.remove();
+        const item = document.createElement('div'); item.className = 'history-item';
+        item.innerHTML = `<span class="date">Baru Saja</span><p class="preview">${text}</p>`;
+        list.firstChild ? list.insertBefore(item, list.firstChild) : list.appendChild(item);
     }
-    
-    const data = await response.json();
-    typingBubble.textContent = data.reply; 
-    typingBubble.classList.remove('typing');
-    
-    await saveMessage('bot', data.reply); // Tunggu simpan balasan bot
-
-  } catch (error) {
-    console.error("Error saat mengirim chat:", error);
-    typingBubble.textContent = `Maaf, terjadi error: ${error.message}`;
-    typingBubble.classList.remove('typing');
-  } finally {
-    setChatInputDisabled(false); 
-    if (chatInput) chatInput.focus();
-  }
+    await saveMessage('user', text);
+    chatInput.value = ''; setChatInputDisabled(true);
+    const typing = addMessageToTranscript("...", 'bot', 'typing');
+    try {
+        const token = await getAuthToken();
+        const res = await fetch('/.netlify/functions/get-chat-response', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ userMessage: text, characterProfile: currentChatbotProfile, characterName: currentCharacterName, characterId: currentCharacterId, userPersona: currentUserPersona })
+        });
+        if (!res.ok) throw new Error("Gagal server.");
+        const data = await res.json();
+        typing.classList.remove('typing');
+        typeText(typing, data.reply);
+        await saveMessage('bot', data.reply);
+    } catch (e) { typing.textContent = "Maaf, ada gangguan."; typing.classList.remove('typing'); } 
+    finally { setChatInputDisabled(false); chatInput.focus(); }
 }
 
-/**
- * Menangani pengiriman GAMBAR.
- * (Sekarang aman)
- */
-async function handleFileSelected(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  const uploadBubble = addMessageToTranscript("Meng-upload gambar...", 'user', 'uploading');
-  setChatInputDisabled(true);
-
-  try {
-    const fileBase64 = await readFileAsBase64(file);
-    
-    // MODIFIKASI: Dapatkan token
-    const token = await getAuthToken();
-
-    const response = await fetch('/.netlify/functions/upload-image', {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}` // BARU: Kirim token
-      },
-      body: JSON.stringify({ file: fileBase64 })
-    });
-
-    if (!response.ok) throw new Error("Gagal meng-upload file ke server.");
-
-    const data = await response.json();
-    const secureUrl = data.secure_url;
-
-    chatTranscript.removeChild(uploadBubble);
-    addMessageWithImage(secureUrl, 'user');
-    
-    await saveMessage('user', secureUrl); // Simpan URL gambar
-    
-    // Respons bot (sementara)
-    const typingBubble = addMessageToTranscript("...", 'bot', 'typing');
-    typingBubble.textContent = "Wah, gambar yang bagus!";
-    typingBubble.classList.remove('typing');
-    await saveMessage('bot', typingBubble.textContent); 
-    
-  } catch (error) {
-    console.error("Error saat upload gambar:", error);
-    uploadBubble.textContent = "Gagal meng-upload gambar.";
-    uploadBubble.classList.remove('uploading');
-  } finally {
-    setChatInputDisabled(false);
-    event.target.value = null; // Reset input file
-  }
-}
-
-
-// === 4. FUNGSI PEMBANTU (Tidak Berubah) ===
-
-function setChatInputDisabled(disabled) {
-  if (chatInput) chatInput.disabled = disabled;
-  if (sendButton) sendButton.disabled = disabled;
-  if (uploadButton) uploadButton.disabled = disabled;
-}
-
+function setChatInputDisabled(d) { chatInput.disabled = d; sendButton.disabled = d; if (uploadButton) uploadButton.disabled = d; }
 function readFileAsBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = (error) => reject(error);
-    reader.readAsDataURL(file);
-  });
+    return new Promise((resolve, reject) => {
+        const r = new FileReader(); r.onload = () => resolve(r.result); r.onerror = reject; r.readAsDataURL(file);
+    });
+}
+function addMessageToTranscript(text, sender, extra) {
+    const d = document.createElement('div'); d.classList.add('chat-bubble', sender);
+    if (extra) d.classList.add(extra);
+    if (text.startsWith('https://res.cloudinary.com')) {
+        d.classList.add('image-bubble'); const i = document.createElement('img'); i.src = text; d.appendChild(i);
+    } else { d.textContent = text; }
+    chatTranscript.appendChild(d); chatTranscript.scrollTop = chatTranscript.scrollHeight; return d;
 }
 
-function addMessageWithImage(imageUrl, sender) {
-  // (Sama seperti sebelumnya)
-  const bubble = document.createElement('div');
-  bubble.classList.add('chat-bubble', sender, 'image-bubble');
-  const img = document.createElement('img');
-  img.src = imageUrl;
-  img.alt = "Gambar yang di-upload";
-  bubble.appendChild(img);
-  chatTranscript.appendChild(bubble);
-  chatTranscript.scrollTop = chatTranscript.scrollHeight;
-  return bubble;
-}
-
-function addMessageToTranscript(text, sender, extraClass = null) {
-  // (Sama seperti sebelumnya)
-  if (text.startsWith('https://res.cloudinary.com')) {
-    return addMessageWithImage(text, sender);
-  }
-  const bubble = document.createElement('div');
-  bubble.classList.add('chat-bubble', sender);
-  if (extraClass) bubble.classList.add(extraClass);
-  bubble.textContent = text; 
-  chatTranscript.appendChild(bubble);
-  chatTranscript.scrollTop = chatTranscript.scrollHeight;
-  return bubble; 
-}
-
-
-// === 5. TITIK MASUK APLIKASI ===
+// === 6. INIT ===
 document.addEventListener('DOMContentLoaded', async () => {
-  
-  // --- A. Mengisi variabel elemen DOM ---
-  chatTranscript = document.getElementById('chat-transcript');
-  chatInput = document.getElementById('chat-input');
-  sendButton = document.getElementById('send-button');
-  backButton = document.getElementById('back-btn');
-  uploadButton = document.getElementById('upload-btn');
-  fileInput = document.getElementById('file-input');
+    chatTranscript = document.getElementById('chat-transcript');
+    chatInput = document.getElementById('chat-input');
+    sendButton = document.getElementById('send-button');
+    backButton = document.getElementById('back-btn');
+    uploadButton = document.getElementById('upload-btn');
+    fileInput = document.getElementById('file-input');
+    maiSprite = document.getElementById('mai-sprite');
 
-  // --- B. Logika Startup ---
-  
-  // BARU: Cek Auth dulu
-  // Kita tunggu auth-guard.js selesai
-  if (!authInitializationDone) {
-      console.log("Chat: Menunggu authReady...");
-      await new Promise(resolve => document.addEventListener('authReady', resolve, { once: true }));
-      console.log("Chat: authReady diterima.");
-  }
+    // Persona & Mobile Elements
+    personaDisplayContainer = document.getElementById('persona-display-container');
+    personaEditContainer = document.getElementById('persona-edit-container');
+    personaTextDisplay = document.getElementById('persona-text-display');
+    editPersonaBtn = document.getElementById('edit-persona-btn');
+    savePersonaBtn = document.getElementById('save-persona-btn');
+    cancelPersonaBtn = document.getElementById('cancel-persona-btn');
+    personaInput = document.getElementById('user-persona-input');
+    personaStatus = document.getElementById('persona-status');
+    
+    // Mobile UI Elements
+    profileIcon = document.getElementById('profile-icon');
+    leftPanel = document.querySelector('.chat-left-panel');
+    mobileBackdrop = document.getElementById('mobile-backdrop');
+    closeLeftPanelBtn = document.getElementById('close-left-panel');
+    mobilePersonaTrigger = document.getElementById('mobile-persona-trigger');
+    mobilePersonaPopup = document.getElementById('mobile-persona-popup');
+    closePersonaPopupBtn = document.getElementById('close-persona-popup');
+    mobilePersonaContentArea = document.getElementById('mobile-persona-content-area');
 
-  currentUser = window.currentUser; // Ambil user yang sudah login
-  
-  // (PENTING) auth-guard.js sudah mengamankan halaman ini,
-  // tapi kita cek lagi untuk keamanan ganda.
-  if (!currentUser) {
-       console.error("Auth Guard gagal. User tidak ditemukan.");
-       if(chatTranscript) {
-         chatTranscript.innerHTML = '<div class="chat-bubble bot">Error: Gagal memverifikasi user. Silakan login kembali.</div>';
-       }
-       setChatInputDisabled(true);
-       return;
-  }
-  
-  console.log("Chat: User terautentikasi:", currentUser.uid);
+    if (!window.currentUser) await new Promise(resolve => document.addEventListener('authReady', resolve, { once: true }));
+    currentUser = window.currentUser; if (!currentUser) return (window.location.href = 'login.html');
 
-  const urlParams = new URLSearchParams(window.location.search);
-  currentCharacterId = urlParams.get('id') || '1'; 
+    const p = new URLSearchParams(window.location.search);
+    currentCharacterId = p.get('id') || '1';
 
-  // Muat profil (publik) dan riwayat (privat)
-  await loadCharacterProfile(currentCharacterId);
-  await loadChatHistory(currentCharacterId);
-  
-  // --- C. Memasang Event Listeners ---
-  if (sendButton) {
-    sendButton.addEventListener('click', handleSendMessage);
-  }
-  
-  if (chatInput) {
-    chatInput.addEventListener('keydown', (e) => {
-      if (chatInput.disabled) return; 
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        handleSendMessage();
-      }
-    });
-  }
+    loadCharacterProfile(currentCharacterId);
+    loadChatHistory(currentCharacterId);
+    loadUserPersona(currentCharacterId);
 
-  if (backButton) {
-    backButton.addEventListener('click', () => {
-      window.location.href = 'index.html';
-    });
-  }
+    // Listeners Utama
+    if (sendButton) sendButton.onclick = handleSendMessage;
+    if (chatInput) chatInput.onkeydown = (e) => { if (!chatInput.disabled && e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } };
+    if (backButton) backButton.onclick = () => window.location.href = 'index.html';
+    if (uploadButton) uploadButton.onclick = () => fileInput.click();
+    if (fileInput) fileInput.onchange = async (e) => { const f = fileInput.files[0]; if (f) handleFileSelected({ target: { files: [f] } }); };
 
-  if (uploadButton) {
-    uploadButton.addEventListener('click', () => {
-      fileInput.click(); 
-    });
-  }
-  
-  if (fileInput) {
-    fileInput.addEventListener('change', handleFileSelected);
-  }
+    // Listeners Persona
+    if (editPersonaBtn) editPersonaBtn.onclick = () => togglePersonaMode(true);
+    if (cancelPersonaBtn) cancelPersonaBtn.onclick = () => togglePersonaMode(false);
+    if (savePersonaBtn) savePersonaBtn.onclick = saveUserPersona;
+
+    // Listeners Mobile UI
+    if (profileIcon) profileIcon.onclick = () => toggleMobileLeftPanel(true);
+    if (closeLeftPanelBtn) closeLeftPanelBtn.onclick = () => toggleMobileLeftPanel(false);
+    if (mobileBackdrop) mobileBackdrop.onclick = () => {
+        toggleMobileLeftPanel(false);
+        toggleMobilePersonaPopup(false);
+    };
+    
+    // Tampilkan tombol persona hanya di mobile
+    if (mobilePersonaTrigger) {
+        if (window.innerWidth <= 768) mobilePersonaTrigger.style.display = 'block';
+        mobilePersonaTrigger.onclick = () => toggleMobilePersonaPopup(true);
+    }
+    if (closePersonaPopupBtn) closePersonaPopupBtn.onclick = () => toggleMobilePersonaPopup(false);
 });
