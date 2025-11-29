@@ -6,6 +6,7 @@
     <title>Chat Page</title>
     <!-- Hubungkan ke file CSS Chat -->
     <link rel="stylesheet" href="/css/chat.css">
+    <link rel="stylesheet" href="/css/modal.css">
     <!-- Impor Google Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,7 +22,19 @@
         <!-- 1. HEADER / TOP BAR -->
         <header class="top-bar">
             <button id="back-btn" aria-label="Kembali">&larr;</button>
-            <div id="profile-icon" aria-label="Profil AI">AI</div>
+
+            <div class="header-right">
+                <div id="profile-icon" aria-label="Profil AI">AI</div>
+                
+                <button id="menu-btn" aria-label="Opsi Chat">
+                    &#x22EE; </button>
+
+                <div id="chat-dropdown" class="chat-dropdown-content">
+                    <button id="delete-chat-item" class="dropdown-item text-danger">
+                        🗑️ Hapus Riwayat
+                    </button>
+                    </div>
+            </div>
         </header>
 
         <!-- 2. KONTEN UTAMA CHAT -->
@@ -120,7 +133,17 @@
         <div id="mobile-persona-content-area"></div>
     </div>
 
-    
+    <div id="custom-confirm-modal" class="guest-modal-overlay">
+        <div class="guest-modal-content" style="max-width: 400px; text-align: left;">
+            <h3 id="confirm-title" style="margin-top: 0; color: var(--text-primary);">Konfirmasi</h3>
+            <p id="confirm-msg" style="color: var(--text-secondary); margin: 15px 0;">Apakah Anda yakin?</p>
+            
+            <div class="confirm-actions">
+                <button id="btn-confirm-cancel" class="btn btn-secondary">Batal</button>
+                <button id="btn-confirm-yes" class="btn btn-danger">Ya, Hapus</button>
+            </div>
+        </div>
+    </div>
 
     <!-- END MODAL -->
 

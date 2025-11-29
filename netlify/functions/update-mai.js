@@ -15,15 +15,17 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
-// Helper Verifikasi Token
-async function getUserIdFromToken(event) {
+// --- HELPER BARU: Ambil Data Token Lengkap ---
+// Kita butuh ini untuk melihat apakah ada stempel "admin: true"
+async function getAuthTokenData(event) {
   const authHeader = event.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     throw new Error('Header Otorisasi tidak ditemukan.');
   }
   const token = authHeader.split('Bearer ')[1];
+  // verifyIdToken mengembalikan objek yang berisi uid DAN custom claims (admin)
   const decodedToken = await admin.auth().verifyIdToken(token);
-  return decodedToken.uid;
+  return decodedToken; 
 }
 
 exports.handler = async (event, context) => {
@@ -31,12 +33,16 @@ exports.handler = async (event, context) => {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
-  let userId;
+  let userToken;
   try {
-    userId = await getUserIdFromToken(event);
+    // Ambil data user beserta status admin-nya
+    userToken = await getAuthTokenData(event);
   } catch (error) {
     return { statusCode: 401, body: JSON.stringify({ error: error.message }) };
   }
+
+  const userId = userToken.uid;
+  const isAdmin = userToken.admin === true; // Cek status admin
 
   try {
     const data = JSON.parse(event.body);
@@ -55,10 +61,15 @@ exports.handler = async (event, context) => {
 
     const currentData = docSnap.data();
 
-    // KEAMANAN: Pastikan yang mengedit adalah PEMBUAT (creatorId)
-    // Kecuali jika user adalah Admin (opsional, tapi kita fokus ke owner dulu)
-    if (currentData.creatorId !== userId) {
-        return { statusCode: 403, body: JSON.stringify({ error: 'Anda tidak memiliki izin mengedit MAI ini.' }) };
+    // --- LOGIKA PENJAGA PINTU UTAMA ---
+    // Boleh lewat jika: Dia Pembuatnya ATAU Dia Admin
+    const isCreator = currentData.creatorId === userId;
+
+    if (!isCreator && !isAdmin) {
+        return { 
+            statusCode: 403, 
+            body: JSON.stringify({ error: 'Eits! Anda bukan pemilik MAI ini dan bukan Admin.' }) 
+        };
     }
 
     // Siapkan data update
@@ -72,7 +83,6 @@ exports.handler = async (event, context) => {
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
     };
 
-    // Hanya update gambar jika ada gambar baru (tidak null/undefined)
     if (image) {
         updateData.image = image;
     }
@@ -81,7 +91,7 @@ exports.handler = async (event, context) => {
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ success: true, message: 'MAI berhasil diupdate' })
+      body: JSON.stringify({ success: true, message: 'MAI berhasil diupdate oleh ' + (isAdmin ? 'Admin' : 'Creator') })
     };
 
   } catch (error) {

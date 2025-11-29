@@ -1,9 +1,10 @@
-// File: js/create-mai.js (DIMODIFIKASI untuk keamanan)
+// File: js/create-mai.js (UPDATE: Auto-Clear Cache)
 
-// BARU: Helper untuk mendapatkan token
-// (Kita tidak bisa pakai window.currentUser karena auth-guard.js mungkin belum selesai)
+// Helper untuk mendapatkan token dengan aman
 function getAuthTokenSafe() {
     return new Promise((resolve, reject) => {
+        if (!firebase.apps.length) return reject(new Error("Firebase belum init"));
+        
         const auth = firebase.auth();
         const user = auth.currentUser;
 
@@ -23,7 +24,6 @@ function getAuthTokenSafe() {
     });
 }
 
-
 document.addEventListener('DOMContentLoaded', () => {
     // --- Elemen DOM ---
     const form = document.getElementById('create-mai-form');
@@ -33,19 +33,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const formStatus = document.getElementById('form-status');
 
     // --- Cek Status Login ---
-    // (auth-guard.js sudah mengamankan halaman ini, 
-    // jadi kita bisa asumsikan user sudah login saat submit)
+    // Pastikan user login sebelum bisa akses halaman ini
     const auth = firebase.auth();
     auth.onAuthStateChanged((user) => {
         if (!user) {
             console.log('User tidak login, mengalihkan...');
-            alert('Anda harus login untuk membuat MAI!');
+            // alert('Anda harus login untuk membuat MAI!'); // Optional, auth-guard sudah menangani
             window.location.href = 'login.html';
         }
     });
 
     // --- 1. Logika Pratinjau Gambar ---
-    
     avatarPreview.addEventListener('click', () => {
         imageInput.click();
     });
@@ -67,7 +65,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         let token;
         try {
-            // BARU: Dapatkan token dulu
             token = await getAuthTokenSafe();
         } catch (error) {
             showError('Sesi Anda berakhir. Silakan login kembali.');
@@ -94,7 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}` // BARU: Kirim token
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({ file: fileBase64 })
             });
@@ -120,8 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
                          .map(tag => tag.trim())
                          .filter(tag => tag.length > 0),
                 visibility: document.querySelector('input[name="visibility"]:checked').value,
-                image: imageUrl,
-                // 'creatorId' TIDAK PERLU dikirim, backend akan mengambilnya dari token
+                image: imageUrl
             };
             
             // --- Langkah C: Simpan Data MAI ke Firestore ---
@@ -129,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}` // BARU: Kirim token
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify(maiData)
             });
@@ -140,6 +136,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // --- Sukses ---
+            
+            // ▼▼▼ PERBAIKAN PENTING: Hapus Cache Lobi ▼▼▼
+            // Ini memaksa lobi mengambil data terbaru saat kita kembali ke sana
+            sessionStorage.removeItem('mai_chars_user'); 
+            // ▲▲▲
+
             formStatus.textContent = 'MAI berhasil dibuat! Mengalihkan ke lobi...';
             formStatus.className = 'success';
             
@@ -170,5 +172,4 @@ document.addEventListener('DOMContentLoaded', () => {
             reader.readAsDataURL(file);
         });
     }
-
 });

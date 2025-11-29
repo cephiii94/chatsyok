@@ -152,3 +152,41 @@
     transition: opacity 0.3s ease, visibility 0.3s ease, backdrop-filter 0.3s;
     backdrop-filter: blur(2px); /* Efek blur di latar belakang */
 }
+
+/* File: css/modal.css (Tambahan di paling bawah) */
+
+/* --- GAYA KONFIRMASI KUSTOM --- */
+.confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+.btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: 0.2s;
+}
+
+/* Tombol Bahaya (Merah Soft) */
+.btn-danger {
+    background-color: #ef9a9a; /* Merah muda soft */
+    color: #7f1d1d; /* Merah tua */
+}
+.btn-danger:hover {
+    background-color: #e57373;
+}
+
+/* Tombol Batal (Abu-abu) */
+.btn-secondary {
+    background-color: #f1f5f9;
+    color: #475569;
+}
+.btn-secondary:hover {
+    background-color: #e2e8f0;
+}
+

@@ -2,3 +2,8 @@
     width: 300px; flex-shrink: 0; background: var(--bg-secondary);
     border: 1px solid var(--border-color); border-radius: 12px;
     padding: 20px; overflow-y: auto; box-shadow: var(--shadow-light);
+
+
+https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}
+
+https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${GEMINI_API_KEY}

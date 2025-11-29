@@ -78,22 +78,36 @@
     </div>
 
     <div id="character-profile-modal" class="guest-modal-overlay">
-    <div class="guest-modal-content profile-content">
-        <button id="close-profile-modal" class="close-btn" aria-label="Tutup">&times;</button>
-        
-        <div class="profile-header-img">
-            <img id="modal-char-img" src="" alt="Avatar MAI">
-        </div>
-
-        <h2 id="modal-char-name">Nama Karakter</h2>
-        <p id="modal-char-desc" class="profile-desc">Deskripsi singkat karakter akan muncul di sini.</p>
-        
-        <div id="modal-char-tags" class="profile-tags">
+        <div class="guest-modal-content profile-content">
+            <button id="close-profile-modal" class="close-btn" aria-label="Tutup">&times;</button>
+            
+            <div class="profile-header-img">
+                <img id="modal-char-img" src="" alt="Avatar MAI">
             </div>
 
-        <div class="modal-actions">
-            <button id="btn-start-chat" class="btn-primary">Mulai Chat</button>
+            <h2 id="modal-char-name">Nama Karakter</h2>
+            <p id="modal-char-desc" class="profile-desc">Deskripsi...</p>
+            
+            <div id="modal-char-tags" class="profile-tags"></div>
+
+            <div class="modal-actions">
+                <button id="btn-start-chat" class="btn-primary" style="width: 100%; margin-bottom: 10px;">Mulai Chat</button>
+                
+                <div id="modal-admin-actions" style="display: flex; gap: 10px; justify-content: center;">
+                    </div>
+                </div>
         </div>
+    </div>
+
+    <div id="custom-confirm-modal" class="guest-modal-overlay">
+        <div class="guest-modal-content" style="max-width: 400px; text-align: left;">
+            <h3 id="confirm-title" style="margin-top: 0; color: var(--text-primary);">Konfirmasi</h3>
+            <p id="confirm-msg" style="color: var(--text-secondary); margin: 15px 0;">Apakah Anda yakin?</p>
+            
+            <div class="confirm-actions">
+                <button id="btn-confirm-cancel" class="btn btn-secondary">Batal</button>
+                <button id="btn-confirm-yes" class="btn btn-danger">Ya, Hapus</button>
+            </div>
         </div>
     </div>
 

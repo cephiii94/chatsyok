@@ -299,8 +299,12 @@ body {
     /* Di sini kita set DISPLAY: BLOCK dengan !important */
     #close-left-panel {
         display: block !important;
-        position: absolute;
-        top: 12px; right: 12px;
+        position: sticky;
+        top: 10px;
+        /* Karena parent-nya Flexbox Column, kita pakai ini biar dia ke kanan */
+        align-self: flex-end; 
+        margin-right: 10px; /* Jarak sedikit dari pinggir kanan */
+        margin-bottom: -40px;
         
         /* Styling tombol X agar terlihat jelas */
         background: rgba(255, 255, 255, 0.9);
@@ -310,7 +314,7 @@ body {
         border-radius: 50%; 
         font-size: 1.8rem; line-height: 1;
         cursor: pointer;
-        z-index: 1002;
+        z-index: 1005;
         box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
 
@@ -349,4 +353,94 @@ body {
 /* Sembunyikan elemen mobile di desktop */
 @media (min-width: 769px) {
     .mobile-overlay-backdrop { display: none !important; }
+}
+
+/* File: css/chat.css (Tambahkan di paling bawah) */
+
+/* --- HEADER KANAN & DROPDOWN --- */
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px; /* Jarak antara profil dan titik tiga */
+    position: relative; /* Penting agar dropdown muncul tepat di bawahnya */
+}
+
+/* Tombol Titik Tiga */
+#menu-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text-primary);
+    padding: 4px;
+    line-height: 1;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#menu-btn:hover, #menu-btn.active {
+    background-color: var(--bg-sidebar);
+}
+
+/* Kotak Dropdown */
+.chat-dropdown-content {
+    display: none; /* Default sembunyi */
+    position: absolute;
+    right: 0;
+    top: 120%; /* Muncul sedikit di bawah header */
+    background-color: var(--bg-secondary);
+    min-width: 180px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    z-index: 2000;
+    overflow: hidden;
+    padding: 6px;
+}
+
+/* Class untuk memunculkan dropdown */
+.chat-dropdown-content.show {
+    display: block;
+    animation: fadeIn 0.15s ease-out;
+}
+
+/* Item di dalam Dropdown */
+.dropdown-item {
+    width: 100%;
+    padding: 10px 12px;
+    text-align: left;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    font-family: 'Inter', sans-serif;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-radius: 6px;
+    transition: background 0.2s;
+}
+
+.dropdown-item:hover {
+    background-color: #f5f5f5;
+}
+
+.dropdown-item.text-danger {
+    color: #e53935; /* Merah untuk tombol hapus */
+}
+.dropdown-item.text-danger:hover {
+    background-color: #ffebee;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
 }
