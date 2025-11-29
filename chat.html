@@ -71,14 +71,19 @@
                 <section class="chat-center-panel">
                     <div class="chat-transcript" id="chat-transcript"></div>
                     <div class="chat-input-area">
+                        <div id="attachment-preview" class="attachment-preview hidden">
+                            <div class="preview-wrapper">
+                                <img id="preview-img" src="" alt="Preview">
+                                <button id="btn-cancel-attach" class="btn-close-preview">&times;</button>
+                            </div>
+                        </div>
                         <button id="upload-btn" aria-label="Lampirkan Gambar">
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
                             </svg>
                         </button>
                         
-                        <input type="file" id="file-input" accept="image/*" style="display: none;">
-                        
+                        <input type="file" id="file-input" accept="image/*, application/pdf, text/plain" style="display: none;">                        
                         <textarea id="chat-input" placeholder="Ketik pesan..." rows="1"></textarea>
                         
                         <button id="send-button" aria-label="Kirim">
@@ -129,8 +134,7 @@
      <div id="mobile-backdrop" class="mobile-overlay-backdrop"></div>
     
     <div id="mobile-persona-popup" class="persona-popup-mobile">
-        <button id="close-persona-popup" style="position:absolute; right:10px; top:10px; border:none; background:none; font-size:1.5rem;">&times;</button>
-        <div id="mobile-persona-content-area"></div>
+        <button id="close-persona-popup" class="mobile-close-btn">&times;</button>        <div id="mobile-persona-content-area"></div>
     </div>
 
     <div id="custom-confirm-modal" class="guest-modal-overlay">
@@ -144,6 +148,12 @@
             </div>
         </div>
     </div>
+
+    <div id="image-viewer-modal" class="image-viewer-modal">
+        <span class="close-viewer">&times;</span>
+        <img class="viewer-content" id="full-image">
+    </div>
+
 
     <!-- END MODAL -->
 

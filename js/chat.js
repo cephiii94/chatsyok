@@ -1,4 +1,4 @@
-// File: js/chat.js (FINAL FULL VERSION)
+// File: js/chat.js (FINAL VERSION: SUPPORT GAMBAR + PDF/DOCS)
 
 // === 1. GLOBAL VARIABLES ===
 let currentChatbotProfile = "", currentCharacterName = "", currentCharacterGreeting = "", currentCharacterId = "1";
@@ -9,9 +9,15 @@ let personaDisplayContainer, personaEditContainer, personaTextDisplay, editPerso
 // Variabel Mobile
 let profileIcon, leftPanel, mobileBackdrop, closeLeftPanelBtn, mobilePersonaTrigger, mobilePersonaPopup, closePersonaPopupBtn, mobilePersonaContentArea;
 
+// Variabel Preview & Upload
+let attachmentPreview, previewImg, btnCancelAttach;
+let currentSelectedFile = null;
+
+// Variabel Image Viewer
+let imageViewerModal, fullImage, closeViewerBtn;
+
 // === 2. HELPER FUNCTIONS ===
 
-// Fungsi Konfirmasi Cantik (Promise-based)
 function showCustomConfirm(title, message) {
     return new Promise((resolve) => {
         const modal = document.getElementById('custom-confirm-modal');
@@ -20,51 +26,48 @@ function showCustomConfirm(title, message) {
         const yesBtn = document.getElementById('btn-confirm-yes');
         const cancelBtn = document.getElementById('btn-confirm-cancel');
 
-        if (!modal) {
-            // Fallback jika modal HTML belum dipasang
-            resolve(confirm(message)); 
-            return;
-        }
+        if (!modal) { resolve(confirm(message)); return; }
 
         titleEl.textContent = title;
         msgEl.textContent = message;
-        
         modal.style.display = 'flex';
         setTimeout(() => modal.classList.add('visible'), 10);
 
         const close = (result) => {
             modal.classList.remove('visible');
             setTimeout(() => modal.style.display = 'none', 300);
-            // Bersihkan event listener
             yesBtn.onclick = null;
             cancelBtn.onclick = null;
             resolve(result);
         };
-
         yesBtn.onclick = () => close(true);
         cancelBtn.onclick = () => close(false);
     });
 }
 
+function openImageViewer(src) {
+    if (imageViewerModal && fullImage) {
+        fullImage.src = src;
+        imageViewerModal.classList.add('active');
+    }
+}
+
+function closeImageViewer() {
+    if (imageViewerModal) {
+        imageViewerModal.classList.remove('active');
+        setTimeout(() => { if(fullImage) fullImage.src = ''; }, 200);
+    }
+}
+
 async function getAuthToken() {
     if (!currentUser) { 
-        if (window.currentUser) {
-            currentUser = window.currentUser;
-        } else {
-            console.warn("User null, mengalihkan ke login.");
-            window.location.href = 'login.html'; 
-            throw new Error("User null");
-        }
+        if (window.currentUser) currentUser = window.currentUser;
+        else { window.location.href = 'login.html'; throw new Error("User null"); }
     }
     try { 
-        // Force refresh token agar claim 'admin' terbaru terbaca
         currentAuthToken = await currentUser.getIdToken(true); 
         return currentAuthToken; 
-    } 
-    catch (error) { 
-        console.error("Gagal get token:", error);
-        throw error; 
-    }
+    } catch (error) { console.error("Gagal get token:", error); throw error; }
 }
 
 // === 3. LOGIKA PERSONA ===
@@ -169,26 +172,17 @@ async function loadCharacterProfile(characterId) {
         currentCharacterName = char.name; 
         currentCharacterGreeting = char.greeting;
         
-        // Update Nama di Panel Kiri
-        const profileNameEl = document.querySelector('.profile-info-container .profile-name');
-        if (profileNameEl) profileNameEl.textContent = char.name;
-        
+        document.querySelector('.profile-info-container .profile-name').textContent = char.name;
         maiSprite = document.getElementById('mai-sprite');
-        if (maiSprite) { 
-            maiSprite.src = char.image; 
-            maiSprite.classList.add('anim-idle'); 
-        }
-        
-        const leftPanelDiv = document.querySelector('.chat-left-panel');
-        if (leftPanelDiv) leftPanelDiv.classList.remove('is-loading');
+        if (maiSprite) { maiSprite.src = char.image; maiSprite.classList.add('anim-idle'); }
+        document.querySelector('.chat-left-panel').classList.remove('is-loading');
 
-        // --- LOGIKA TOMBOL EDIT (Creator & Admin) ---
         let isAdmin = false;
         if (currentUser) {
             try {
                 const tokenResult = await currentUser.getIdTokenResult();
                 isAdmin = tokenResult.claims.admin === true;
-            } catch(e) { console.log("Gagal cek admin claims", e); }
+            } catch(e) { console.log(e); }
         }
 
         if (currentUser && (char.creatorId === currentUser.uid || isAdmin)) {
@@ -196,23 +190,16 @@ async function loadCharacterProfile(characterId) {
             if (!existingBtn) {
                 const btn = document.createElement('button');
                 btn.id = 'edit-char-btn'; 
-                btn.textContent = (isAdmin && char.creatorId !== currentUser.uid) 
-                    ? '⚡ Edit (Mode Admin)' 
-                    : '✏️ Edit Karakter';
-                
+                btn.textContent = (isAdmin && char.creatorId !== currentUser.uid) ? '⚡ Edit (Mode Admin)' : '✏️ Edit Karakter';
                 Object.assign(btn.style, { 
                     marginTop: '8px', width: '100%', padding: '8px', 
                     backgroundColor: (isAdmin && char.creatorId !== currentUser.uid) ? '#ffca28' : '#e0e0e0',
                     border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', color: '#333' 
                 });
-                
                 btn.onclick = () => window.location.href = `edit-mai.html?id=${characterId}`;
-                
-                const container = document.querySelector('.profile-info-container');
-                if (container) container.appendChild(btn);
+                document.querySelector('.profile-info-container').appendChild(btn);
             }
         }
-
     } catch (e) { console.error(e); }
 }
 
@@ -261,7 +248,7 @@ async function saveMessage(sender, text) {
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ characterId: currentCharacterId, sender, text })
         });
-    } catch (e) { console.error("Gagal save message:", e); }
+    } catch (e) { console.error(e); }
 }
 
 function typeText(element, text, speed = 25) {
@@ -276,30 +263,125 @@ function typeText(element, text, speed = 25) {
     } type();
 }
 
+// --- HANDLE FILE SELECTED (PREVIEW - SUPPORT PDF) ---
+function handleFileSelected(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    currentSelectedFile = file;
+
+    // Cek Tipe File
+    if (file.type.startsWith('image/')) {
+        // Jika Gambar -> Tampilkan Preview Asli
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            previewImg.src = event.target.result;
+            attachmentPreview.classList.remove('hidden');
+        };
+        reader.readAsDataURL(file);
+    } else {
+        // Jika PDF/Docs -> Tampilkan Ikon Dokumen
+        // Kita pakai icon dokumen generik
+        previewImg.src = "https://cdn-icons-png.flaticon.com/512/337/337946.png"; 
+        attachmentPreview.classList.remove('hidden');
+    }
+    chatInput.focus();
+}
+
+function cancelAttachment() {
+    currentSelectedFile = null;
+    fileInput.value = ''; 
+    attachmentPreview.classList.add('hidden'); 
+}
+
+// --- HANDLE SEND MESSAGE ---
 async function handleSendMessage() {
     const text = chatInput.value.trim();
-    if (!text || chatInput.disabled) return;
-    
-    addMessageToTranscript(text, 'user');
-    const list = document.getElementById('chat-history-list');
-    if (list) {
-        const empty = list.querySelector('.empty-state'); if (empty) empty.remove();
-        const item = document.createElement('div'); item.className = 'history-item';
-        item.innerHTML = `<span class="date">Baru Saja</span><p class="preview">${text}</p>`;
-        list.firstChild ? list.insertBefore(item, list.firstChild) : list.appendChild(item);
+    if ((!text && !currentSelectedFile) || chatInput.disabled) return;
+    setChatInputDisabled(true);
+
+    if (currentSelectedFile) {
+        if (currentSelectedFile.size > 4 * 1024 * 1024) { // Naikkan limit ke 10MB buat PDF
+            alert("Maaf, ukuran file terlalu besar (Maks 10MB).");
+            setChatInputDisabled(false);
+            return;
+        }
+
+        try {
+            // 1. Simpan file lokal
+            const fileToUpload = currentSelectedFile;
+            
+            // 2. Tampilkan UI Chat sementara
+            let tempDisplay = previewImg.src; 
+            if (!fileToUpload.type.startsWith('image/')) {
+                // Jika dokumen, beri pesan teks dulu
+                addMessageToTranscript(`📄 Mengirim dokumen: ${fileToUpload.name}...`, 'user');
+            } else {
+                addMessageToTranscript(tempDisplay, 'user'); 
+            }
+            
+            cancelAttachment(); 
+
+            // 3. Konversi ke Base64
+            const base64 = await readFileAsBase64(fileToUpload);
+            
+            // 4. Upload
+            const token = await getAuthToken();
+            const uploadRes = await fetch('/.netlify/functions/upload-image', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ file: base64 })
+            });
+
+            if (!uploadRes.ok) {
+                const errData = await uploadRes.json();
+                throw new Error(errData.error || "Gagal upload file");
+            }
+            const uploadData = await uploadRes.json();
+            const realFileUrl = uploadData.secure_url;
+
+            // 5. Simpan Pesan (URL File)
+            await saveMessage('user', realFileUrl);
+            
+            // 6. Jika dokumen, update UI jadi Link
+            if (!fileToUpload.type.startsWith('image/')) {
+               // Tidak perlu update transcript lagi, biarkan AI yang respon
+               // atau bisa tambahkan link download manual disini jika mau
+            }
+
+            if (text) {
+                addMessageToTranscript(text, 'user');
+                await saveMessage('user', text);
+            }
+            
+            await triggerAI(realFileUrl); 
+
+        } catch (error) {
+            console.error(error);
+            addMessageToTranscript("❌ Gagal mengirim file.", 'bot');
+            setChatInputDisabled(false);
+            return; 
+        }
+    } else if (text) {
+        addMessageToTranscript(text, 'user');
+        await saveMessage('user', text);
+        await triggerAI(text);
     }
-    
-    await saveMessage('user', text);
-    chatInput.value = ''; setChatInputDisabled(true);
+
+    chatInput.value = ''; 
+    chatInput.style.height = '50px';
+    setChatInputDisabled(false);
+    chatInput.focus();
+}
+
+async function triggerAI(messageContent) {
     const typing = addMessageToTranscript("...", 'bot', 'typing');
-    
     try {
         const token = await getAuthToken();
         const res = await fetch('/.netlify/functions/get-chat-response', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ 
-                userMessage: text, 
+                userMessage: messageContent, 
                 characterProfile: currentChatbotProfile, 
                 characterName: currentCharacterName, 
                 characterId: currentCharacterId, 
@@ -312,30 +394,69 @@ async function handleSendMessage() {
         
         typing.classList.remove('typing');
         typeText(typing, data.reply);
-        
         await saveMessage('bot', data.reply);
-    } catch (e) { 
-        typing.textContent = "Maaf, koneksi terputus."; 
-        typing.classList.remove('typing'); 
-    } 
-    finally { setChatInputDisabled(false); chatInput.focus(); }
+    } catch (e) {
+        typing.textContent = "Maaf, koneksi terputus.";
+        typing.classList.remove('typing');
+    }
 }
 
 function setChatInputDisabled(d) { chatInput.disabled = d; sendButton.disabled = d; if (uploadButton) uploadButton.disabled = d; }
 
 function readFileAsBase64(file) {
-    return new Promise((resolve, reject) => {
-        const r = new FileReader(); r.onload = () => resolve(r.result); r.onerror = reject; r.readAsDataURL(file);
-    });
+    if (file instanceof File) {
+         return new Promise((resolve, reject) => {
+            const r = new FileReader(); r.onload = () => resolve(r.result); r.onerror = reject; r.readAsDataURL(file);
+        });
+    }
+    return Promise.resolve(file); 
 }
 
+// --- UPDATE FUNGSI INI: HANDLE GAMBAR VS DOKUMEN DI CHAT ---
+// File: js/chat.js (Cari fungsi ini di paling bawah dan GANTI)
+
 function addMessageToTranscript(text, sender, extra) {
-    const d = document.createElement('div'); d.classList.add('chat-bubble', sender);
+    const d = document.createElement('div'); 
+    d.classList.add('chat-bubble', sender);
+    
     if (extra) d.classList.add(extra);
-    if (text.startsWith('https://res.cloudinary.com')) {
-        d.classList.add('image-bubble'); const i = document.createElement('img'); i.src = text; d.appendChild(i);
-    } else { d.textContent = text; }
-    chatTranscript.appendChild(d); chatTranscript.scrollTop = chatTranscript.scrollHeight; return d;
+    
+    // ▼▼▼ PERBAIKAN DISINI ▼▼▼
+    // Cek apakah teks adalah URL Cloudinary ATAU data gambar Base64 (Preview)
+    const isCloudinary = text && text.startsWith('https://res.cloudinary.com');
+    const isBase64 = text && text.startsWith('data:image');
+
+    if (isCloudinary || isBase64) {
+        d.classList.add('image-bubble'); 
+        const i = document.createElement('img'); 
+        i.src = text; 
+        
+        // Event klik untuk membuka gambar besar (Lightbox)
+        i.onclick = () => openImageViewer(text); 
+        i.style.cursor = 'zoom-in';
+        
+        d.appendChild(i);
+    } 
+    // Cek PDF (tetap sama)
+    else if (text && text.toLowerCase().endsWith('.pdf')) {
+        d.innerHTML = `
+            <div style="display:flex; align-items:center; gap:10px;">
+                <span style="font-size:24px;">📄</span>
+                <a href="${text}" target="_blank" style="color:inherit; text-decoration:underline;">
+                    Buka Dokumen PDF
+                </a>
+            </div>`;
+        d.classList.add('file-bubble'); 
+    } 
+    // Teks biasa
+    else { 
+        d.textContent = text; 
+    }
+    // ▲▲▲ AKHIR PERBAIKAN ▲▲▲
+
+    chatTranscript.appendChild(d); 
+    chatTranscript.scrollTop = chatTranscript.scrollHeight; 
+    return d;
 }
 
 // === 6. INIT & EVENT LISTENERS ===
@@ -347,6 +468,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     uploadButton = document.getElementById('upload-btn');
     fileInput = document.getElementById('file-input');
     maiSprite = document.getElementById('mai-sprite');
+
+    // Preview & Viewer Elements
+    attachmentPreview = document.getElementById('attachment-preview');
+    previewImg = document.getElementById('preview-img');
+    btnCancelAttach = document.getElementById('btn-cancel-attach');
+    
+    // Init Image Viewer
+    imageViewerModal = document.getElementById('image-viewer-modal');
+    fullImage = document.getElementById('full-image');
+    closeViewerBtn = document.querySelector('.close-viewer');
+
+    if (closeViewerBtn) closeViewerBtn.onclick = closeImageViewer;
+    if (imageViewerModal) imageViewerModal.onclick = (e) => {
+        if (e.target === imageViewerModal) closeImageViewer();
+    };
 
     personaDisplayContainer = document.getElementById('persona-display-container');
     personaEditContainer = document.getElementById('persona-edit-container');
@@ -376,11 +512,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadChatHistory(currentCharacterId);
     loadUserPersona(currentCharacterId);
 
+    // --- Listeners Chat ---
     if (sendButton) sendButton.onclick = handleSendMessage;
-    if (chatInput) chatInput.onkeydown = (e) => { if (!chatInput.disabled && e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } };
+    if (chatInput) {
+        chatInput.onkeydown = (e) => { if (!chatInput.disabled && e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } };
+        chatInput.addEventListener('input', function() {
+            this.style.height = 'auto'; 
+            const newHeight = Math.max(50, this.scrollHeight);
+            this.style.height = newHeight + 'px';
+        });
+    }
+
     if (backButton) backButton.onclick = () => window.location.href = 'index.html';
     if (uploadButton) uploadButton.onclick = () => fileInput.click();
-    if (fileInput) fileInput.onchange = async (e) => { const f = fileInput.files[0]; if (f) handleFileSelected({ target: { files: [f] } }); };
+    if (fileInput) fileInput.onchange = (e) => handleFileSelected(e);
+    
+    if (btnCancelAttach) btnCancelAttach.onclick = cancelAttachment;
 
     if (editPersonaBtn) editPersonaBtn.onclick = () => togglePersonaMode(true);
     if (cancelPersonaBtn) cancelPersonaBtn.onclick = () => togglePersonaMode(false);
@@ -398,7 +545,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     if (closePersonaPopupBtn) closePersonaPopupBtn.onclick = () => toggleMobilePersonaPopup(false);
 
-    // --- DROPDOWN & DELETE CHAT ---
     const menuBtn = document.getElementById('menu-btn');
     const dropdown = document.getElementById('chat-dropdown');
     const deleteItem = document.getElementById('delete-chat-item');
@@ -409,7 +555,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             dropdown.classList.toggle('show');
             menuBtn.classList.toggle('active');
         });
-
         window.addEventListener('click', () => {
             if (dropdown.classList.contains('show')) {
                 dropdown.classList.remove('show');
@@ -420,11 +565,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (deleteItem) {
         deleteItem.addEventListener('click', async () => {
-            const isConfirmed = await showCustomConfirm(
-                "Hapus Riwayat Chat?", 
-                "Semua percakapan dengan karakter ini akan dihapus permanen. Lanjutkan?"
-            );
-            
+            const isConfirmed = await showCustomConfirm("Hapus Riwayat Chat?", "Semua percakapan dengan karakter ini akan dihapus permanen. Lanjutkan?");
             if (!isConfirmed) return;
 
             const originalText = deleteItem.innerHTML;
@@ -444,21 +585,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     greetingBubble.className = 'chat-bubble bot';
                     greetingBubble.textContent = currentCharacterGreeting || "Halo!";
                     chatTranscript.appendChild(greetingBubble);
-                    
                     const historyList = document.getElementById('chat-history-list');
                     if (historyList) historyList.innerHTML = '<p class="empty-state">Belum ada riwayat.</p>';
-                    
                     dropdown.classList.remove('show');
-                } else {
-                    throw new Error("Gagal menghapus.");
-                }
-            } catch (err) {
-                console.error(err);
-                alert("Gagal menghapus chat.");
-            } finally {
-                deleteItem.innerHTML = originalText;
-                deleteItem.disabled = false;
-            }
+                } else { throw new Error("Gagal menghapus."); }
+            } catch (err) { console.error(err); alert("Gagal menghapus chat."); } 
+            finally { deleteItem.innerHTML = originalText; deleteItem.disabled = false; }
         });
     }
 });

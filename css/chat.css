@@ -19,8 +19,14 @@ body {
     font-family: 'Inter', sans-serif;
     background-color: var(--bg-primary);
     color: var(--text-primary);
-    height: 100vh;
-    overflow: hidden;
+    
+    /* PERBAIKAN TINGGI AGAR PAS DI HP */
+    min-height: 100vh;      /* Fallback untuk browser lama */
+    height: 100dvh;         /* Dynamic Height: Menyesuaikan address bar HP */
+    
+    overflow: hidden;       /* Mencegah scroll halaman utama */
+    display: flex;          /* Pastikan layout flex */
+    flex-direction: column;
 }
 
 /* --- 2. STRUKTUR UTAMA --- */
@@ -173,12 +179,31 @@ body {
     border-top: 1px solid var(--border-color); background-color: var(--bg-secondary);
     align-items: flex-end; 
 }
+/* File: css/chat.css */
+
+/* ... kode lain ... */
+
 #chat-input {
-    flex-grow: 1; border: 1px solid var(--border-color); border-radius: 12px;
-    padding: 12px 16px; font-size: 1rem; font-family: 'Inter', sans-serif;
-    resize: none; height: 50px; transition: border-color 0.2s;
+    flex-grow: 1; 
+    border: 1px solid var(--border-color); 
+    border-radius: 24px; /* Sedikit lebih bulat biar mirip WA */
+    padding: 12px 16px; 
+    font-size: 1rem; 
+    font-family: 'Inter', sans-serif;
+    resize: none; /* Hilangkan tuas resize manual di pojok */
+    
+    /* ▼▼▼ BAGIAN PENTING ▼▼▼ */
+    height: 50px;      /* Tinggi awal (default) */
+    min-height: 50px;  /* Tidak boleh lebih kecil dari ini */
+    max-height: 150px; /* Batas maksimal tinggi (sekitar 4-5 baris) */
+    overflow-y: auto;  /* Munculkan scrollbar jika sudah mentok max-height */
+    transition: border-color 0.2s; /* Hapus transisi height biar gak 'jumpy' saat ngetik */
+    /* ▲▲▲ */
 }
+
 #chat-input:focus { outline: none; border-color: var(--accent-blue); }
+
+
 
 #upload-btn, #send-button {
     flex-shrink: 0; width: 50px; height: 50px;
@@ -272,6 +297,24 @@ body {
     .chat-main-wrapper { gap: 0; }
     .top-bar { position: sticky; top: 0; z-index: 10; }
 
+    /* --- PERBAIKAN INPUT CHAT MOBILE --- */
+    .chat-input-area {
+        /* Tambahkan padding bawah ekstra agar tidak tertutup tombol navigasi HP */
+        /* env(safe-area-inset-bottom) khusus untuk iPhone ber-poni/home bar */
+        padding-bottom: calc(16px + env(safe-area-inset-bottom)); 
+        
+        /* Pastikan background tetap putih menutupi area bawah */
+        background-color: var(--bg-secondary);
+        
+        /* Opsional: Beri sedikit shadow ke atas agar batasnya jelas */
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+        
+        /* Pastikan dia menempel di bawah dengan benar */
+        position: sticky;
+        bottom: 0;
+        z-index: 20;
+    }
+
     /* --- PANEL KIRI JADI POPUP TENGAH (MOBILE ONLY) --- */
     .chat-left-panel {
         display: none; /* Default sembunyi di mobile */
@@ -297,7 +340,7 @@ body {
 
     /* ▼▼▼ PERBAIKAN TOMBOL X (MOBILE) ▼▼▼ */
     /* Di sini kita set DISPLAY: BLOCK dengan !important */
-    #close-left-panel {
+    #close-left-panel #mobile-persona-popup .mobile-close-btn{
         display: block !important;
         position: sticky;
         top: 10px;
@@ -348,6 +391,8 @@ body {
         max-height: 80vh; overflow-y: auto;
     }
     .persona-popup-mobile.active { display: flex; flex-direction: column; }
+
+    
 }
 
 /* Sembunyikan elemen mobile di desktop */
@@ -444,3 +489,137 @@ body {
     from { opacity: 0; transform: translateY(-5px); }
     to { opacity: 1; transform: translateY(0); }
 }
+/* FIX: Sembunyikan popup mobile HANYA di tampilan desktop (Layar > 768px) */
+@media (min-width: 769px) {
+    #mobile-persona-popup {
+        display: none !important;
+    }
+}
+
+/* File: css/chat.css */
+
+/* --- ATTACHMENT PREVIEW --- */
+.chat-input-area {
+    position: relative; /* Agar preview absolute bisa nempel di sini */
+    flex-direction: row; /* Pastikan arahnya baris */
+    align-items: flex-end; 
+}
+
+.attachment-preview {
+    position: absolute;
+    bottom: 100%; /* Muncul tepat di atas input area */
+    left: 0;
+    width: 100%;
+    background-color: #f0f2f5; /* Warna abu muda ala WA */
+    padding: 10px;
+    border-top: 1px solid var(--border-color);
+    border-radius: 12px 12px 0 0;
+    display: flex;
+    animation: slideUp 0.2s ease-out;
+    z-index: 5;
+}
+
+.attachment-preview.hidden {
+    display: none;
+}
+
+.preview-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.preview-wrapper img {
+    height: 80px; /* Ukuran thumbnail */
+    width: auto;
+    border-radius: 8px;
+    border: 2px solid var(--accent-blue);
+    background-color: white;
+}
+
+.btn-close-preview {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background-color: #ff5252;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+@keyframes slideUp {
+    from { transform: translateY(10px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+/* File: css/chat.css */
+
+/* --- IMAGE VIEWER (LIGHTBOX) --- */
+.image-viewer-modal {
+    display: none; /* Sembunyi by default */
+    position: fixed; 
+    z-index: 9999; /* Paling depan */
+    left: 0; top: 0;
+    width: 100%; height: 100%;
+    overflow: auto; 
+    background-color: rgba(0, 0, 0, 0.9); /* Hitam pekat transparan */
+    backdrop-filter: blur(5px); /* Efek blur di belakang */
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    animation: fadeInViewer 0.2s ease-out;
+}
+
+.image-viewer-modal.active {
+    display: flex;
+}
+
+/* Gambar Full Size */
+.viewer-content {
+    margin: auto;
+    display: block;
+    max-width: 90%;
+    max-height: 90%;
+    border-radius: 8px;
+    box-shadow: 0 0 20px rgba(255,255,255,0.1);
+    animation: zoomInViewer 0.3s;
+    object-fit: contain;
+}
+
+/* Tombol Close (X) */
+.close-viewer {
+    position: absolute;
+    top: 20px;
+    right: 35px;
+    color: #f1f1f1;
+    font-size: 40px;
+    font-weight: bold;
+    transition: 0.3s;
+    cursor: pointer;
+    z-index: 10001;
+}
+
+.close-viewer:hover,
+.close-viewer:focus {
+    color: #bbb;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* Animasi */
+@keyframes fadeInViewer {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes zoomInViewer {
+    from { transform: scale(0.8); }
+    to { transform: scale(1); }
+}
+

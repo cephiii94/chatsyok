@@ -1,86 +1,55 @@
-// File: netlify/functions/upload-image.js (DIMODIFIKASI untuk keamanan)
+// File: netlify/functions/upload-image.js
 
 const cloudinary = require('cloudinary').v2;
-const admin = require('firebase-admin'); // BARU: Tambahkan firebase-admin
+const admin = require('firebase-admin');
 
-// Konfigurasi Cloudinary
-cloudinary.config({ 
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME, 
-  api_key: process.env.CLOUDINARY_API_KEY, 
+// Config Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// Inisialisasi Firebase Admin
+// Init Firebase (Untuk Cek Token)
 if (!admin.apps.length) {
   try {
     const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount)
-    });
-  } catch (e) {
-    console.error("Gagal inisialisasi Firebase Admin:", e);
-  }
+    admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+  } catch (e) { console.error(e); }
 }
-
-// BARU: Fungsi helper untuk verifikasi token
-async function getUserIdFromToken(event) {
-  const authHeader = event.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    throw new Error('Header Otorisasi tidak ditemukan atau tidak valid.');
-  }
-  const token = authHeader.split('Bearer ')[1];
-  
-  try {
-    const decodedToken = await admin.auth().verifyIdToken(token);
-    return decodedToken.uid; // Ini adalah ID user yang AMAN
-  } catch (error) {
-    console.error("Verifikasi token gagal:", error);
-    throw new Error('Token tidak valid atau kedaluwarsa.');
-  }
-}
-
 
 exports.handler = async (event, context) => {
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Method Not Allowed' };
-  }
+  if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
 
   try {
-    // BARU: Verifikasi user dulu
-    // Ini memastikan hanya user login yang bisa upload
-    await getUserIdFromToken(event); 
-  } catch (error) {
-    return { statusCode: 401, body: JSON.stringify({ error: error.message }) };
-  }
+    // 1. Cek Token User
+    const authHeader = event.headers.authorization;
+    if (!authHeader) throw new Error('Unauthorized');
+    const token = authHeader.split('Bearer ')[1];
+    await admin.auth().verifyIdToken(token);
 
-  try {
-    // 1. Ambil data gambar
+    // 2. Parse Body
     const body = JSON.parse(event.body);
-    const fileData = body.file; 
-
-    if (!fileData) {
-      return { statusCode: 400, body: 'No file data provided.' };
+    
+    // Validasi Input
+    if (!body.file) {
+        return { statusCode: 400, body: JSON.stringify({ error: "Data file tidak ditemukan." }) };
     }
 
-    // 2. Upload ke Cloudinary
-    const result = await cloudinary.uploader.upload(fileData, {
-      folder: 'chatsyok'
+    // 3. Upload ke Cloudinary
+    // Cloudinary pintar, dia bisa baca base64 langsung
+    const result = await cloudinary.uploader.upload(body.file, {
+        folder: "mai_chat_uploads",
+        resource_type: "auto"
     });
 
-    // 3. Kirim kembali URL
     return {
       statusCode: 200,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
-        secure_url: result.secure_url 
-      })
+      body: JSON.stringify({ secure_url: result.secure_url })
     };
 
   } catch (error) {
-    console.error("Error uploading to Cloudinary:", error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: error.message || "Gagal meng-upload gambar." })
-    };
+    console.error("Upload Failed:", error);
+    return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
   }
 };
