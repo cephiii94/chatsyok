@@ -299,20 +299,28 @@ body {
 
     /* --- PERBAIKAN INPUT CHAT MOBILE --- */
     .chat-input-area {
-        /* Tambahkan padding bawah ekstra agar tidak tertutup tombol navigasi HP */
-        /* env(safe-area-inset-bottom) khusus untuk iPhone ber-poni/home bar */
-        padding-bottom: calc(16px + env(safe-area-inset-bottom)); 
+        /* GANTI padding-bottom yang lama dengan ini */
         
-        /* Pastikan background tetap putih menutupi area bawah */
+        /* Kita beri jarak aman minimal 20px, ditambah safe-area HP */
+        padding-bottom: calc(20px + env(safe-area-inset-bottom));
+        
+        /* Pastikan background putih menutupi area bawah */
         background-color: var(--bg-secondary);
         
-        /* Opsional: Beri sedikit shadow ke atas agar batasnya jelas */
-        box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
-        
-        /* Pastikan dia menempel di bawah dengan benar */
+        /* Pastikan menempel di bawah */
         position: sticky;
         bottom: 0;
-        z-index: 20;
+        left: 0;
+        width: 100%;
+        z-index: 50; /* Pastikan layer paling atas */
+        
+        /* Biar batasnya jelas */
+        border-top: 1px solid var(--border-color);
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+    }
+
+    .chat-transcript {
+        padding-bottom: 80px !important; 
     }
 
     /* --- PANEL KIRI JADI POPUP TENGAH (MOBILE ONLY) --- */
@@ -621,5 +629,41 @@ body {
 @keyframes zoomInViewer {
     from { transform: scale(0.8); }
     to { transform: scale(1); }
+}
+
+/* File: css/chat.css (Tambahan Animasi Typing) */
+
+/* Wadah Indikator Typing */
+.typing-indicator {
+    background-color: var(--bg-sidebar); /* Warna abu muda sesuai tema */
+    padding: 15px 20px;
+    border-radius: 18px;
+    border-bottom-left-radius: 4px; /* Lancip di kiri bawah ala bot */
+    display: inline-flex; /* Agar menyesuaikan isi */
+    align-items: center;
+    gap: 5px;
+    width: fit-content;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    will-change: transform; /* Optimasi performa */
+}
+
+/* Titik-titik (Dots) */
+.typing-dot {
+    width: 8px;
+    height: 8px;
+    background-color: #90a4ae; /* Warna abu kebiruan */
+    border-radius: 50%;
+    animation: typingBounce 1.4s infinite ease-in-out both;
+}
+
+/* Mengatur jeda animasi agar bergelombang */
+.typing-dot:nth-child(1) { animation-delay: -0.32s; }
+.typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+/* Keyframes: Gerakan Memantul */
+@keyframes typingBounce {
+    0%, 80%, 100% { transform: scale(0); opacity: 0.5; }
+    40% { transform: scale(1); opacity: 1; }
 }
 

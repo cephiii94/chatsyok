@@ -70,6 +70,30 @@ async function getAuthToken() {
     } catch (error) { console.error("Gagal get token:", error); throw error; }
 }
 
+// --- FUNGSI BARU: ANIMASI TYPING ---
+function showTypingIndicator() {
+    const container = document.createElement('div');
+    container.id = 'typing-indicator-bubble'; // ID unik biar gampang dihapus
+    container.className = 'typing-indicator';
+    
+    // Buat 3 titik
+    container.innerHTML = `
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+    `;
+    
+    chatTranscript.appendChild(container);
+    chatTranscript.scrollTop = chatTranscript.scrollHeight;
+}
+
+function removeTypingIndicator() {
+    const existing = document.getElementById('typing-indicator-bubble');
+    if (existing) {
+        existing.remove();
+    }
+}
+
 // === 3. LOGIKA PERSONA ===
 function togglePersonaMode(isEditing) {
     if (isEditing) {
@@ -374,7 +398,9 @@ async function handleSendMessage() {
 }
 
 async function triggerAI(messageContent) {
-    const typing = addMessageToTranscript("...", 'bot', 'typing');
+    // 1. Munculkan Animasi Titik-Titik
+    showTypingIndicator(); 
+    
     try {
         const token = await getAuthToken();
         const res = await fetch('/.netlify/functions/get-chat-response', {
@@ -389,15 +415,26 @@ async function triggerAI(messageContent) {
             })
         });
         
+        // 2. Hapus Animasi Titik-Titik (Entah sukses atau gagal)
+        removeTypingIndicator();
+
         if (!res.ok) throw new Error("Gagal server.");
         const data = await res.json();
         
-        typing.classList.remove('typing');
-        typeText(typing, data.reply);
+        // 3. Buat Bubble Baru & Mulai Efek Mengetik Teks
+        // Kita buat bubble kosong dulu
+        const botBubble = addMessageToTranscript("", 'bot'); 
+        
+        // Jalankan efek ketikan mesin tik
+        typeText(botBubble, data.reply);
+        
         await saveMessage('bot', data.reply);
+
     } catch (e) {
-        typing.textContent = "Maaf, koneksi terputus.";
-        typing.classList.remove('typing');
+        removeTypingIndicator(); // Pastikan animasi hilang kalau error
+        // Tampilkan pesan error
+        const errorBubble = addMessageToTranscript("Maaf, koneksi terputus.", 'bot');
+        errorBubble.style.color = 'red';
     }
 }
 
