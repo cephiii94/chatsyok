@@ -299,28 +299,30 @@ body {
 
     /* --- PERBAIKAN INPUT CHAT MOBILE --- */
     .chat-input-area {
-        /* GANTI padding-bottom yang lama dengan ini */
+        /* Jarak aman lebih besar biar jempol enak & gak kena navigasi HP */
+        padding-bottom: calc(30px + env(safe-area-inset-bottom)); 
         
-        /* Kita beri jarak aman minimal 20px, ditambah safe-area HP */
-        padding-bottom: calc(20px + env(safe-area-inset-bottom));
-        
-        /* Pastikan background putih menutupi area bawah */
+        /* Background putih wajib ada biar chat di belakangnya gak kelihatan */
         background-color: var(--bg-secondary);
         
-        /* Pastikan menempel di bawah */
-        position: sticky;
+        /* GANTI KE FIXED: Memaksa elemen nempel di kaca layar */
+        position: fixed; 
         bottom: 0;
         left: 0;
         width: 100%;
-        z-index: 50; /* Pastikan layer paling atas */
         
-        /* Biar batasnya jelas */
+        /* Layer paling atas */
+        z-index: 999; 
+        
+        /* Kosmetik */
         border-top: 1px solid var(--border-color);
-        box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
     }
-
+    
+    /* PENTING: Beri ruang kosong di bawah chat transcript */
+    /* Supaya chat terakhir tidak tertutup oleh input area yang sekarang melayang */
     .chat-transcript {
-        padding-bottom: 80px !important; 
+        padding-bottom: 120px !important; /* Jarak lebih lega */
     }
 
     /* --- PANEL KIRI JADI POPUP TENGAH (MOBILE ONLY) --- */
