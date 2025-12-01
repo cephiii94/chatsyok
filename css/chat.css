@@ -10,6 +10,7 @@
     --accent-blue: #90caf9; 
     --accent-blue-dark: #64b5f6;
     --shadow-light: 0 4px 10px rgba(0, 82, 160, 0.05);
+    --mobile-bottom: 0px; /* dipakai untuk offset pada mobile ketika navigation bar menutupi */
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -151,15 +152,17 @@ body { font-family: 'Inter', sans-serif; background-color: var(--bg-primary); co
 
 /* MOBILE */
 @media (max-width: 768px) {
-    .message-actions { opacity: 1; } /* Ikon selalu muncul di mobile */
     .chat-left-panel { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 380px; height: auto; max-height: 85vh; z-index: 1000; }
     .chat-left-panel.mobile-visible { display: flex; }
     .mobile-overlay-backdrop { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 999; backdrop-filter: blur(3px); }
     .mobile-overlay-backdrop.active { display: block; }
     .mobile-close-btn { display: block !important; position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.9); border: 1px solid #ddd; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; z-index: 1005; }
     .chat-right-panel { display: none; }
-    .chat-input-area { padding: 12px; padding-bottom: max(16px, env(safe-area-inset-bottom)); position: fixed; bottom: 0; left: 0; width: 100%; z-index: 999; }
-    .chat-transcript { padding-bottom: 120px !important; }
+    /* letakkan bottom berdasarkan variable yang di-update via JS + safe-area */
+    .chat-input-area { padding: 12px; padding-bottom: max(16px, env(safe-area-inset-bottom)); position: fixed; bottom: var(--mobile-bottom, 0px); left: 0; width: 100%; z-index: 999; transition: bottom 160ms ease; }
+    /* beri space di transcript agar tidak tertutup; 120px ~= tinggi area input, ditambah offset nav */
+    .chat-transcript { padding-bottom: calc(120px + var(--mobile-bottom, 0px)) !important; }
+
     .persona-popup-mobile { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; background: white; z-index: 2001; border-radius: 16px; padding: 20px; box-shadow: 0 15px 40px rgba(0,0,0,0.3); max-height: 80vh; overflow-y: auto; }
     .persona-popup-mobile.active { display: flex; flex-direction: column; }
     #mobile-persona-trigger { display: block; width: 100%; margin-top: 15px; padding: 12px; background: var(--accent-blue); color: white; border: none; border-radius: 8px; }

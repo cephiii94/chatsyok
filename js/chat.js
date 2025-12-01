@@ -457,4 +457,37 @@ document.addEventListener('DOMContentLoaded', async () => {
             if(personaBox && desktopRightPanel) desktopRightPanel.appendChild(personaBox);
         };
     }
+
+    // ===== MOBILE BOTTOM SAFE AREA HANDLING =====
+    // Fungsi menghitung offset yang muncul saat virtual keyboard / navigation bar menutupi viewport
+    function updateMobileInsets() {
+        const v = window.visualViewport;
+        let offsetPx = 0;
+        if (v) {
+            // perbedaan antara innerHeight dan visualViewport.height + offsetTop merupakan area yang "tersembunyi"
+            offsetPx = Math.max(0, window.innerHeight - v.height - (v.offsetTop || 0));
+        } else {
+            offsetPx = 0;
+        }
+        // set CSS var yang dipakai di CSS
+        document.documentElement.style.setProperty('--mobile-bottom', `calc(${offsetPx}px + env(safe-area-inset-bottom, 0px))`);
+        // pastikan transcript punya padding bawah yang cukup (fallback jika CSS tidak mengaplikasikan)
+        if (chatTranscript) {
+            chatTranscript.style.paddingBottom = `calc(120px + var(--mobile-bottom, 0px))`;
+        }
+    }
+
+    // Pasang listener untuk perubahan viewport (keyboard open/close, gesture nav, resize)
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', updateMobileInsets);
+        window.visualViewport.addEventListener('scroll', updateMobileInsets);
+    }
+    window.addEventListener('resize', updateMobileInsets);
+    // saat fokus ke input, sedikit delay lalu scroll ke bawah supaya input terlihat
+    if (chatInput) {
+        chatInput.addEventListener('focus', () => { setTimeout(() => scrollToBottom(), 250); });
+        chatInput.addEventListener('blur', () => { setTimeout(() => updateMobileInsets(), 250); });
+    }
+    // inisialisasi sekali
+    updateMobileInsets();
 });
