@@ -1,8 +1,9 @@
-// File: netlify/functions/get-chat-response.js (MODEL 2.5 + ROBUST FIXES)
+// File: netlify/functions/get-chat-response.js
+// VERSI FINAL: Support Waktu Dinamis (Client Side), Lokasi, File, dan Identitas
 
 const admin = require('firebase-admin');
 
-// Inisialisasi Firebase
+// 1. Inisialisasi Firebase Admin
 if (!admin.apps.length) {
   try {
     const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
@@ -16,16 +17,18 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
-// Helper Auth
+// 2. Helper Auth (Verifikasi Token)
 async function getUserIdFromToken(event) {
   const authHeader = event.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) throw new Error('No Token');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    throw new Error('No Token Provided');
+  }
   const token = authHeader.split('Bearer ')[1];
   const decodedToken = await admin.auth().verifyIdToken(token);
   return decodedToken.uid;
 }
 
-// --- FUNGSI DOWNLOAD KUAT (User-Agent + Retry) ---
+// 3. Helper Download File (Gambar/PDF) dengan Retry & User-Agent
 async function urlToGenerativePart(fileUrl) {
     console.log("Downloading file:", fileUrl);
     
@@ -34,7 +37,6 @@ async function urlToGenerativePart(fileUrl) {
 
     for (let i = 0; i < maxRetries; i++) {
         try {
-            // Header User-Agent & Connection Close (PENTING!)
             const response = await fetch(fileUrl, {
                 headers: {
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
@@ -58,14 +60,17 @@ async function urlToGenerativePart(fileUrl) {
         } catch (err) {
             console.warn(`Percobaan download ke-${i + 1} gagal: ${err.message}`);
             lastError = err;
-            await new Promise(resolve => setTimeout(resolve, 1000)); // Tunggu 1 detik
+            await new Promise(resolve => setTimeout(resolve, 1000));
         }
     }
     throw new Error(`Gagal download setelah ${maxRetries}x percobaan. Error: ${lastError.message}`);
 }
 
+// 4. Handler Utama
 exports.handler = async (event, context) => {
-  if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
+  if (event.httpMethod !== 'POST') {
+      return { statusCode: 405, body: 'Method Not Allowed' };
+  }
 
   let userId;
   try {
@@ -76,27 +81,50 @@ exports.handler = async (event, context) => {
 
   try {
     const body = JSON.parse(event.body);
-    const { userMessage, characterProfile, characterId, userPersona } = body;
+    // Kita ambil 'userLocalTime' dari sini
+    const { userMessage, characterProfile, characterId, userPersona, userName, userLocalTime } = body;
     const characterName = body.characterName || 'Chatbot';
     
     if (!userMessage || !characterProfile || !characterId) {
-      return { statusCode: 400, body: 'Data tidak lengkap.' };
+      return { statusCode: 400, body: 'Data wajib tidak lengkap.' };
     }
 
-    // 1. Deteksi File (Gambar/PDF)
+    // --- A. LOGIKA WAKTU & LOKASI ---
+    
+    // 1. Waktu: Prioritaskan waktu dari Browser (Frontend)
+    let timeString;
+    if (userLocalTime) {
+        // Jika frontend mengirim waktu (misal: WITA), pakai itu
+        timeString = userLocalTime;
+    } else {
+        // Fallback: Jika tidak ada (misal browser lama), pakai waktu Server (WIB)
+        const now = new Date();
+        timeString = now.toLocaleString('id-ID', { 
+            timeZone: 'Asia/Jakarta', 
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', 
+            hour: '2-digit', minute: '2-digit', timeZoneName: 'short'
+        });
+    }
+
+    // 2. Lokasi: Ambil dari Header Netlify
+    const userCity = event.headers['x-nf-client-connection-ip-city'];
+    const userCountry = event.headers['x-nf-client-connection-ip-country'];
+    const userLocation = userCity ? `${userCity}, ${userCountry}` : 'Indonesia';
+
+    // --- B. PROSES FILE ---
     const isFile = userMessage.startsWith('https://res.cloudinary.com');
     let filePart = null;
     let textMessageForPrompt = userMessage;
 
     if (isFile) {
-        console.log("📂 Memproses file Cloudinary...");
+        console.log("📂 Memproses lampiran file...");
         try {
             filePart = await urlToGenerativePart(userMessage);
             
             if (filePart.inlineData.mimeType === 'application/pdf') {
-                textMessageForPrompt = "[Pengguna melampirkan dokumen PDF. Baca dan analisis isinya.]";
+                textMessageForPrompt = "[SYSTEM: Pengguna melampirkan dokumen PDF. Baca dan analisis isinya.]";
             } else {
-                textMessageForPrompt = "[Pengguna melampirkan sebuah GAMBAR. Lihat dan komentari visualnya.]";
+                textMessageForPrompt = "[SYSTEM: Pengguna melampirkan sebuah GAMBAR. Lihat dan komentari visualnya.]";
             }
         } catch (imgErr) {
             console.error("Gagal proses file:", imgErr);
@@ -104,7 +132,7 @@ exports.handler = async (event, context) => {
         }
     }
 
-    // 2. Ambil Riwayat Chat
+    // --- C. RIWAYAT CHAT ---
     const historySnapshot = await db.collection('characters')
                                     .doc(characterId)
                                     .collection('chats')
@@ -116,8 +144,9 @@ exports.handler = async (event, context) => {
 
     const historyDocs = historySnapshot.docs.reverse();
     let historyContext = "";
+    
     if (!historyDocs.empty) {
-        historyContext = "KONTEKS OBROLAN TERDAHULU:\n";
+        historyContext = "RIWAYAT OBROLAN:\n";
         historyDocs.forEach(doc => {
             const data = doc.data();
             const role = data.sender === 'user' ? 'User' : characterName;
@@ -127,87 +156,81 @@ exports.handler = async (event, context) => {
             }
             historyContext += `${role}: "${cleanText}"\n`;
         });
-        historyContext += "\n--- BATAS KONTEKS ---\n";
+        historyContext += "--- BATAS RIWAYAT ---\n";
     }
 
-    // 3. Prompt Hybrid
-    const userRoleText = userPersona 
-        ? `User memiliki peran: "${userPersona}".` 
-        : "User adalah teman ngobrol.";
+    // --- D. SUSUN PROMPT ---
+    const userRoleText = userPersona ? `Peran User: "${userPersona}".` : "Peran User: Teman bicara.";
 
     const finalPrompt = `
-      PERINTAH: Berperanlah sebagai karakter berikut.
-      Nama: "${characterName}"
-      Deskripsi: "${characterProfile}"
-      ${userRoleText}
+      PERINTAH SISTEM:
+      Berperanlah sebagai karakter imajiner berikut. Jangan break character.
 
-      ATURAN PENTING (WAJIB DIPATUHI):
-      1. GAYA BICARA: Santai, natural, seperti chat di WhatsApp. Jangan kaku/baku.
-      2. PANJANG: Jawab SINGKAT (maksimal 2-3 kalimat), KECUALI sedang menjelaskan isi dokumen PDF.
-      3. SINGKATAN: Boleh pakai singkatan umum (yg, gak, udh, bgt).
-      4. Jangan mengulang kata-kata User. Langsung respon intinya saja.
-      5. Tetap pada karakter (Roleplay).
-      6. JIKA ADA LAMPIRAN (GAMBAR/PDF): Analisis isinya dengan detail.
+      PROFIL KARAKTER:
+      - Nama: "${characterName}"
+      - Deskripsi: "${characterProfile}"
+      
+      DATA REAL-TIME (PENTING):
+      - Waktu User: ${timeString}
+      - Lokasi User: ${userLocation}
+      - Nama User: "${userName || 'Teman'}"
+      - ${userRoleText}
 
+      ATURAN MAIN:
+      1. Jawab santai, natural, seperti chat WhatsApp.
+      2. Jawab SINGKAT (2-3 kalimat), kecuali menjelaskan isi PDF/Gambar.
+      3. Jika ditanya "Jam berapa?", JANGAN MENEBAK. Lihat data "Waktu User" di atas.
+      4. Kamu adalah entitas virtual di aplikasi "ChatsYok!".
+      5. Jangan berjanji melakukan aksi fisik (email, telepon, kirim barang).
+
+      KONTEKS:
       ${historyContext}
 
-      PESAN BARU USER: "${textMessageForPrompt}"
+      PESAN BARU: "${textMessageForPrompt}"
       
       RESPON ${characterName}:
     `;
 
+    // --- E. REQUEST KE GEMINI ---
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-    
-    // ▼▼▼ KEMBALI KE MODEL 2.5 YANG LEBIH PINTAR ▼▼▼
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${GEMINI_API_KEY}`;
 
-    // 4. Susun Payload
-    const parts = [];
-    if (filePart) parts.push(filePart);
-    parts.push({ text: finalPrompt });
-
-    const apiResponse = await fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-          contents: [{ parts: parts }], 
-          // Safety Settings (PENTING: BLOCK_NONE agar tidak rewel)
-          safetySettings: [
+    const payload = {
+        contents: [{ parts: [] }],
+        safetySettings: [
             { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
             { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
             { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
             { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-          ],
-          // Config Token Besar (PENTING untuk Model 2.5 biar bisa mikir)
-          generationConfig: {
-              temperature: 0.85, 
-              maxOutputTokens: 2000, // 2000 Token = Aman untuk thinking process
-          }
-      })
+        ],
+        generationConfig: {
+            temperature: 0.85,
+            maxOutputTokens: 2000,
+        }
+    };
+
+    if (filePart) payload.contents[0].parts.push(filePart);
+    payload.contents[0].parts.push({ text: finalPrompt });
+
+    const apiResponse = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
     });
 
     if (!apiResponse.ok) {
         const err = await apiResponse.json();
-        console.error("Gemini API Error:", JSON.stringify(err, null, 2));
-        throw new Error(err.error.message);
+        throw new Error(`Gemini Error: ${err.error?.message || 'Unknown error'}`);
     }
 
     const responseData = await apiResponse.json();
-
-    // 5. Parsing Anti-Crash (PENTING)
     const candidateText = responseData?.candidates?.[0]?.content?.parts?.[0]?.text;
 
-    let botReply = "";
-    if (candidateText) {
-        botReply = candidateText.trim();
-    } else {
-        console.error("AI Menolak Menjawab (Prohibited/Error):", JSON.stringify(responseData, null, 2));
-        // Pesan sopan jika AI menolak gambar tertentu
-        botReply = "Maaf, sistem keamananku memblokir gambar ini (mungkin dianggap sensitif oleh Google). Coba gambar lain ya!"; 
-    }
+    let botReply = candidateText ? candidateText.trim() : "Maaf, saya tidak bisa merespon pesan ini (mungkin terfilter).";
 
     return {
       statusCode: 200,
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ reply: botReply })
     };
 
@@ -215,7 +238,7 @@ exports.handler = async (event, context) => {
     console.error("Handler Error:", error);
     return { 
         statusCode: 200, 
-        body: JSON.stringify({ reply: `(Maaf, ada gangguan sistem: ${error.message})` }) 
+        body: JSON.stringify({ reply: `(Sistem Error: ${error.message})` }) 
     };
   }
 };

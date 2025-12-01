@@ -1,408 +1,144 @@
-// File: js/chat.js (FINAL VERSION: SUPPORT GAMBAR + PDF/DOCS)
+// File: js/chat.js (FINAL: Toast & Copy for User)
 
 // === 1. GLOBAL VARIABLES ===
 let currentChatbotProfile = "", currentCharacterName = "", currentCharacterGreeting = "", currentCharacterId = "1";
 let currentUser = null, currentAuthToken = null, currentUserPersona = "";
 let chatTranscript, chatInput, sendButton, uploadButton, fileInput, backButton, maiSprite;
 let personaDisplayContainer, personaEditContainer, personaTextDisplay, editPersonaBtn, savePersonaBtn, cancelPersonaBtn, personaInput, personaStatus;
-
-// Variabel Mobile
+let isUserNearBottom = true; 
 let profileIcon, leftPanel, mobileBackdrop, closeLeftPanelBtn, mobilePersonaTrigger, mobilePersonaPopup, closePersonaPopupBtn, mobilePersonaContentArea;
-
-// Variabel Preview & Upload
 let attachmentPreview, previewImg, btnCancelAttach;
 let currentSelectedFile = null;
-
-// Variabel Image Viewer
+let lastUserMessage = ""; 
 let imageViewerModal, fullImage, closeViewerBtn;
 
+const DEFAULT_AVATAR = "https://ui-avatars.com/api/?name=AI&background=random&color=fff&size=256";
+
 // === 2. HELPER FUNCTIONS ===
-
-function showCustomConfirm(title, message) {
-    return new Promise((resolve) => {
-        const modal = document.getElementById('custom-confirm-modal');
-        const titleEl = document.getElementById('confirm-title');
-        const msgEl = document.getElementById('confirm-msg');
-        const yesBtn = document.getElementById('btn-confirm-yes');
-        const cancelBtn = document.getElementById('btn-confirm-cancel');
-
-        if (!modal) { resolve(confirm(message)); return; }
-
-        titleEl.textContent = title;
-        msgEl.textContent = message;
-        modal.style.display = 'flex';
-        setTimeout(() => modal.classList.add('visible'), 10);
-
-        const close = (result) => {
-            modal.classList.remove('visible');
-            setTimeout(() => modal.style.display = 'none', 300);
-            yesBtn.onclick = null;
-            cancelBtn.onclick = null;
-            resolve(result);
-        };
-        yesBtn.onclick = () => close(true);
-        cancelBtn.onclick = () => close(false);
-    });
-}
-
-function openImageViewer(src) {
-    if (imageViewerModal && fullImage) {
-        fullImage.src = src;
-        imageViewerModal.classList.add('active');
-    }
-}
-
-function closeImageViewer() {
-    if (imageViewerModal) {
-        imageViewerModal.classList.remove('active');
-        setTimeout(() => { if(fullImage) fullImage.src = ''; }, 200);
-    }
-}
 
 async function getAuthToken() {
     if (!currentUser) { 
         if (window.currentUser) currentUser = window.currentUser;
-        else { window.location.href = 'login.html'; throw new Error("User null"); }
+        else return null; 
     }
-    try { 
-        currentAuthToken = await currentUser.getIdToken(true); 
-        return currentAuthToken; 
-    } catch (error) { console.error("Gagal get token:", error); throw error; }
+    return await currentUser.getIdToken(true);
 }
 
-// --- FUNGSI BARU: ANIMASI TYPING ---
-function showTypingIndicator() {
-    const container = document.createElement('div');
-    container.id = 'typing-indicator-bubble'; // ID unik biar gampang dihapus
-    container.className = 'typing-indicator';
-    
-    // Buat 3 titik
-    container.innerHTML = `
-        <div class="typing-dot"></div>
-        <div class="typing-dot"></div>
-        <div class="typing-dot"></div>
-    `;
-    
-    chatTranscript.appendChild(container);
-    chatTranscript.scrollTop = chatTranscript.scrollHeight;
+function getCurrentTime() {
+    const now = new Date();
+    return now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
 }
 
-function removeTypingIndicator() {
-    const existing = document.getElementById('typing-indicator-bubble');
-    if (existing) {
-        existing.remove();
-    }
+function showCustomConfirm(title, message) {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('custom-confirm-modal');
+        if (!modal) { resolve(confirm(message)); return; }
+        document.getElementById('confirm-title').textContent = title;
+        document.getElementById('confirm-msg').textContent = message;
+        modal.style.display = 'flex';
+        setTimeout(() => modal.classList.add('visible'), 10);
+        
+        const close = (res) => {
+            modal.classList.remove('visible');
+            setTimeout(() => modal.style.display = 'none', 300);
+            resolve(res);
+        };
+        document.getElementById('btn-confirm-yes').onclick = () => close(true);
+        document.getElementById('btn-confirm-cancel').onclick = () => close(false);
+    });
 }
 
-// === 3. LOGIKA PERSONA ===
-function togglePersonaMode(isEditing) {
-    if (isEditing) {
-        personaDisplayContainer.classList.add('hidden');
-        personaEditContainer.classList.remove('hidden');
-        personaInput.value = currentUserPersona;
-        personaInput.focus();
+// --- TOAST NOTIFICATION ---
+function showToast(message) {
+    const toast = document.getElementById('toast');
+    if (toast) {
+        toast.textContent = message;
+        toast.classList.remove('hidden');
+        // Reset timer jika dipanggil berulang
+        if (toast.timeoutId) clearTimeout(toast.timeoutId);
+        toast.timeoutId = setTimeout(() => {
+            toast.classList.add('hidden');
+        }, 2000); // Hilang dalam 2 detik
     } else {
-        personaDisplayContainer.classList.remove('hidden');
-        personaEditContainer.classList.add('hidden');
-        personaStatus.textContent = "";
+        alert(message); // Fallback
     }
 }
 
-function updatePersonaDisplay(text) {
-    if (!text || text.trim() === "") personaTextDisplay.innerHTML = '<em class="text-muted">Belum ada peran yang diatur.</em>';
-    else personaTextDisplay.textContent = text;
-}
+// === 3. CORE LOGIC ===
 
-async function loadUserPersona(characterId) {
-    try {
-        const token = await getAuthToken();
-        const res = await fetch(`/.netlify/functions/manage-persona?charId=${characterId}`, { headers: { 'Authorization': `Bearer ${token}` } });
-        if (res.ok) {
-            const data = await res.json();
-            currentUserPersona = data.persona || "";
-            updatePersonaDisplay(currentUserPersona);
-        }
-    } catch (e) { console.error("Gagal load persona:", e); }
-}
-
-async function saveUserPersona() {
-    const text = personaInput.value.trim();
-    savePersonaBtn.disabled = true;
-    savePersonaBtn.textContent = "Menyimpan...";
-    try {
-        const token = await getAuthToken();
-        const res = await fetch('/.netlify/functions/manage-persona', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ charId: currentCharacterId, persona: text })
-        });
-        if (res.ok) {
-            currentUserPersona = text;
-            updatePersonaDisplay(text);
-            togglePersonaMode(false);
-            personaStatus.textContent = "Tersimpan!";
-            personaStatus.className = "status-text success";
-            setTimeout(() => { personaStatus.textContent = ""; }, 2000);
-            if (window.innerWidth <= 768) toggleMobilePersonaPopup(false);
-        } else throw new Error("Gagal simpan");
-    } catch (e) {
-        personaStatus.textContent = "Gagal menyimpan.";
-        personaStatus.className = "status-text error";
-    } finally {
-        savePersonaBtn.disabled = false;
-        savePersonaBtn.textContent = "Simpan";
-    }
-}
-
-// === 4. LOGIKA MOBILE UI ===
-function toggleMobileLeftPanel(show) {
-    if (show) {
-        leftPanel.classList.add('mobile-visible');
-        mobileBackdrop.classList.add('active');
-    } else {
-        leftPanel.classList.remove('mobile-visible');
-        mobileBackdrop.classList.remove('active');
-    }
-}
-
-function toggleMobilePersonaPopup(show) {
-    const personaBox = document.querySelector('.persona-box');
-    const originalParent = document.querySelector('.chat-right-panel');
-    
-    if (show) {
-        if (personaBox && mobilePersonaContentArea) {
-            mobilePersonaContentArea.appendChild(personaBox);
-            mobilePersonaPopup.classList.add('active');
-            mobileBackdrop.classList.add('active');
-            leftPanel.classList.remove('mobile-visible');
-        }
-    } else {
-        if (personaBox && originalParent) {
-            originalParent.appendChild(personaBox);
-            mobilePersonaPopup.classList.remove('active');
-            mobileBackdrop.classList.remove('active');
-        }
-    }
-}
-
-// === 5. LOGIKA CHAT & KARAKTER ===
 async function loadCharacterProfile(characterId) {
+    const nameEl = document.querySelector('.profile-info-container .profile-name');
+    const spriteEl = document.getElementById('mai-sprite');
+    
     try {
         const res = await fetch(`/.netlify/functions/get-character?id=${characterId}`);
-        if (!res.ok) throw new Error("Gagal load profile");
-        const char = await res.json();
+        if (!res.ok) throw new Error("Karakter tidak ditemukan");
         
+        const char = await res.json();
         currentChatbotProfile = char.description; 
         currentCharacterName = char.name; 
         currentCharacterGreeting = char.greeting;
         
-        document.querySelector('.profile-info-container .profile-name').textContent = char.name;
-        maiSprite = document.getElementById('mai-sprite');
-        if (maiSprite) { maiSprite.src = char.image; maiSprite.classList.add('anim-idle'); }
-        document.querySelector('.chat-left-panel').classList.remove('is-loading');
-
-        let isAdmin = false;
-        if (currentUser) {
-            try {
-                const tokenResult = await currentUser.getIdTokenResult();
-                isAdmin = tokenResult.claims.admin === true;
-            } catch(e) { console.log(e); }
+        if (nameEl) nameEl.textContent = char.name;
+        if (spriteEl) {
+            spriteEl.onload = () => spriteEl.classList.add('anim-idle');
+            spriteEl.onerror = () => { spriteEl.src = DEFAULT_AVATAR; };
+            spriteEl.src = char.image || DEFAULT_AVATAR;
         }
 
-        if (currentUser && (char.creatorId === currentUser.uid || isAdmin)) {
-            const existingBtn = document.getElementById('edit-char-btn');
-            if (!existingBtn) {
-                const btn = document.createElement('button');
-                btn.id = 'edit-char-btn'; 
-                btn.textContent = (isAdmin && char.creatorId !== currentUser.uid) ? '⚡ Edit (Mode Admin)' : '✏️ Edit Karakter';
-                Object.assign(btn.style, { 
-                    marginTop: '8px', width: '100%', padding: '8px', 
-                    backgroundColor: (isAdmin && char.creatorId !== currentUser.uid) ? '#ffca28' : '#e0e0e0',
-                    border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', color: '#333' 
-                });
-                btn.onclick = () => window.location.href = `edit-mai.html?id=${characterId}`;
-                document.querySelector('.profile-info-container').appendChild(btn);
-            }
+        // Edit button logic (same as before)
+        if (currentUser && (char.creatorId === currentUser.uid || (await currentUser.getIdTokenResult()).claims.admin)) {
+            renderEditButton(characterId);
         }
-    } catch (e) { console.error(e); }
+    } catch (e) { 
+        console.error(e);
+        if (nameEl) { nameEl.textContent = "Error Memuat Data"; nameEl.style.color = "red"; }
+        if (spriteEl) spriteEl.src = DEFAULT_AVATAR;
+    }
+}
+
+function renderEditButton(charId) {
+    const container = document.querySelector('.profile-info-container');
+    if (!container || document.getElementById('edit-char-btn')) return;
+    const btn = document.createElement('button');
+    btn.id = 'edit-char-btn'; btn.textContent = '✏️ Edit Karakter';
+    Object.assign(btn.style, { marginTop: '8px', width: '100%', padding: '8px', backgroundColor: '#e0e0e0', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', color: '#333' });
+    btn.onclick = () => window.location.href = `edit-mai.html?id=${charId}`;
+    container.appendChild(btn);
 }
 
 async function loadChatHistory(characterId) {
     try {
         const token = await getAuthToken();
+        if (!token) return; 
         const res = await fetch(`/.netlify/functions/get-history?id=${characterId}`, { headers: { 'Authorization': `Bearer ${token}` } });
         if (!res.ok) return;
+        
         const history = await res.json();
+        chatTranscript.innerHTML = '';
         
-        const botBubble = document.querySelector('.chat-bubble.bot');
-        if (history.length > 0 && chatTranscript) chatTranscript.innerHTML = '';
-        
-        history.forEach(m => addMessageToTranscript(m.text, m.sender));
-        
-        if (history.length === 0 && botBubble) botBubble.textContent = currentCharacterGreeting;
-        else if (history.length === 0 && chatTranscript) {
-             const greetingDiv = document.createElement('div');
-             greetingDiv.className = 'chat-bubble bot';
-             greetingDiv.textContent = currentCharacterGreeting;
-             chatTranscript.appendChild(greetingDiv);
+        if (history.length === 0) {
+            addMessageToTranscript(currentCharacterGreeting || "Halo! Ada yang bisa saya bantu?", 'bot');
+        } else {
+            history.forEach(m => addMessageToTranscript(m.text, m.sender, true));
         }
-
         renderHistoryList(history);
+        scrollToBottom();
     } catch (e) { console.error(e); }
-}
-
-function renderHistoryList(historyData) {
-    const container = document.getElementById('chat-history-list');
-    if (!container) return;
-    container.innerHTML = '';
-    const msgs = historyData ? historyData.filter(m => m.sender === 'user').reverse().slice(0, 10) : [];
-    if (msgs.length === 0) { container.innerHTML = '<p class="empty-state">Belum ada riwayat.</p>'; return; }
-    msgs.forEach(m => {
-        const d = document.createElement('div'); d.className = 'history-item';
-        d.innerHTML = `<span class="date">User</span><p class="preview">${m.text}</p>`;
-        container.appendChild(d);
-    });
-}
-
-async function saveMessage(sender, text) {
-    try {
-        const token = currentAuthToken || await getAuthToken();
-        await fetch('/.netlify/functions/save-message', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ characterId: currentCharacterId, sender, text })
-        });
-    } catch (e) { console.error(e); }
-}
-
-function typeText(element, text, speed = 25) {
-    element.textContent = ""; element.classList.add('typing-cursor');
-    let i = 0; if (maiSprite) maiSprite.classList.add('anim-idle');
-    function type() {
-        if (i < text.length) {
-            element.textContent += text.charAt(i); i++;
-            if (chatTranscript) chatTranscript.scrollTop = chatTranscript.scrollHeight;
-            setTimeout(type, speed + (Math.random() * 15 - 5));
-        } else { element.classList.remove('typing-cursor'); }
-    } type();
-}
-
-// --- HANDLE FILE SELECTED (PREVIEW - SUPPORT PDF) ---
-function handleFileSelected(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    currentSelectedFile = file;
-
-    // Cek Tipe File
-    if (file.type.startsWith('image/')) {
-        // Jika Gambar -> Tampilkan Preview Asli
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            previewImg.src = event.target.result;
-            attachmentPreview.classList.remove('hidden');
-        };
-        reader.readAsDataURL(file);
-    } else {
-        // Jika PDF/Docs -> Tampilkan Ikon Dokumen
-        // Kita pakai icon dokumen generik
-        previewImg.src = "https://cdn-icons-png.flaticon.com/512/337/337946.png"; 
-        attachmentPreview.classList.remove('hidden');
-    }
-    chatInput.focus();
-}
-
-function cancelAttachment() {
-    currentSelectedFile = null;
-    fileInput.value = ''; 
-    attachmentPreview.classList.add('hidden'); 
-}
-
-// --- HANDLE SEND MESSAGE ---
-async function handleSendMessage() {
-    const text = chatInput.value.trim();
-    if ((!text && !currentSelectedFile) || chatInput.disabled) return;
-    setChatInputDisabled(true);
-
-    if (currentSelectedFile) {
-        if (currentSelectedFile.size > 4 * 1024 * 1024) { // Naikkan limit ke 10MB buat PDF
-            alert("Maaf, ukuran file terlalu besar (Maks 10MB).");
-            setChatInputDisabled(false);
-            return;
-        }
-
-        try {
-            // 1. Simpan file lokal
-            const fileToUpload = currentSelectedFile;
-            
-            // 2. Tampilkan UI Chat sementara
-            let tempDisplay = previewImg.src; 
-            if (!fileToUpload.type.startsWith('image/')) {
-                // Jika dokumen, beri pesan teks dulu
-                addMessageToTranscript(`📄 Mengirim dokumen: ${fileToUpload.name}...`, 'user');
-            } else {
-                addMessageToTranscript(tempDisplay, 'user'); 
-            }
-            
-            cancelAttachment(); 
-
-            // 3. Konversi ke Base64
-            const base64 = await readFileAsBase64(fileToUpload);
-            
-            // 4. Upload
-            const token = await getAuthToken();
-            const uploadRes = await fetch('/.netlify/functions/upload-image', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ file: base64 })
-            });
-
-            if (!uploadRes.ok) {
-                const errData = await uploadRes.json();
-                throw new Error(errData.error || "Gagal upload file");
-            }
-            const uploadData = await uploadRes.json();
-            const realFileUrl = uploadData.secure_url;
-
-            // 5. Simpan Pesan (URL File)
-            await saveMessage('user', realFileUrl);
-            
-            // 6. Jika dokumen, update UI jadi Link
-            if (!fileToUpload.type.startsWith('image/')) {
-               // Tidak perlu update transcript lagi, biarkan AI yang respon
-               // atau bisa tambahkan link download manual disini jika mau
-            }
-
-            if (text) {
-                addMessageToTranscript(text, 'user');
-                await saveMessage('user', text);
-            }
-            
-            await triggerAI(realFileUrl); 
-
-        } catch (error) {
-            console.error(error);
-            addMessageToTranscript("❌ Gagal mengirim file.", 'bot');
-            setChatInputDisabled(false);
-            return; 
-        }
-    } else if (text) {
-        addMessageToTranscript(text, 'user');
-        await saveMessage('user', text);
-        await triggerAI(text);
-    }
-
-    chatInput.value = ''; 
-    chatInput.style.height = '50px';
-    setChatInputDisabled(false);
-    chatInput.focus();
 }
 
 async function triggerAI(messageContent) {
-    // 1. Munculkan Animasi Titik-Titik
-    showTypingIndicator(); 
+    showTypingIndicator();
     
     try {
         const token = await getAuthToken();
+        const now = new Date();
+        const localTime = now.toLocaleString('id-ID', { 
+            weekday: 'long', year: 'numeric', month: 'long', 
+            day: 'numeric', hour: '2-digit', minute: '2-digit',
+            timeZoneName: 'short' 
+        });
+
         const res = await fetch('/.netlify/functions/get-chat-response', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -411,116 +147,229 @@ async function triggerAI(messageContent) {
                 characterProfile: currentChatbotProfile, 
                 characterName: currentCharacterName, 
                 characterId: currentCharacterId, 
-                userPersona: currentUserPersona 
+                userPersona: currentUserPersona,
+                userLocalTime: localTime 
             })
         });
         
-        // 2. Hapus Animasi Titik-Titik (Entah sukses atau gagal)
         removeTypingIndicator();
 
         if (!res.ok) throw new Error("Gagal server.");
         const data = await res.json();
         
-        // 3. Buat Bubble Baru & Mulai Efek Mengetik Teks
-        // Kita buat bubble kosong dulu
-        const botBubble = addMessageToTranscript("", 'bot'); 
-        
-        // Jalankan efek ketikan mesin tik
-        typeText(botBubble, data.reply);
-        
+        addMessageToTranscript(data.reply, 'bot');
         await saveMessage('bot', data.reply);
-
     } catch (e) {
-        removeTypingIndicator(); // Pastikan animasi hilang kalau error
-        // Tampilkan pesan error
-        const errorBubble = addMessageToTranscript("Maaf, koneksi terputus.", 'bot');
-        errorBubble.style.color = 'red';
+        removeTypingIndicator();
+        addMessageToTranscript("Maaf, koneksi terputus.", 'bot');
     }
 }
 
-function setChatInputDisabled(d) { chatInput.disabled = d; sendButton.disabled = d; if (uploadButton) uploadButton.disabled = d; }
+// === 4. CHAT UI LOGIC ===
 
-function readFileAsBase64(file) {
-    if (file instanceof File) {
-         return new Promise((resolve, reject) => {
-            const r = new FileReader(); r.onload = () => resolve(r.result); r.onerror = reject; r.readAsDataURL(file);
-        });
-    }
-    return Promise.resolve(file); 
-}
-
-// --- UPDATE FUNGSI INI: HANDLE GAMBAR VS DOKUMEN DI CHAT ---
-// File: js/chat.js (Cari fungsi ini di paling bawah dan GANTI)
-
-function addMessageToTranscript(text, sender, extra) {
-    const d = document.createElement('div'); 
-    d.classList.add('chat-bubble', sender);
+function addMessageToTranscript(text, sender, isHistory = false) {
+    const container = document.createElement('div');
+    container.className = `chat-bubble-container ${sender}`;
     
-    if (extra) d.classList.add(extra);
-    
-    // ▼▼▼ PERBAIKAN DISINI ▼▼▼
-    // Cek apakah teks adalah URL Cloudinary ATAU data gambar Base64 (Preview)
+    const bubble = document.createElement('div');
+    bubble.className = `chat-bubble ${sender}`;
+
     const isCloudinary = text && text.startsWith('https://res.cloudinary.com');
     const isBase64 = text && text.startsWith('data:image');
-
+    
+    // KONTEN
     if (isCloudinary || isBase64) {
-        d.classList.add('image-bubble'); 
-        const i = document.createElement('img'); 
-        i.src = text; 
-        
-        // Event klik untuk membuka gambar besar (Lightbox)
-        i.onclick = () => openImageViewer(text); 
-        i.style.cursor = 'zoom-in';
-        
-        d.appendChild(i);
+        bubble.classList.add('image-bubble'); 
+        const img = document.createElement('img'); 
+        img.src = text; 
+        img.onclick = () => openImageViewer(text); 
+        img.style.cursor = 'zoom-in';
+        bubble.appendChild(img);
     } 
-    // Cek PDF (tetap sama)
     else if (text && text.toLowerCase().endsWith('.pdf')) {
-        d.innerHTML = `
-            <div style="display:flex; align-items:center; gap:10px;">
-                <span style="font-size:24px;">📄</span>
-                <a href="${text}" target="_blank" style="color:inherit; text-decoration:underline;">
-                    Buka Dokumen PDF
-                </a>
-            </div>`;
-        d.classList.add('file-bubble'); 
+        bubble.classList.add('file-bubble'); 
+        bubble.innerHTML = `<div style="display:flex; align-items:center; gap:10px;"><span style="font-size:24px;">📄</span><a href="${text}" target="_blank" style="color:inherit; text-decoration:underline;">Dokumen PDF</a></div>`;
     } 
-    // Teks biasa
-    else { 
-        d.textContent = text; 
+    else {
+        if (sender === 'bot' && typeof marked !== 'undefined') {
+            bubble.innerHTML = marked.parse(text); 
+        } else {
+            bubble.textContent = text; 
+        }
     }
-    // ▲▲▲ AKHIR PERBAIKAN ▲▲▲
 
-    chatTranscript.appendChild(d); 
-    chatTranscript.scrollTop = chatTranscript.scrollHeight; 
-    return d;
+    // TIMESTAMP
+    const timeSpan = document.createElement('span');
+    timeSpan.className = 'message-time';
+    timeSpan.textContent = getCurrentTime();
+    bubble.appendChild(timeSpan);
+
+    container.appendChild(bubble);
+
+    // ▼▼▼ ACTION BUTTONS (COPY UNTUK SEMUA, REGEN UNTUK BOT) ▼▼▼
+    if (!isCloudinary) {
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'message-actions';
+        
+        // Tombol Salin (Copy) - Muncul untuk User & Bot
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'action-icon-btn';
+        copyBtn.innerHTML = '📋';
+        copyBtn.title = "Salin Teks";
+        copyBtn.onclick = () => { 
+            navigator.clipboard.writeText(text); 
+            showToast('Teks disalin!'); // Gunakan Toast baru
+        };
+        actionsDiv.appendChild(copyBtn);
+
+        // Tombol Regenerate - Hanya untuk Bot
+        if (sender === 'bot') {
+            const regenBtn = document.createElement('button');
+            regenBtn.className = 'action-icon-btn';
+            regenBtn.innerHTML = '🔄';
+            regenBtn.title = "Jawab Ulang";
+            regenBtn.onclick = () => regenerateLastMessage(container);
+            actionsDiv.appendChild(regenBtn);
+        }
+
+        container.appendChild(actionsDiv);
+    }
+    // ▲▲▲
+
+    chatTranscript.appendChild(container);
+
+    if (sender === 'user' || isUserNearBottom || !isHistory) {
+        scrollToBottom();
+    }
 }
 
-// === 6. INIT & EVENT LISTENERS ===
+// --- COMMON FUNCTIONS ---
+function scrollToBottom() { chatTranscript.scrollTop = chatTranscript.scrollHeight; }
+function handleScroll() {
+    const threshold = 100; 
+    const position = chatTranscript.scrollTop + chatTranscript.offsetHeight;
+    isUserNearBottom = position >= chatTranscript.scrollHeight - threshold;
+}
+function showTypingIndicator() {
+    const container = document.createElement('div');
+    container.id = 'typing-indicator-bubble';
+    container.className = 'chat-bubble-container bot'; 
+    container.innerHTML = `<div class="chat-bubble bot"><div class="typing-indicator" style="margin:0; padding:0; background:none; box-shadow:none;"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div>`;
+    chatTranscript.appendChild(container);
+    scrollToBottom();
+}
+function removeTypingIndicator() { const el = document.getElementById('typing-indicator-bubble'); if(el) el.remove(); }
+async function saveMessage(sender, text) {
+    try {
+        const token = await getAuthToken();
+        await fetch('/.netlify/functions/save-message', {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ characterId: currentCharacterId, sender, text })
+        });
+    } catch (e) { console.error(e); }
+}
+async function regenerateLastMessage(bubbleContainer) {
+    if (!lastUserMessage) return;
+    bubbleContainer.remove();
+    await triggerAI(lastUserMessage);
+}
+async function handleSendMessage() {
+    const text = chatInput.value.trim();
+    if ((!text && !currentSelectedFile) || chatInput.disabled) return;
+    chatInput.value = ''; chatInput.style.height = '50px';
+    setChatInputDisabled(true);
+
+    if (currentSelectedFile) await handleFileUpload(currentSelectedFile, text);
+    else {
+        addMessageToTranscript(text, 'user');
+        lastUserMessage = text;
+        await saveMessage('user', text);
+        await triggerAI(text);
+    }
+    setChatInputDisabled(false); chatInput.focus();
+}
+async function handleFileUpload(file, caption) {
+    try {
+        const base64 = await readFileAsBase64(file);
+        addMessageToTranscript(previewImg.src, 'user');
+        cancelAttachment();
+        
+        const token = await getAuthToken();
+        const res = await fetch('/.netlify/functions/upload-image', { 
+            method: 'POST', headers: {'Content-Type':'application/json', 'Authorization': `Bearer ${token}`},
+            body: JSON.stringify({file: base64})
+        });
+        if(!res.ok) throw new Error("Gagal upload");
+        
+        const data = await res.json();
+        await saveMessage('user', data.secure_url);
+        
+        // Simpan URL gambar sebagai "pesan terakhir" agar kalau diregenerate, AI tetap baca gambarnya
+        lastUserMessage = data.secure_url; 
+
+        if(caption) { 
+            addMessageToTranscript(caption, 'user'); 
+            await saveMessage('user', caption); 
+            lastUserMessage = caption; // Jika ada caption, update pesan terakhir jadi caption
+        }
+        
+        await triggerAI(data.secure_url);
+    } catch(e) { console.error(e); addMessageToTranscript("Gagal mengirim file.", 'bot'); }
+}
+function setChatInputDisabled(d) { chatInput.disabled = d; sendButton.disabled = d; if(uploadButton) uploadButton.disabled = d; }
+function cancelAttachment() { currentSelectedFile = null; fileInput.value = ''; attachmentPreview.classList.add('hidden'); }
+function readFileAsBase64(file) { return new Promise((res, rej) => { const r = new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file); }); }
+function openImageViewer(src) { const m=document.getElementById('image-viewer-modal'); const i=document.getElementById('full-image'); if(m&&i){ i.src=src; m.classList.add('active'); }}
+function renderHistoryList(history) {
+    const el = document.getElementById('chat-history-list'); if(!el) return;
+    el.innerHTML = '';
+    const items = history.filter(m=>m.sender==='user').reverse().slice(0,10);
+    if(items.length===0) el.innerHTML='<p class="empty-state">Belum ada riwayat.</p>';
+    items.forEach(m=>{
+        const d=document.createElement('div'); d.className='history-item';
+        d.innerHTML=`<span class="date">User</span><p class="preview">${m.text}</p>`;
+        el.appendChild(d);
+    });
+}
+async function loadUserPersona(id) {
+    try {
+        const token = await getAuthToken();
+        const res = await fetch(`/.netlify/functions/manage-persona?charId=${id}`, {headers:{'Authorization':`Bearer ${token}`}});
+        if(res.ok) {
+            const d=await res.json(); currentUserPersona=d.persona||"";
+            if(personaTextDisplay) personaTextDisplay.textContent=currentUserPersona||"Belum ada peran.";
+        }
+    } catch(e) { console.log(e); }
+}
+async function saveUserPersona() {
+    const text = personaInput.value.trim();
+    savePersonaBtn.textContent="Simpan...";
+    try {
+        const token = await getAuthToken();
+        await fetch('/.netlify/functions/manage-persona', {
+            method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+            body:JSON.stringify({charId:currentCharacterId, persona:text})
+        });
+        currentUserPersona=text;
+        if(personaTextDisplay) personaTextDisplay.textContent=text;
+        personaEditContainer.classList.add('hidden');
+        personaDisplayContainer.classList.remove('hidden');
+    } catch(e){ showToast('Gagal simpan peran'); }
+    savePersonaBtn.textContent="Simpan";
+}
+
+// === 5. INIT ===
 document.addEventListener('DOMContentLoaded', async () => {
     chatTranscript = document.getElementById('chat-transcript');
     chatInput = document.getElementById('chat-input');
     sendButton = document.getElementById('send-button');
-    backButton = document.getElementById('back-btn');
     uploadButton = document.getElementById('upload-btn');
     fileInput = document.getElementById('file-input');
+    backButton = document.getElementById('back-btn');
     maiSprite = document.getElementById('mai-sprite');
-
-    // Preview & Viewer Elements
     attachmentPreview = document.getElementById('attachment-preview');
     previewImg = document.getElementById('preview-img');
     btnCancelAttach = document.getElementById('btn-cancel-attach');
-    
-    // Init Image Viewer
-    imageViewerModal = document.getElementById('image-viewer-modal');
-    fullImage = document.getElementById('full-image');
-    closeViewerBtn = document.querySelector('.close-viewer');
-
-    if (closeViewerBtn) closeViewerBtn.onclick = closeImageViewer;
-    if (imageViewerModal) imageViewerModal.onclick = (e) => {
-        if (e.target === imageViewerModal) closeImageViewer();
-    };
-
     personaDisplayContainer = document.getElementById('persona-display-container');
     personaEditContainer = document.getElementById('persona-edit-container');
     personaTextDisplay = document.getElementById('persona-text-display');
@@ -528,16 +377,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     savePersonaBtn = document.getElementById('save-persona-btn');
     cancelPersonaBtn = document.getElementById('cancel-persona-btn');
     personaInput = document.getElementById('user-persona-input');
-    personaStatus = document.getElementById('persona-status');
-    
-    profileIcon = document.getElementById('profile-icon');
-    leftPanel = document.querySelector('.chat-left-panel');
-    mobileBackdrop = document.getElementById('mobile-backdrop');
-    closeLeftPanelBtn = document.getElementById('close-left-panel');
-    mobilePersonaTrigger = document.getElementById('mobile-persona-trigger');
-    mobilePersonaPopup = document.getElementById('mobile-persona-popup');
-    closePersonaPopupBtn = document.getElementById('close-persona-popup');
-    mobilePersonaContentArea = document.getElementById('mobile-persona-content-area');
+    imageViewerModal = document.getElementById('image-viewer-modal');
+    fullImage = document.getElementById('full-image');
+
+    const closeV = document.querySelector('.close-viewer');
+    if(closeV) closeV.onclick = () => imageViewerModal.classList.remove('active');
+
+    if(chatTranscript) chatTranscript.addEventListener('scroll', handleScroll);
 
     if (!window.currentUser) await new Promise(resolve => document.addEventListener('authReady', resolve, { once: true }));
     currentUser = window.currentUser; if (!currentUser) return (window.location.href = 'login.html');
@@ -549,85 +395,66 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadChatHistory(currentCharacterId);
     loadUserPersona(currentCharacterId);
 
-    // --- Listeners Chat ---
-    if (sendButton) sendButton.onclick = handleSendMessage;
-    if (chatInput) {
-        chatInput.onkeydown = (e) => { if (!chatInput.disabled && e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } };
-        chatInput.addEventListener('input', function() {
-            this.style.height = 'auto'; 
-            const newHeight = Math.max(50, this.scrollHeight);
-            this.style.height = newHeight + 'px';
-        });
-    }
-
-    if (backButton) backButton.onclick = () => window.location.href = 'index.html';
-    if (uploadButton) uploadButton.onclick = () => fileInput.click();
-    if (fileInput) fileInput.onchange = (e) => handleFileSelected(e);
-    
-    if (btnCancelAttach) btnCancelAttach.onclick = cancelAttachment;
-
-    if (editPersonaBtn) editPersonaBtn.onclick = () => togglePersonaMode(true);
-    if (cancelPersonaBtn) cancelPersonaBtn.onclick = () => togglePersonaMode(false);
-    if (savePersonaBtn) savePersonaBtn.onclick = saveUserPersona;
-
-    if (profileIcon) profileIcon.onclick = () => toggleMobileLeftPanel(true);
-    if (closeLeftPanelBtn) closeLeftPanelBtn.onclick = () => toggleMobileLeftPanel(false);
-    if (mobileBackdrop) mobileBackdrop.onclick = () => {
-        toggleMobileLeftPanel(false);
-        toggleMobilePersonaPopup(false);
+    if(sendButton) sendButton.onclick = handleSendMessage;
+    if(chatInput) chatInput.onkeydown = (e) => { if(e.key==='Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); }};
+    if(uploadButton) uploadButton.onclick = () => fileInput.click();
+    if(fileInput) fileInput.onchange = (e) => {
+        const f = e.target.files[0]; if(!f) return; currentSelectedFile=f;
+        previewImg.src = f.type.startsWith('image/') ? URL.createObjectURL(f) : "https://cdn-icons-png.flaticon.com/512/337/337946.png";
+        attachmentPreview.classList.remove('hidden'); chatInput.focus();
     };
-    if (mobilePersonaTrigger) {
-        if (window.innerWidth <= 768) mobilePersonaTrigger.style.display = 'block';
-        mobilePersonaTrigger.onclick = () => toggleMobilePersonaPopup(true);
-    }
-    if (closePersonaPopupBtn) closePersonaPopupBtn.onclick = () => toggleMobilePersonaPopup(false);
-
+    if(btnCancelAttach) btnCancelAttach.onclick = cancelAttachment;
+    if(backButton) backButton.onclick = () => window.location.href='index.html';
+    
+    if(editPersonaBtn) editPersonaBtn.onclick = () => { personaDisplayContainer.classList.add('hidden'); personaEditContainer.classList.remove('hidden'); personaInput.value=currentUserPersona; };
+    if(cancelPersonaBtn) cancelPersonaBtn.onclick = () => { personaDisplayContainer.classList.remove('hidden'); personaEditContainer.classList.add('hidden'); };
+    if(savePersonaBtn) savePersonaBtn.onclick = saveUserPersona;
+    
     const menuBtn = document.getElementById('menu-btn');
     const dropdown = document.getElementById('chat-dropdown');
-    const deleteItem = document.getElementById('delete-chat-item');
+    if(menuBtn) menuBtn.onclick = (e) => { e.stopPropagation(); dropdown.classList.toggle('show'); };
+    window.onclick = () => { if(dropdown) dropdown.classList.remove('show'); };
+    
+    const delBtn = document.getElementById('delete-chat-item');
+    if(delBtn) delBtn.onclick = async () => {
+        const sure = await showCustomConfirm('Hapus Chat?', 'Riwayat obrolan akan dihapus permanen.');
+        if(sure) {
+            const t = await getAuthToken();
+            await fetch(`/.netlify/functions/delete-history?id=${currentCharacterId}`, {method:'DELETE', headers:{'Authorization':`Bearer ${t}`}});
+            location.reload();
+        }
+    };
+    
+    const pIcon = document.getElementById('profile-icon');
+    const lPanel = document.querySelector('.chat-left-panel');
+    const mBack = document.getElementById('mobile-backdrop');
+    if(pIcon) pIcon.onclick = () => { lPanel.classList.add('mobile-visible'); mBack.classList.add('active'); };
+    const closeLP = document.getElementById('close-left-panel');
+    if(closeLP) closeLP.onclick = () => { lPanel.classList.remove('mobile-visible'); mBack.classList.remove('active'); };
+    if(mBack) mBack.onclick = () => { lPanel.classList.remove('mobile-visible'); mBack.classList.remove('active'); };
+    
+    const mobilePersonaTrig = document.getElementById('mobile-persona-trigger');
+    const mobilePersonaPop = document.getElementById('mobile-persona-popup');
+    const mobilePersonaContent = document.getElementById('mobile-persona-content-area');
+    const personaBox = document.querySelector('.persona-box');
+    const desktopRightPanel = document.querySelector('.chat-right-panel');
+    const closePersonaPopBtn = document.getElementById('close-persona-popup');
 
-    if (menuBtn && dropdown) {
-        menuBtn.addEventListener('click', (e) => {
-            e.stopPropagation(); 
-            dropdown.classList.toggle('show');
-            menuBtn.classList.toggle('active');
-        });
-        window.addEventListener('click', () => {
-            if (dropdown.classList.contains('show')) {
-                dropdown.classList.remove('show');
-                menuBtn.classList.remove('active');
+    if(mobilePersonaTrig) {
+        mobilePersonaTrig.onclick = () => {
+            if(personaBox && mobilePersonaContent) {
+                mobilePersonaContent.appendChild(personaBox);
+                mobilePersonaPop.classList.add('active');
+                mBack.classList.add('active');
+                lPanel.classList.remove('mobile-visible'); 
             }
-        });
+        };
     }
-
-    if (deleteItem) {
-        deleteItem.addEventListener('click', async () => {
-            const isConfirmed = await showCustomConfirm("Hapus Riwayat Chat?", "Semua percakapan dengan karakter ini akan dihapus permanen. Lanjutkan?");
-            if (!isConfirmed) return;
-
-            const originalText = deleteItem.innerHTML;
-            deleteItem.innerHTML = '⏳ Menghapus...';
-            deleteItem.disabled = true;
-
-            try {
-                const token = await getAuthToken();
-                const res = await fetch(`/.netlify/functions/delete-history?id=${currentCharacterId}`, {
-                    method: 'DELETE',
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (res.ok) {
-                    chatTranscript.innerHTML = '';
-                    const greetingBubble = document.createElement('div');
-                    greetingBubble.className = 'chat-bubble bot';
-                    greetingBubble.textContent = currentCharacterGreeting || "Halo!";
-                    chatTranscript.appendChild(greetingBubble);
-                    const historyList = document.getElementById('chat-history-list');
-                    if (historyList) historyList.innerHTML = '<p class="empty-state">Belum ada riwayat.</p>';
-                    dropdown.classList.remove('show');
-                } else { throw new Error("Gagal menghapus."); }
-            } catch (err) { console.error(err); alert("Gagal menghapus chat."); } 
-            finally { deleteItem.innerHTML = originalText; deleteItem.disabled = false; }
-        });
+    if(closePersonaPopBtn) {
+        closePersonaPopBtn.onclick = () => {
+            mobilePersonaPop.classList.remove('active');
+            mBack.classList.remove('active');
+            if(personaBox && desktopRightPanel) desktopRightPanel.appendChild(personaBox);
+        };
     }
 });
