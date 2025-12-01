@@ -299,24 +299,30 @@ body {
 
     /* --- PERBAIKAN INPUT CHAT MOBILE --- */
     .chat-input-area {
-        /* Jarak aman lebih besar biar jempol enak & gak kena navigasi HP */
-        padding-bottom: calc(30px + env(safe-area-inset-bottom)); 
+        /* Bri menambahkan padding yang lebih aman agar tidak tertutup */
+        padding: 16px; /* Padding atas/kiri/kanan */
         
-        /* Background putih wajib ada biar chat di belakangnya gak kelihatan */
+        /* Gunakan max() untuk memilih nilai terbesar antara 20px atau area aman HP */
+        /* Ini menjaga agar input tidak terlalu mepet ke bawah di Android 3-tombol */
+        padding-bottom: max(20px, env(safe-area-inset-bottom)); 
+        
         background-color: var(--bg-secondary);
         
-        /* GANTI KE FIXED: Memaksa elemen nempel di kaca layar */
+        /* Pastikan posisi fixed agar menempel di layar */
         position: fixed; 
         bottom: 0;
         left: 0;
         width: 100%;
         
-        /* Layer paling atas */
+        /* Layer paling atas agar tidak tertutup konten lain */
         z-index: 999; 
         
         /* Kosmetik */
         border-top: 1px solid var(--border-color);
         box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+        
+        /* Tambahan agar transisi saat keyboard muncul lebih mulus */
+        transition: padding-bottom 0.2s ease;
     }
     
     /* PENTING: Beri ruang kosong di bawah chat transcript */
