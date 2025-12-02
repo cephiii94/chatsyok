@@ -21,6 +21,58 @@ body { font-family: 'Inter', sans-serif; background-color: var(--bg-primary); co
 .top-bar { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; width: 100%; flex-shrink: 0; background-color: var(--bg-secondary); border-bottom: 1px solid var(--border-color); }
 #back-btn { background: none; border: none; font-size: 1.5rem; color: var(--text-primary); cursor: pointer; padding: 0 8px; }
 #profile-icon { width: 36px; height: 36px; border-radius: 50%; background-color: var(--accent-blue); color: var(--bg-secondary); display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.9rem; cursor: pointer; }
+/* File: css/chat.css */
+
+/* Grup untuk tombol back dan nama agar nempel di kiri */
+.header-left-group {
+    display: flex;
+    align-items: center;
+    gap: 10px; /* Jarak antara panah dan nama */
+    flex-grow: 1; /* Agar mengambil ruang kosong */
+}
+
+/* File: css/chat.css */
+
+.header-avatar {
+    width: 38px;           /* Ukuran lebar */
+    height: 38px;          /* Ukuran tinggi */
+    border-radius: 50%;    /* Membuat jadi bulat */
+    object-fit: cover;     /* Agar gambar tidak gepeng */
+    border: 1px solid var(--border-color); /* Garis tepi tipis */
+    background-color: #f0f0f0; /* Warna dasar saat loading */
+    flex-shrink: 0;        /* Mencegah gambar mengecil */
+    margin-right: 2px;     /* Jarak sedikit ke teks */
+}
+
+/* Wadah teks nama dan status */
+.header-char-info, #header-char-avatar {
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.header-char-info:hover, #header-char-avatar:hover {
+    opacity: 0.8;
+}
+
+/* Gaya untuk Nama MAI di header */
+#header-char-name {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; /* Titik-titik jika nama kepanjangan */
+    max-width: 200px; /* Batasi lebar agar tidak menabrak tombol kanan */
+}
+
+/* Gaya untuk status kecil di bawah nama */
+.header-status-text {
+    font-size: 0.75rem;
+    color: #4caf50; /* Warna hijau online */
+    margin-top: -2px;
+}
+
 
 /* LAYOUT */
 #chat-content { display: flex; flex-grow: 1; padding: 16px; gap: 16px; overflow: hidden; }

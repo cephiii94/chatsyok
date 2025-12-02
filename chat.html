@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
     <title>Chat Room - ChatsYok!</title>
-    
+    <link rel="icon" type="image/png" href="/img/favico/32x32.png" sizes="32x32">    
     <link rel="stylesheet" href="/css/chat.css">
     <link rel="stylesheet" href="/css/modal.css">
     
@@ -21,10 +21,17 @@
 
     <div id="chat-page">
         <header class="top-bar">
-            <button id="back-btn" aria-label="Kembali">&larr;</button>
+            <div class="header-left-group">
+                <button id="back-btn" aria-label="Kembali">&larr;</button>
+                
+                <img id="header-char-avatar" class="header-avatar" src="" alt="" style="display: none;">
+                <div class="header-char-info">
+                    <h3 id="header-char-name">Memuat...</h3>
+                    <span id="header-status" class="header-status-text">Online</span>
+                </div>
+            </div>
 
             <div class="header-right">
-                <div id="profile-icon" aria-label="Profil AI">AI</div>
                 <button id="menu-btn" aria-label="Opsi Chat">&#x22EE;</button>
                 <div id="chat-dropdown" class="chat-dropdown-content">
                     <button id="delete-chat-item" class="dropdown-item text-danger">🗑️ Hapus Riwayat</button>
