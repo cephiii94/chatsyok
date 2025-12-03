@@ -1,8 +1,8 @@
-// File: netlify/functions/save-message.js (DIMODIFIKASI TOTAL)
+// File: netlify/functions/save-message.js
 
 const admin = require('firebase-admin');
 
-// Inisialisasi Firebase Admin
+// Inisialisasi Firebase
 if (!admin.apps.length) {
   try {
     const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
@@ -10,65 +10,73 @@ if (!admin.apps.length) {
       credential: admin.credential.cert(serviceAccount)
     });
   } catch (e) {
-    console.error("Gagal inisialisasi Firebase Admin:", e);
+    console.error("Firebase Init Error:", e);
   }
 }
 
 const db = admin.firestore();
 
-// BARU: Fungsi helper untuk verifikasi token
+// Helper Verifikasi Token
 async function getUserIdFromToken(event) {
   const authHeader = event.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    throw new Error('Header Otorisasi tidak ditemukan atau tidak valid.');
+    throw new Error('Header Otorisasi tidak ditemukan.');
   }
   const token = authHeader.split('Bearer ')[1];
-  
-  try {
-    const decodedToken = await admin.auth().verifyIdToken(token);
-    return decodedToken.uid; // Ini adalah ID user yang AMAN
-  } catch (error) {
-    console.error("Verifikasi token gagal:", error);
-    throw new Error('Token tidak valid atau kedaluwarsa.');
-  }
+  const decodedToken = await admin.auth().verifyIdToken(token);
+  return decodedToken.uid;
 }
 
 exports.handler = async (event, context) => {
-  // Hanya izinkan metode POST
+  // Hanya izinkan POST
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
   let userId;
   try {
-    // BARU: Verifikasi user dulu
     userId = await getUserIdFromToken(event);
   } catch (error) {
     return { statusCode: 401, body: JSON.stringify({ error: error.message }) };
   }
 
   try {
-    const { characterId, sender, text } = JSON.parse(event.body);
+    // Ambil data dari body, termasuk sessionId
+    const { characterId, sender, text, sessionId } = JSON.parse(event.body);
 
-    if (!characterId || !sender || !text) {
-      return { statusCode: 400, body: 'Field (characterId, sender, text) tidak lengkap.' };
+    if (!characterId || !sender || !text || !sessionId) {
+      return { statusCode: 400, body: 'Data tidak lengkap (butuh sessionId).' };
     }
 
-    // Buat dokumen baru di sub-koleksi 'messages'
-    const messageData = {
-      sender: sender,
-      text: text,
-      timestamp: admin.firestore.FieldValue.serverTimestamp() 
-    };
+    const timestamp = admin.firestore.FieldValue.serverTimestamp();
 
-    // MODIFIKASI: Path database diubah total
-    const docRef = db.collection('characters')
-                     .doc(characterId)
-                     .collection('chats') // Koleksi baru
-                     .doc(userId)         // Dokumen per user
-                     .collection('messages'); // Koleksi pesan user tsb
+    // 1. Tentukan lokasi dokumen sesi
+    // Path: characters > {charId} > chats > {userId} > sessions > {sessionId}
+    const sessionRef = db.collection('characters').doc(characterId)
+                         .collection('chats').doc(userId)
+                         .collection('sessions').doc(sessionId);
+
+    // 2. Simpan Pesan di sub-koleksi 'messages'
+    await sessionRef.collection('messages').add({
+      sender,
+      text,
+      timestamp: timestamp
+    });
+
+    // 3. Update Preview & Waktu Sesi (agar muncul paling atas di sidebar)
+    // Kita potong teks jika terlalu panjang untuk preview
+    let previewText = text.substring(0, 60);
+    if (text.length > 60) previewText += '...';
     
-    await docRef.add(messageData);
+    // Tambahkan prefix "Anda:" jika pengirimnya user
+    const displayPreview = sender === 'user' ? `Anda: ${previewText}` : previewText;
+
+    // Set/Merge data sesi
+    await sessionRef.set({
+        id: sessionId,
+        preview: displayPreview,
+        updatedAt: timestamp
+    }, { merge: true }); 
 
     return {
       statusCode: 200,

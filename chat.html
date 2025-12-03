@@ -33,8 +33,15 @@
 
             <div class="header-right">
                 <button id="menu-btn" aria-label="Opsi Chat">&#x22EE;</button>
+                
                 <div id="chat-dropdown" class="chat-dropdown-content">
-                    <button id="delete-chat-item" class="dropdown-item text-danger">🗑️ Hapus Riwayat</button>
+                    <button id="mobile-persona-btn-dropdown" class="dropdown-item">🎭 Atur Peran</button>
+                    
+                    <button id="btn-save-session-dropdown" class="dropdown-item">💾 Simpan Sesi</button>
+                    
+                    <hr style="margin: 4px 0; border: 0; border-top: 1px solid var(--border-color);">
+                    
+                    <button id="delete-chat-item" class="dropdown-item text-danger">🗑️ Hapus Chat</button>
                 </div>
             </div>
         </header>
@@ -130,6 +137,26 @@
     <div id="image-viewer-modal" class="image-viewer-modal">
         <span class="close-viewer">&times;</span>
         <img class="viewer-content" id="full-image">
+    </div>
+
+    <div id="save-session-modal" class="guest-modal-overlay">
+        <div class="guest-modal-content" style="max-width: 400px; text-align: left;">
+            <h3 style="margin-top: 0; color: var(--text-primary);">Simpan Percakapan</h3>
+            <p style="color: var(--text-secondary); margin-bottom: 15px; font-size: 0.9rem;">
+                Berikan judul agar mudah ditemukan kembali nanti.
+            </p>
+            
+            <div class="form-group">
+                <label for="session-title-input" style="font-weight: 600; font-size: 0.9rem;">Judul Sesi</label>
+                <input type="text" id="session-title-input" placeholder="Contoh: Belajar Sejarah..." 
+                    style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; margin-top: 5px;">
+            </div>
+
+            <div class="confirm-actions" style="margin-top: 20px;">
+                <button id="btn-cancel-save" class="btn btn-secondary">Batal</button>
+                <button id="btn-confirm-save" class="btn btn-primary">Simpan</button>
+            </div>
+        </div>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>

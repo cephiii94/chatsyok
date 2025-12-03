@@ -1,8 +1,7 @@
-// File: netlify/functions/get-history.js (DIMODIFIKASI TOTAL)
+// File: netlify/functions/get-history.js
 
 const admin = require('firebase-admin');
 
-// Inisialisasi Firebase Admin
 if (!admin.apps.length) {
   try {
     const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
@@ -10,33 +9,25 @@ if (!admin.apps.length) {
       credential: admin.credential.cert(serviceAccount)
     });
   } catch (e) {
-    console.error("Gagal inisialisasi Firebase Admin:", e);
+    console.error("Gagal inisialisasi Firebase:", e);
   }
 }
 
 const db = admin.firestore();
 
-// BARU: Fungsi helper untuk verifikasi token
 async function getUserIdFromToken(event) {
   const authHeader = event.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    throw new Error('Header Otorisasi tidak ditemukan atau tidak valid.');
+    throw new Error('Header Otorisasi bermasalah.');
   }
   const token = authHeader.split('Bearer ')[1];
-  
-  try {
-    const decodedToken = await admin.auth().verifyIdToken(token);
-    return decodedToken.uid; // Ini adalah ID user yang AMAN
-  } catch (error) {
-    console.error("Verifikasi token gagal:", error);
-    throw new Error('Token tidak valid atau kedaluwarsa.');
-  }
+  const decodedToken = await admin.auth().verifyIdToken(token);
+  return decodedToken.uid;
 }
 
 exports.handler = async (event, context) => {
   let userId;
   try {
-    // BARU: Verifikasi user dulu
     userId = await getUserIdFromToken(event);
   } catch (error) {
     return { statusCode: 401, body: JSON.stringify({ error: error.message }) };
@@ -44,35 +35,34 @@ exports.handler = async (event, context) => {
 
   try {
     const characterId = event.queryStringParameters.id;
-    if (!characterId) {
-      return { statusCode: 400, body: 'Character ID tidak ditemukan.' };
+    const sessionId = event.queryStringParameters.sessionId; // Parameter Wajib Baru
+
+    if (!characterId || !sessionId) {
+      // Jika tidak ada sessionId, kembalikan kosong (atau error)
+      // Ini mencegah error jika frontend lupa kirim ID
+      return { statusCode: 200, body: JSON.stringify([]) }; 
     }
 
-    // MODIFIKASI: Path database diubah total
+    // Path ke pesan dalam sesi
     const snapshot = await db.collection('characters')
                              .doc(characterId)
-                             .collection('chats') // Koleksi baru
-                             .doc(userId)         // Dokumen per user
-                             .collection('messages') // Koleksi pesan user tsb
+                             .collection('chats')
+                             .doc(userId)
+                             .collection('sessions')
+                             .doc(sessionId)
+                             .collection('messages')
                              .orderBy('timestamp', 'asc')
                              .get();
 
     if (snapshot.empty) {
-      return {
-        statusCode: 200,
-        body: JSON.stringify([]) // Kirim array kosong jika tidak ada riwayat
-      };
+      return { statusCode: 200, body: JSON.stringify([]) };
     }
 
-    // Ubah data snapshot menjadi array
-    const history = snapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        sender: data.sender,
-        text: data.text
-      };
-    });
+    const history = snapshot.docs.map(doc => ({
+      id: doc.id,
+      sender: doc.data().sender,
+      text: doc.data().text
+    }));
 
     return {
       statusCode: 200,
@@ -84,7 +74,7 @@ exports.handler = async (event, context) => {
     console.error("Error mengambil riwayat:", error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: "Gagal memuat riwayat obrolan." })
+      body: JSON.stringify({ error: "Gagal memuat riwayat." })
     };
   }
 };

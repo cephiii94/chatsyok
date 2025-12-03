@@ -164,6 +164,7 @@ body { font-family: 'Inter', sans-serif; background-color: var(--bg-primary); co
 .status-text { font-size: 0.8rem; text-align: center; margin-top: 8px; }
 .status-text.success { color: green; } .status-text.error { color: red; }
 .hidden { display: none !important; }
+#mobile-persona-btn-dropdown { display: none;}
 
 /* ATTACHMENT */
 .attachment-preview { position: absolute; bottom: 100%; left: 0; width: 100%; background-color: #f0f2f5; padding: 10px; border-top: 1px solid var(--border-color); border-radius: 12px 12px 0 0; display: flex; animation: slideUp 0.2s ease-out; z-index: 5; }
@@ -217,6 +218,101 @@ body { font-family: 'Inter', sans-serif; background-color: var(--bg-primary); co
 
     .persona-popup-mobile { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; background: white; z-index: 2001; border-radius: 16px; padding: 20px; box-shadow: 0 15px 40px rgba(0,0,0,0.3); max-height: 80vh; overflow-y: auto; }
     .persona-popup-mobile.active { display: flex; flex-direction: column; }
-    #mobile-persona-trigger { display: block; width: 100%; margin-top: 15px; padding: 12px; background: var(--accent-blue); color: white; border: none; border-radius: 8px; }
+    #mobile-persona-trigger { display: flex; width: 100%; margin-top: 15px; padding: 12px; background: var(--accent-blue); color: white; border: none; border-radius: 8px; }
 }
 @media (min-width: 769px) { .mobile-overlay-backdrop, #mobile-persona-popup { display: none !important; } }
+
+/* Style Tombol Hapus di List Riwayat */
+.delete-session-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    opacity: 0.3; /* Samar secara default */
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    flex-shrink: 0; /* Jangan mengecil */
+}
+
+.delete-session-btn:hover {
+    opacity: 1;
+    background-color: #ffebee; /* Merah muda sangat tipis saat hover */
+    transform: scale(1.1);
+}
+
+/* Pada Mobile, buat tombol agak lebih terlihat agar mudah disentuh */
+@media (max-width: 768px) {
+    .delete-session-btn {
+        opacity: 0.6;
+        padding: 8px; /* Area sentuh lebih besar */
+    }
+}
+
+/* Update sedikit history item agar teks tidak berantakan */
+.history-item .preview {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* --- Tambahan untuk Tombol Edit & Hapus --- */
+
+/* Container untuk tombol aksi di list */
+.session-actions {
+    display: flex;
+    gap: 2px;
+    opacity: 0.6; /* Agak transparan jika tidak di-hover */
+    transition: opacity 0.2s;
+}
+
+/* Tampilkan penuh saat item di-hover */
+.history-item:hover .session-actions {
+    opacity: 1;
+}
+
+/* Style tombol umum (Edit & Hapus) */
+.session-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.95rem;
+    padding: 6px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Warna spesifik saat hover */
+.edit-session-btn:hover {
+    background-color: #e3f2fd; /* Biru muda */
+    color: var(--accent-blue);
+}
+
+.delete-session-btn:hover {
+    background-color: #ffebee; /* Merah muda */
+    color: #e53935;
+}
+
+/* Mobile Adjustment */
+@media (max-width: 768px) {
+    .session-actions { opacity: 1; } /* Selalu terlihat di HP */
+    .session-btn { padding: 8px; font-size: 1.1rem; } /* Lebih besar untuk jari */
+}
+
+/* File: css/chat.css */
+
+/* Default: Sembunyikan tombol persona di dropdown (untuk Desktop) */
+#mobile-persona-btn-dropdown {
+    display: none;
+}
+
+/* Mobile: Tampilkan tombol tersebut */
+@media (max-width: 768px) {
+    #mobile-persona-btn-dropdown {
+        display: flex; /* atau block */
+    }
+}
