@@ -1,5 +1,5 @@
 // File: js/chat.js
-// Versi: Final Release (Manual Save, Edit Title, Reset Chat)
+// Versi: Final Complete (Save Session + Regenerate Button)
 
 // === 1. GLOBAL VARIABLES ===
 let currentChatbotProfile = "", currentCharacterName = "", currentCharacterGreeting = "", currentCharacterId = "1";
@@ -7,13 +7,17 @@ let currentUser = null, currentUserPersona = "";
 let currentSessionId = null; // ID Sesi yang sedang aktif
 let editingSessionId = null; // ID Sesi yang sedang diedit judulnya
 
+// Status Session
+let isCurrentSessionSaved = false; // Menandai apakah sesi saat ini sudah disimpan
+let isSavingForNewChat = false;    // Menandai kalau kita menyimpan karena ingin buat chat baru
+
 // Elemen UI
 let chatTranscript, chatInput, sendButton, uploadButton, fileInput, backButton, maiSprite;
 let personaDisplayContainer, personaEditContainer, personaTextDisplay, editPersonaBtn, savePersonaBtn, cancelPersonaBtn, personaInput;
 let imageViewerModal, fullImage;
 let isUserNearBottom = true; 
 let currentSelectedFile = null;
-let lastUserMessage = ""; 
+let lastUserMessage = ""; // Menyimpan pesan terakhir user untuk fitur regenerate
 
 const DEFAULT_AVATAR = "https://ui-avatars.com/api/?name=AI&background=random&color=fff&size=256";
 
@@ -64,6 +68,8 @@ function showCustomConfirm(title, message) {
         
         const yesBtn = document.getElementById('btn-confirm-yes');
         const noBtn = document.getElementById('btn-confirm-cancel');
+        
+        // Clone node untuk membersihkan event listener lama
         const newYes = yesBtn.cloneNode(true);
         const newNo = noBtn.cloneNode(true);
         yesBtn.parentNode.replaceChild(newYes, yesBtn);
@@ -152,6 +158,7 @@ async function loadSessionsList() {
             // Jika belum ada sesi aktif saat init, pilih yang terbaru dari list
             if (!currentSessionId && sessions.length > 0) {
                currentSessionId = sessions[0].id;
+               isCurrentSessionSaved = true; // Sesi dari DB pasti saved
             }
 
             sessions.forEach(session => {
@@ -208,6 +215,9 @@ async function loadSessionsList() {
 function startNewSession(refreshList = true) {
     currentSessionId = generateUUID(); 
     chatTranscript.innerHTML = ''; 
+    isCurrentSessionSaved = false; // Sesi baru statusnya belum disimpan
+    lastUserMessage = ""; // Reset last message
+    
     addMessageToTranscript(currentCharacterGreeting || "Halo!", 'bot'); 
     
     if (refreshList) {
@@ -219,6 +229,8 @@ function startNewSession(refreshList = true) {
 function switchSession(sessionId) {
     if (currentSessionId === sessionId) return;
     currentSessionId = sessionId;
+    isCurrentSessionSaved = true; // Pindah ke sesi lama, berarti statusnya tersimpan
+    
     loadChatHistory(sessionId);
     loadSessionsList(); // Update highlight
     closeMobileSidebar();
@@ -247,7 +259,12 @@ function openSaveModal() {
     const titleEl = modal.querySelector('h3');
     if(modal) {
         if(input) input.value = ''; 
-        if(titleEl) titleEl.textContent = "Simpan Percakapan";
+        
+        // Judul modal dinamis
+        if(titleEl) {
+            titleEl.textContent = isSavingForNewChat ? "Simpan sebelum Chat Baru?" : "Simpan Percakapan";
+        }
+        
         modal.style.display = 'flex';
         setTimeout(() => modal.classList.add('visible'), 10);
         if(input) input.focus();
@@ -289,11 +306,26 @@ async function handleSaveConfirm() {
 
         if (res.ok) {
             showToast("Berhasil disimpan!");
+            isCurrentSessionSaved = true; // Update status jadi tersimpan
             loadSessionsList(); 
+
+            // Logika Khusus: Jika menyimpan karena ingin chat baru
+            if (isSavingForNewChat) {
+                isSavingForNewChat = false; // Reset flag
+                setTimeout(() => {
+                    startNewSession(true); // Mulai sesi baru otomatis
+                    showToast("Sesi lama diamankan. Chat baru dimulai! 🚀");
+                }, 1000);
+            }
+
         } else {
             showToast("Gagal menyimpan.");
+            isSavingForNewChat = false; // Reset jika gagal
         }
-    } catch (e) { showToast("Error koneksi."); }
+    } catch (e) { 
+        showToast("Error koneksi."); 
+        isSavingForNewChat = false; 
+    }
 }
 
 async function deleteSession(sessionId) {
@@ -334,6 +366,10 @@ async function loadChatHistory(sessionId) {
             addMessageToTranscript(currentCharacterGreeting, 'bot');
         } else {
             history.forEach(m => addMessageToTranscript(m.text, m.sender, true));
+            
+            // --- UPDATE: Ambil pesan terakhir user untuk Regenerate ---
+            const lastUserMsgObj = history.slice().reverse().find(m => m.sender === 'user');
+            if (lastUserMsgObj) lastUserMessage = lastUserMsgObj.text;
         }
         scrollToBottom();
     } catch (e) { console.error(e); }
@@ -352,7 +388,7 @@ async function handleSendMessage() {
         await handleFileUpload(currentSelectedFile, text);
     } else {
         addMessageToTranscript(text, 'user');
-        lastUserMessage = text;
+        lastUserMessage = text; // Simpan untuk regenerate
         await saveMessage('user', text);
         await triggerAI(text);
     }
@@ -440,13 +476,37 @@ function addMessageToTranscript(text, sender, isHistory = false) {
     bubble.appendChild(timeSpan);
     container.appendChild(bubble);
     
+    // --- Tombol Aksi (Copy & Regenerate) ---
     if (!isImage) {
         const actionsDiv = document.createElement('div');
         actionsDiv.className = 'message-actions';
+        
+        // 1. Tombol Copy
         const copyBtn = document.createElement('button');
         copyBtn.className = 'action-icon-btn'; copyBtn.innerHTML = '📋';
+        copyBtn.title = 'Salin Pesan';
         copyBtn.onclick = () => { navigator.clipboard.writeText(text); showToast('Disalin!'); };
         actionsDiv.appendChild(copyBtn);
+
+        // 2. Tombol Regenerate (Hanya untuk Bot)
+        if (sender === 'bot') {
+            const regenBtn = document.createElement('button');
+            regenBtn.className = 'action-icon-btn';
+            regenBtn.innerHTML = '🔄'; 
+            regenBtn.title = 'Jawab Ulang (Regenerate)';
+            regenBtn.onclick = async () => {
+                if (!lastUserMessage) {
+                    showToast("Tidak menemukan pesan terakhir untuk diulang.");
+                    return;
+                }
+                // Hapus balon chat ini agar diganti dengan yang baru
+                container.remove(); 
+                // Panggil ulang AI dengan pesan terakhir user
+                await triggerAI(lastUserMessage);
+            };
+            actionsDiv.appendChild(regenBtn);
+        }
+
         container.appendChild(actionsDiv);
     }
 
@@ -583,63 +643,62 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.querySelector('.chat-right-panel').appendChild(document.querySelector('.persona-box'));
     };
 
-// 3. Hapus Chat (Reset Layar & Hapus Database)
+    // 3. Hapus Chat (Reset Layar & Hapus Database)
     const delChatBtn = document.getElementById('delete-chat-item');
     if (delChatBtn) {
         delChatBtn.onclick = async () => {
-            // Tutup menu dropdown
             document.getElementById('chat-dropdown').classList.remove('show');
-            
-            // Konfirmasi ke pengguna
             const sure = await showCustomConfirm('Hapus Chat?', 'Yakin ingin menghapus permanen sesi ini? MAI akan melupakan percakapan ini.');
             
             if (sure) {
-                // Cek apakah ada sesi aktif yang perlu dihapus dari database
                 if (currentSessionId) {
                     try {
                         showToast("Menghapus memori...");
                         const token = await getAuthToken();
-                        
-                        // Panggil fungsi delete-history di backend
-                        // Kita kirimkan currentSessionId agar hanya sesi ini yang dihapus
                         const res = await fetch(`/.netlify/functions/delete-history?id=${currentCharacterId}&sessionId=${currentSessionId}`, {
                             method: 'DELETE',
                             headers: { 'Authorization': `Bearer ${token}` }
                         });
-
                         if (!res.ok) throw new Error("Gagal menghapus data di server");
-                        
                     } catch (e) {
                         console.error("Gagal hapus db:", e);
                         showToast("Gagal menghapus data server, tapi layar akan dibersihkan.");
                     }
                 }
-
-                // Setelah data di server terhapus (atau jika ini sesi baru/draft),
-                // Kita bersihkan layar dan mulai sesi baru yang bersih.
                 startNewSession(true); 
                 showToast("Layar & Memori dibersihkan.");
             }
         };
     }
 
-// 4. Tombol Chat Baru (Dengan Konfirmasi Popup)
+    // 4. Tombol Chat Baru (LOGIKA BARU DARI BRI)
     const newChatBtn = document.getElementById('btn-new-chat');
     if (newChatBtn) {
         newChatBtn.onclick = async () => {
-            // 1. Tutup menu dropdown dulu biar rapi
             document.getElementById('chat-dropdown').classList.remove('show');
             
-            // 2. Tampilkan Popup Konfirmasi
-            const sure = await showCustomConfirm(
-                'Mulai Chat Baru?', 
-                'Percakapan saat ini akan disimpan otomatis di riwayat. Anda ingin memulai topik baru?'
-            );
-            
-            // 3. Jika User klik "Ya", baru kita reset layar
-            if (sure) {
-                startNewSession(true); 
-                showToast("Lembaran baru dibuka! ✨");
+            // Cek apakah chat masih kosong?
+            if (chatTranscript.innerText.trim() === "" || chatTranscript.children.length <= 1) {
+                startNewSession(true);
+                return;
+            }
+
+            // LOGIKA UTAMA: Cek apakah sudah disimpan?
+            if (isCurrentSessionSaved) {
+                // KONDISI 1: SUDAH TERSIMPAN
+                const sure = await showCustomConfirm(
+                    'Mulai Chat Baru?', 
+                    'Sesi ini sudah tersimpan. Ingin membuka lembaran baru?'
+                );
+                
+                if (sure) {
+                    startNewSession(true); 
+                    showToast("Lembaran baru dibuka! ✨");
+                }
+            } else {
+                // KONDISI 2: BELUM TERSIMPAN (Muncul Form Judul)
+                isSavingForNewChat = true;
+                openSaveModal();
             }
         };
     }
@@ -648,7 +707,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const btnCancelSave = document.getElementById('btn-cancel-save');
     const btnConfirmSave = document.getElementById('btn-confirm-save');
     const saveInput = document.getElementById('session-title-input');
-    if (btnCancelSave) btnCancelSave.onclick = closeSaveModal;
+    
+    if (btnCancelSave) btnCancelSave.onclick = () => {
+        closeSaveModal();
+        isSavingForNewChat = false; // Reset flag jika batal
+    };
     if (btnConfirmSave) btnConfirmSave.onclick = handleSaveConfirm;
     if (saveInput) saveInput.onkeydown = (e) => { if (e.key === 'Enter') handleSaveConfirm(); };
 
