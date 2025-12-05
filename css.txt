@@ -8,6 +8,9 @@ https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generat
 
 https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${GEMINI_API_KEY}
 
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${GEMINI_API_KEY}`;
+
+
 ==================get-chat-respon==============
       ATURAN PENTING (WAJIB DIPATUHI):
       1. GAYA BICARA: Santai tapi sopan, natural, seperti chat di WhatsApp. Jangan kaku/baku.

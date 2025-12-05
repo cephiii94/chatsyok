@@ -583,15 +583,63 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.querySelector('.chat-right-panel').appendChild(document.querySelector('.persona-box'));
     };
 
-    // 3. Hapus Chat (Reset Layar) - Pengganti tombol lama
+// 3. Hapus Chat (Reset Layar & Hapus Database)
     const delChatBtn = document.getElementById('delete-chat-item');
     if (delChatBtn) {
         delChatBtn.onclick = async () => {
+            // Tutup menu dropdown
             document.getElementById('chat-dropdown').classList.remove('show');
-            const sure = await showCustomConfirm('Hapus Chat?', 'Bersihkan layar dan mulai obrolan baru (draft)?');
+            
+            // Konfirmasi ke pengguna
+            const sure = await showCustomConfirm('Hapus Chat?', 'Yakin ingin menghapus permanen sesi ini? MAI akan melupakan percakapan ini.');
+            
             if (sure) {
-                startNewSession(true);
-                showToast("Layar dibersihkan.");
+                // Cek apakah ada sesi aktif yang perlu dihapus dari database
+                if (currentSessionId) {
+                    try {
+                        showToast("Menghapus memori...");
+                        const token = await getAuthToken();
+                        
+                        // Panggil fungsi delete-history di backend
+                        // Kita kirimkan currentSessionId agar hanya sesi ini yang dihapus
+                        const res = await fetch(`/.netlify/functions/delete-history?id=${currentCharacterId}&sessionId=${currentSessionId}`, {
+                            method: 'DELETE',
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+
+                        if (!res.ok) throw new Error("Gagal menghapus data di server");
+                        
+                    } catch (e) {
+                        console.error("Gagal hapus db:", e);
+                        showToast("Gagal menghapus data server, tapi layar akan dibersihkan.");
+                    }
+                }
+
+                // Setelah data di server terhapus (atau jika ini sesi baru/draft),
+                // Kita bersihkan layar dan mulai sesi baru yang bersih.
+                startNewSession(true); 
+                showToast("Layar & Memori dibersihkan.");
+            }
+        };
+    }
+
+// 4. Tombol Chat Baru (Dengan Konfirmasi Popup)
+    const newChatBtn = document.getElementById('btn-new-chat');
+    if (newChatBtn) {
+        newChatBtn.onclick = async () => {
+            // 1. Tutup menu dropdown dulu biar rapi
+            document.getElementById('chat-dropdown').classList.remove('show');
+            
+            // 2. Tampilkan Popup Konfirmasi
+            const sure = await showCustomConfirm(
+                'Mulai Chat Baru?', 
+                'Percakapan saat ini akan disimpan otomatis di riwayat. Anda ingin memulai topik baru?'
+            );
+            
+            // 3. Jika User klik "Ya", baru kita reset layar
+            if (sure) {
+                startNewSession(true); 
+                showToast("Lembaran baru dibuka! ✨");
             }
         };
     }
