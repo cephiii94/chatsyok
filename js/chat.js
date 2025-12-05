@@ -1,5 +1,5 @@
 // File: js/chat.js
-// Versi: Final Release (Manual Save, Edit Title, Reset Chat)
+// Versi: Final Complete + Auto-Expand Textarea
 
 // === 1. GLOBAL VARIABLES ===
 let currentChatbotProfile = "", currentCharacterName = "", currentCharacterGreeting = "", currentCharacterId = "1";
@@ -7,13 +7,17 @@ let currentUser = null, currentUserPersona = "";
 let currentSessionId = null; // ID Sesi yang sedang aktif
 let editingSessionId = null; // ID Sesi yang sedang diedit judulnya
 
+// Status Session
+let isCurrentSessionSaved = false; // Menandai apakah sesi saat ini sudah disimpan
+let isSavingForNewChat = false;    // Menandai kalau kita menyimpan karena ingin buat chat baru
+
 // Elemen UI
 let chatTranscript, chatInput, sendButton, uploadButton, fileInput, backButton, maiSprite;
 let personaDisplayContainer, personaEditContainer, personaTextDisplay, editPersonaBtn, savePersonaBtn, cancelPersonaBtn, personaInput;
 let imageViewerModal, fullImage;
 let isUserNearBottom = true; 
 let currentSelectedFile = null;
-let lastUserMessage = ""; 
+let lastUserMessage = ""; // Menyimpan pesan terakhir user untuk fitur regenerate
 
 const DEFAULT_AVATAR = "https://ui-avatars.com/api/?name=AI&background=random&color=fff&size=256";
 
@@ -64,6 +68,7 @@ function showCustomConfirm(title, message) {
         
         const yesBtn = document.getElementById('btn-confirm-yes');
         const noBtn = document.getElementById('btn-confirm-cancel');
+        
         const newYes = yesBtn.cloneNode(true);
         const newNo = noBtn.cloneNode(true);
         yesBtn.parentNode.replaceChild(newYes, yesBtn);
@@ -96,7 +101,6 @@ async function initChat() {
     await loadSessionsList(); 
     await loadUserPersona(currentCharacterId);
 
-    // Jika belum ada sesi (pertama kali load), buat sesi draft baru
     if (!currentSessionId) {
         startNewSession(false); 
     } else {
@@ -149,9 +153,9 @@ async function loadSessionsList() {
         if (sessions.length === 0) {
             listEl.innerHTML = '<p class="empty-state" style="font-size:0.8rem; padding: 10px;">Belum ada sesi tersimpan.</p>';
         } else {
-            // Jika belum ada sesi aktif saat init, pilih yang terbaru dari list
             if (!currentSessionId && sessions.length > 0) {
                currentSessionId = sessions[0].id;
+               isCurrentSessionSaved = true; 
             }
 
             sessions.forEach(session => {
@@ -164,10 +168,6 @@ async function loadSessionsList() {
                     dateDisplay = d.toLocaleDateString('id-ID', {day:'numeric', month:'short'});
                 }
 
-                item.style.display = 'flex';
-                item.style.justifyContent = 'space-between';
-                item.style.alignItems = 'center';
-
                 item.innerHTML = `
                     <div style="flex-grow: 1; overflow: hidden; margin-right: 8px;">
                         <span class="date">${dateDisplay}</span>
@@ -179,20 +179,17 @@ async function loadSessionsList() {
                     </div>
                 `;
                 
-                // 1. Pindah Sesi
                 item.onclick = (e) => {
                     if (e.target.closest('.session-btn')) return;
                     switchSession(session.id);
                 };
 
-                // 2. Edit Judul
                 const editBtn = item.querySelector('.edit-session-btn');
                 editBtn.onclick = (e) => {
                     e.stopPropagation();
                     openEditModal(session.id, session.preview);
                 };
 
-                // 3. Hapus Sesi
                 const delBtn = item.querySelector('.delete-session-btn');
                 delBtn.onclick = (e) => {
                     e.stopPropagation();
@@ -208,6 +205,9 @@ async function loadSessionsList() {
 function startNewSession(refreshList = true) {
     currentSessionId = generateUUID(); 
     chatTranscript.innerHTML = ''; 
+    isCurrentSessionSaved = false; 
+    lastUserMessage = ""; 
+    
     addMessageToTranscript(currentCharacterGreeting || "Halo!", 'bot'); 
     
     if (refreshList) {
@@ -219,8 +219,10 @@ function startNewSession(refreshList = true) {
 function switchSession(sessionId) {
     if (currentSessionId === sessionId) return;
     currentSessionId = sessionId;
+    isCurrentSessionSaved = true; 
+    
     loadChatHistory(sessionId);
-    loadSessionsList(); // Update highlight
+    loadSessionsList(); 
     closeMobileSidebar();
 }
 
@@ -247,7 +249,9 @@ function openSaveModal() {
     const titleEl = modal.querySelector('h3');
     if(modal) {
         if(input) input.value = ''; 
-        if(titleEl) titleEl.textContent = "Simpan Percakapan";
+        if(titleEl) {
+            titleEl.textContent = isSavingForNewChat ? "Simpan sebelum Chat Baru?" : "Simpan Percakapan";
+        }
         modal.style.display = 'flex';
         setTimeout(() => modal.classList.add('visible'), 10);
         if(input) input.focus();
@@ -289,11 +293,25 @@ async function handleSaveConfirm() {
 
         if (res.ok) {
             showToast("Berhasil disimpan!");
+            isCurrentSessionSaved = true; 
             loadSessionsList(); 
+
+            if (isSavingForNewChat) {
+                isSavingForNewChat = false; 
+                setTimeout(() => {
+                    startNewSession(true); 
+                    showToast("Sesi lama diamankan. Chat baru dimulai! 🚀");
+                }, 1000);
+            }
+
         } else {
             showToast("Gagal menyimpan.");
+            isSavingForNewChat = false; 
         }
-    } catch (e) { showToast("Error koneksi."); }
+    } catch (e) { 
+        showToast("Error koneksi."); 
+        isSavingForNewChat = false; 
+    }
 }
 
 async function deleteSession(sessionId) {
@@ -334,6 +352,8 @@ async function loadChatHistory(sessionId) {
             addMessageToTranscript(currentCharacterGreeting, 'bot');
         } else {
             history.forEach(m => addMessageToTranscript(m.text, m.sender, true));
+            const lastUserMsgObj = history.slice().reverse().find(m => m.sender === 'user');
+            if (lastUserMsgObj) lastUserMessage = lastUserMsgObj.text;
         }
         scrollToBottom();
     } catch (e) { console.error(e); }
@@ -345,14 +365,19 @@ async function handleSendMessage() {
     const text = chatInput.value.trim();
     if ((!text && !currentSelectedFile) || chatInput.disabled) return;
     
+    // ▼▼▼ TAMBAHAN BRI: Reset tinggi input setelah kirim ▼▼▼
     chatInput.value = ''; 
+    chatInput.style.height = '50px'; // Reset height
+    chatInput.style.overflowY = 'hidden';
+    // ▲▲▲ AKHIR TAMBAHAN ▲▲▲
+
     chatInput.disabled = true; sendButton.disabled = true;
 
     if (currentSelectedFile) {
         await handleFileUpload(currentSelectedFile, text);
     } else {
         addMessageToTranscript(text, 'user');
-        lastUserMessage = text;
+        lastUserMessage = text; 
         await saveMessage('user', text);
         await triggerAI(text);
     }
@@ -443,10 +468,29 @@ function addMessageToTranscript(text, sender, isHistory = false) {
     if (!isImage) {
         const actionsDiv = document.createElement('div');
         actionsDiv.className = 'message-actions';
+        
         const copyBtn = document.createElement('button');
         copyBtn.className = 'action-icon-btn'; copyBtn.innerHTML = '📋';
+        copyBtn.title = 'Salin Pesan';
         copyBtn.onclick = () => { navigator.clipboard.writeText(text); showToast('Disalin!'); };
         actionsDiv.appendChild(copyBtn);
+
+        if (sender === 'bot') {
+            const regenBtn = document.createElement('button');
+            regenBtn.className = 'action-icon-btn';
+            regenBtn.innerHTML = '🔄'; 
+            regenBtn.title = 'Jawab Ulang (Regenerate)';
+            regenBtn.onclick = async () => {
+                if (!lastUserMessage) {
+                    showToast("Tidak menemukan pesan terakhir untuk diulang.");
+                    return;
+                }
+                container.remove(); 
+                await triggerAI(lastUserMessage);
+            };
+            actionsDiv.appendChild(regenBtn);
+        }
+
         container.appendChild(actionsDiv);
     }
 
@@ -518,7 +562,40 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Event Listeners Dasar
     if(sendButton) sendButton.onclick = handleSendMessage;
-    if(chatInput) chatInput.onkeydown = (e) => { if(e.key==='Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); }};
+    
+    // ▼▼▼ TAMBAHAN BRI: Auto-Expand Textarea Listener ▼▼▼
+    if(chatInput) {
+        // Fungsi untuk mengatur tinggi otomatis
+        const adjustInputHeight = () => {
+            chatInput.style.height = 'auto'; // Reset dulu ke auto biar bisa ngukur scrollHeight
+            const maxHeight = 150; // Sesuai CSS
+            const newHeight = Math.min(chatInput.scrollHeight, maxHeight); 
+            chatInput.style.height = newHeight + 'px';
+            
+            // Jika konten lebih tinggi dari 150px, munculkan scrollbar
+            if (chatInput.scrollHeight > maxHeight) {
+                chatInput.style.overflowY = 'auto';
+            } else {
+                chatInput.style.overflowY = 'hidden';
+            }
+        };
+
+        // Panggil saat ngetik
+        chatInput.addEventListener('input', adjustInputHeight);
+
+        // Panggil juga di onkeydown agar instan
+        chatInput.onkeydown = (e) => { 
+            if(e.key==='Enter' && !e.shiftKey) { 
+                e.preventDefault(); 
+                handleSendMessage(); 
+            } else {
+                // Gunakan setTimeout agar nilai input sudah terupdate saat kita ukur
+                setTimeout(adjustInputHeight, 0); 
+            }
+        };
+    }
+    // ▲▲▲ AKHIR TAMBAHAN ▲▲▲
+
     if(uploadButton && fileInput) {
         uploadButton.onclick = () => fileInput.click();
         fileInput.onchange = (e) => {
@@ -583,15 +660,55 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.querySelector('.chat-right-panel').appendChild(document.querySelector('.persona-box'));
     };
 
-    // 3. Hapus Chat (Reset Layar) - Pengganti tombol lama
+    // 3. Hapus Chat
     const delChatBtn = document.getElementById('delete-chat-item');
     if (delChatBtn) {
         delChatBtn.onclick = async () => {
             document.getElementById('chat-dropdown').classList.remove('show');
-            const sure = await showCustomConfirm('Hapus Chat?', 'Bersihkan layar dan mulai obrolan baru (draft)?');
+            const sure = await showCustomConfirm('Hapus Chat?', 'Yakin ingin menghapus permanen sesi ini? MAI akan melupakan percakapan ini.');
+            
             if (sure) {
+                if (currentSessionId) {
+                    try {
+                        showToast("Menghapus memori...");
+                        const token = await getAuthToken();
+                        const res = await fetch(`/.netlify/functions/delete-history?id=${currentCharacterId}&sessionId=${currentSessionId}`, {
+                            method: 'DELETE',
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        if (!res.ok) throw new Error("Gagal menghapus data di server");
+                    } catch (e) {
+                        console.error("Gagal hapus db:", e);
+                        showToast("Gagal menghapus data server, tapi layar akan dibersihkan.");
+                    }
+                }
+                startNewSession(true); 
+                showToast("Layar & Memori dibersihkan.");
+            }
+        };
+    }
+
+    // 4. Tombol Chat Baru
+    const newChatBtn = document.getElementById('btn-new-chat');
+    if (newChatBtn) {
+        newChatBtn.onclick = async () => {
+            document.getElementById('chat-dropdown').classList.remove('show');
+            if (chatTranscript.innerText.trim() === "" || chatTranscript.children.length <= 1) {
                 startNewSession(true);
-                showToast("Layar dibersihkan.");
+                return;
+            }
+            if (isCurrentSessionSaved) {
+                const sure = await showCustomConfirm(
+                    'Mulai Chat Baru?', 
+                    'Sesi ini sudah tersimpan. Ingin membuka lembaran baru?'
+                );
+                if (sure) {
+                    startNewSession(true); 
+                    showToast("Lembaran baru dibuka! ✨");
+                }
+            } else {
+                isSavingForNewChat = true;
+                openSaveModal();
             }
         };
     }
@@ -600,7 +717,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const btnCancelSave = document.getElementById('btn-cancel-save');
     const btnConfirmSave = document.getElementById('btn-confirm-save');
     const saveInput = document.getElementById('session-title-input');
-    if (btnCancelSave) btnCancelSave.onclick = closeSaveModal;
+    
+    if (btnCancelSave) btnCancelSave.onclick = () => {
+        closeSaveModal();
+        isSavingForNewChat = false; 
+    };
     if (btnConfirmSave) btnConfirmSave.onclick = handleSaveConfirm;
     if (saveInput) saveInput.onkeydown = (e) => { if (e.key === 'Enter') handleSaveConfirm(); };
 

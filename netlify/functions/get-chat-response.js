@@ -1,5 +1,5 @@
 // File: netlify/functions/get-chat-response.js
-// VERSI FINAL: Support Waktu Dinamis (Client Side), Lokasi, File, dan Identitas
+// VERSI FINAL + FIX SESSION: Support Waktu, Lokasi, File, dan Sesi Terisolasi
 
 const admin = require('firebase-admin');
 
@@ -81,23 +81,30 @@ exports.handler = async (event, context) => {
 
   try {
     const body = JSON.parse(event.body);
-    // Kita ambil 'userLocalTime' dari sini
-    const { userMessage, characterProfile, characterId, userPersona, userName, userLocalTime } = body;
+    
+    // --- UPDATE 1: AMBIL SESSION ID ---
+    const { 
+        userMessage, 
+        characterProfile, 
+        characterId, 
+        userPersona, 
+        userName, 
+        userLocalTime,
+        sessionId // <--- Ini penting!
+    } = body;
+
     const characterName = body.characterName || 'Chatbot';
     
-    if (!userMessage || !characterProfile || !characterId) {
-      return { statusCode: 400, body: 'Data wajib tidak lengkap.' };
+    if (!userMessage || !characterProfile || !characterId || !sessionId) {
+      return { statusCode: 400, body: 'Data wajib (termasuk Session ID) tidak lengkap.' };
     }
 
     // --- A. LOGIKA WAKTU & LOKASI ---
     
-    // 1. Waktu: Prioritaskan waktu dari Browser (Frontend)
     let timeString;
     if (userLocalTime) {
-        // Jika frontend mengirim waktu (misal: WITA), pakai itu
         timeString = userLocalTime;
     } else {
-        // Fallback: Jika tidak ada (misal browser lama), pakai waktu Server (WIB)
         const now = new Date();
         timeString = now.toLocaleString('id-ID', { 
             timeZone: 'Asia/Jakarta', 
@@ -106,7 +113,6 @@ exports.handler = async (event, context) => {
         });
     }
 
-    // 2. Lokasi: Ambil dari Header Netlify
     const userCity = event.headers['x-nf-client-connection-ip-city'];
     const userCountry = event.headers['x-nf-client-connection-ip-country'];
     const userLocation = userCity ? `${userCity}, ${userCountry}` : 'Indonesia';
@@ -132,23 +138,34 @@ exports.handler = async (event, context) => {
         }
     }
 
-    // --- C. RIWAYAT CHAT ---
+    // --- C. RIWAYAT CHAT (DIPERBAIKI) ---
+    // Update 2: Query Firestore masuk ke 'sessions -> sessionId'
     const historySnapshot = await db.collection('characters')
                                     .doc(characterId)
                                     .collection('chats')
                                     .doc(userId)
+                                    .collection('sessions') // Masuk ke koleksi sessions
+                                    .doc(sessionId)         // Masuk ke ID sesi spesifik
                                     .collection('messages')
-                                    .orderBy('timestamp', 'desc')
-                                    .limit(10)
+                                    .orderBy('timestamp', 'desc') // Ambil yg terbaru dulu
+                                    .limit(10) // Ambil 10 terakhir
                                     .get();
 
-    const historyDocs = historySnapshot.docs.reverse();
+    const historyDocs = historySnapshot.docs.reverse(); // Balik jadi (Lama -> Baru)
     let historyContext = "";
     
     if (!historyDocs.empty) {
-        historyContext = "RIWAYAT OBROLAN:\n";
+        historyContext = "RIWAYAT OBROLAN (Sesi Ini):\n";
         historyDocs.forEach(doc => {
             const data = doc.data();
+            
+            // CEGAH DOUBLE INPUT:
+            // Karena 'saveMessage' dipanggil sebelum API ini, pesan terakhir di DB adalah pesan user saat ini.
+            // Kita skip pesan terakhir dari riwayat agar tidak dobel dengan "PESAN BARU" di prompt.
+            if (data.text === userMessage && data.sender === 'user') {
+                return; // Skip, karena ini akan masuk lewat variabel 'PESAN BARU'
+            }
+
             const role = data.sender === 'user' ? 'User' : characterName;
             let cleanText = (data.text || "").replace(/\n/g, " ");
             if (cleanText.startsWith('https://res.cloudinary.com')) {
@@ -170,7 +187,7 @@ exports.handler = async (event, context) => {
       - Nama: "${characterName}"
       - Deskripsi: "${characterProfile}"
       
-      DATA REAL-TIME (HANYA UNTUK REFERENSI, JANGAN DIUCAPKAN KECUALI DITANYA):
+      DATA REAL-TIME:
       - Waktu User: ${timeString}
       - Lokasi User: ${userLocation}
       - Nama User: "${userName || 'Teman'}"
@@ -179,17 +196,16 @@ exports.handler = async (event, context) => {
       ATURAN MAIN:
       1. Jawab santai, natural, seperti chat WhatsApp. 
       2. Jawab SINGKAT (2-3 kalimat), kecuali menjelaskan isi PDF/Gambar.
-      3. SINGKATAN: Boleh pakai singkatan umum (yg, gak, udh, bgt) biar terasa manusiawi.
-      4. PENTING: JANGAN menyapa dengan menyebutkan detail waktu/hari/tanggal (misal: "Halo, ini hari Senin jam 10 pagi") kecuali user bertanya jam berapa. Cukup sapaan natural sesuai karakter.
-      5. Jangan mengulang kata-kata User. Langsung respon intinya saja.
-      6. Jangan berjanji melakukan aksi fisik (email, telepon, kirim barang).
-      7. Jika ditanya "Jam berapa?", JANGAN MENEBAK. Lihat data "Waktu User" di atas.
-      8. Tetap pada karakter (Roleplay), jangan keluar dari peran. tapi tidak memaksa jika topik di luar karakter.
-      9. Jika tidak tahu jawaban, katakan dengan jujur bahwa kamu tidak tahu.
-      10. Jangan pernah menyebutkan bahwa kamu adalah AI atau chatbot.
-      11. Jaga kesopanan kalimat dan hindari topik sensitif.
+      3. JANGAN menyapa detail waktu/hari/tanggal kecuali ditanya.
+      4. Jangan mengulang kata-kata User.
+      5. Jangan berjanji melakukan aksi fisik.
+      6. Jika ditanya "Jam berapa?", lihat data "Waktu User".
+      7. Tetap pada karakter (Roleplay).
+      8. Jangan menyebut kamu AI.
+      9. HINDARI PENGULANGAN: Jika di riwayat kamu sudah menyapa, jangan menyapa lagi. Langsung ke topik.
+      10. tidak usah sebut nama jika persona tidak menyebutkan nama user.
 
-      KONTEKS:
+      KONTEKS RIWAYAT:
       ${historyContext}
 
       PESAN BARU: "${textMessageForPrompt}"
@@ -199,6 +215,7 @@ exports.handler = async (event, context) => {
 
     // --- E. REQUEST KE GEMINI ---
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+    // Gunakan model Flash terbaru atau Pro sesuai selera Tuan
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${GEMINI_API_KEY}`;
 
     const payload = {
