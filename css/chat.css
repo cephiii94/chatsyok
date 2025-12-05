@@ -139,7 +139,23 @@ body { font-family: 'Inter', sans-serif; background-color: var(--bg-primary); co
 
 /* INPUT */
 .chat-input-area { display: flex; gap: 10px; padding: 16px; border-top: 1px solid var(--border-color); background-color: var(--bg-secondary); align-items: flex-end; position: relative; }
-#chat-input { flex-grow: 1; border: 1px solid var(--border-color); border-radius: 24px; padding: 12px 16px; font-size: 1rem; font-family: 'Inter', sans-serif; resize: none; height: 50px; min-height: 50px; max-height: 150px; overflow-y: auto; transition: border-color 0.2s; }
+#chat-input { 
+    flex-grow: 1; 
+    border: 1px solid var(--border-color); 
+    border-radius: 24px; 
+    padding: 12px 16px; 
+    font-size: 1rem; 
+    font-family: 'Inter', sans-serif; 
+    resize: none; /* Mencegah resize manual user */
+    
+    /* ▼▼▼ UPDATE DARI BRI ▼▼▼ */
+    height: 50px;          /* Tinggi awal */
+    min-height: 50px;      /* Minimal segini */
+    max-height: 150px;     /* Maksimal segini (biar gak menuhin layar) */
+    overflow-y: hidden;    /* Sembunyikan scrollbar di awal */
+    transition: height 0.1s ease; /* Animasi halus saat naik */
+    /* ▲▲▲ AKHIR UPDATE ▲▲▲ */
+}
 #chat-input:focus { outline: none; border-color: var(--accent-blue); }
 #upload-btn, #send-button { flex-shrink: 0; width: 50px; height: 50px; border-radius: 12px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background-color 0.2s; }
 #upload-btn { background: var(--bg-primary); color: var(--text-secondary); }
