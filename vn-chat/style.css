@@ -1,0 +1,67 @@
+body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: 'Nunito', sans-serif; }
+
+.vn-background {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background-size: cover; background-position: center;
+    z-index: 1; filter: blur(2px); /* Sedikit blur biar karakter menonjol */
+}
+
+.character-container {
+    position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+    height: 90vh; width: auto; z-index: 2;
+    pointer-events: none; /* Supaya klik tembus ke background */
+}
+
+.sprite-img {
+    height: 100%; width: auto; object-fit: contain;
+    transition: opacity 0.3s ease-in-out; /* Efek transisi saat ganti ekspresi */
+}
+
+.ui-layer {
+    position: absolute; width: 100%; height: 100%; z-index: 3;
+    display: flex; flex-direction: column; justify-content: flex-end;
+}
+
+.dialogue-box {
+    background: rgba(0, 0, 0, 0.8); /* Hitam transparan */
+    color: white;
+    padding: 20px 30px;
+    margin: 20px;
+    border-radius: 15px;
+    border: 2px solid #fff;
+    min-height: 150px;
+    position: relative;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+.name-tag {
+    position: absolute; top: -20px; left: 20px;
+    background: #ff6b6b; color: white;
+    padding: 5px 20px; font-weight: bold; border-radius: 20px;
+    border: 2px solid #fff;
+}
+
+.dialogue-text {
+    font-size: 1.1rem; line-height: 1.6; margin-bottom: 20px;
+    min-height: 60px;
+}
+
+.input-area {
+    display: flex; gap: 10px; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 10px;
+}
+
+#user-input {
+    flex-grow: 1; background: transparent; border: none; color: white;
+    font-size: 1rem; outline: none;
+}
+
+#btn-send {
+    background: var(--bg-button, #90caf9); border: none; padding: 5px 15px;
+    border-radius: 5px; cursor: pointer; font-weight: bold;
+}
+
+.btn-back {
+    position: absolute; top: 20px; left: 20px;
+    background: rgba(255,255,255,0.8); border: none; padding: 8px 12px;
+    border-radius: 8px; cursor: pointer; z-index: 10; font-weight: bold;
+}

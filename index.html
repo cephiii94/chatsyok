@@ -1,25 +1,27 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ChatsYok! - LevelUp</title>
-    <link rel="icon" type="image/png" href="/img/favico/32x32.png" sizes="32x32">  
-        <!-- Hubungkan ke CSS Lobby -->
+    <link rel="icon" type="image/png" href="/img/favico/32x32.png" sizes="32x32">
+    <!-- Hubungkan ke CSS Lobby -->
     <link rel="stylesheet" href="/css/lobby.css">
-    
+
     <!-- ▼▼▼ TAMBAHKAN LINK CSS MODAL BARU INI ▼▼▼ -->
     <link rel="stylesheet" href="/css/modal.css">
-    
+
     <!-- Impor Google Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
+
 <body>
 
     <div id="app-container">
-        
+
         <!-- Header Mobile (Hanya tampil di mobile) -->
         <header class="mobile-header">
             <button id="hamburger-btn">
@@ -29,7 +31,7 @@
             </button>
             <h1>ChatsYok! - LevelUp</h1>
         </header>
-        
+
         <!-- Sidebar Lobby -->
         <aside class="lobby-sidebar" id="lobby-sidebar">
             <h1>ChatApp</h1>
@@ -37,6 +39,7 @@
                 <a href="#" class="active">Home</a>
                 <a href="create-mai.html">Buat Bot</a>
                 <a href="#">Komunitas</a>
+                <a href="/vn-chat/index.html">Visual Novel</a>
                 <a href="#">Pengaturan</a>
                 <!-- Link Login/Logout akan ditambahkan oleh auth-guard.js -->
             </nav>
@@ -73,7 +76,8 @@
         <div class="guest-modal-content">
             <button id="close-guest-modal" class="close-btn" aria-label="Tutup">&times;</button>
             <h2>Selamat Datang!</h2>
-            <p>Anda saat ini menjelajah sebagai tamu dan hanya dapat melihat MAI default. Silakan login untuk membuat MAI Anda sendiri dan melihat semua karakter publik.</p>
+            <p>Anda saat ini menjelajah sebagai tamu dan hanya dapat melihat MAI default. Silakan login untuk membuat
+                MAI Anda sendiri dan melihat semua karakter publik.</p>
             <a href="login.html" class="btn btn-primary">Login atau Daftar</a>
         </div>
     </div>
@@ -81,22 +85,23 @@
     <div id="character-profile-modal" class="guest-modal-overlay">
         <div class="guest-modal-content profile-content">
             <button id="close-profile-modal" class="close-btn" aria-label="Tutup">&times;</button>
-            
+
             <div class="profile-header-img">
                 <img id="modal-char-img" src="" alt="Avatar MAI">
             </div>
 
             <h2 id="modal-char-name">Nama Karakter</h2>
             <p id="modal-char-desc" class="profile-desc">Deskripsi...</p>
-            
+
             <div id="modal-char-tags" class="profile-tags"></div>
 
             <div class="modal-actions">
-                <button id="btn-start-chat" class="btn-primary" style="width: 100%; margin-bottom: 10px;">Mulai Chat</button>
-                
+                <button id="btn-start-chat" class="btn-primary" style="width: 100%; margin-bottom: 10px;">Mulai
+                    Chat</button>
+
                 <div id="modal-admin-actions" style="display: flex; gap: 10px; justify-content: center;">
-                    </div>
                 </div>
+            </div>
         </div>
     </div>
 
@@ -104,7 +109,7 @@
         <div class="guest-modal-content" style="max-width: 400px; text-align: left;">
             <h3 id="confirm-title" style="margin-top: 0; color: var(--text-primary);">Konfirmasi</h3>
             <p id="confirm-msg" style="color: var(--text-secondary); margin: 15px 0;">Apakah Anda yakin?</p>
-            
+
             <div class="confirm-actions">
                 <button id="btn-confirm-cancel" class="btn btn-secondary">Batal</button>
                 <button id="btn-confirm-yes" class="btn btn-danger">Ya, Hapus</button>
@@ -112,17 +117,18 @@
         </div>
     </div>
 
-    
+
     <!-- ▲▲▲ AKHIR DARI MODAL ▲▲▲ -->
 
 
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
-    
+
     <script src="/js/firebase-config.js"></script>
-    <script src="/js/auth-guard.js"></script> 
+    <script src="/js/auth-guard.js"></script>
 
     <!-- Hubungkan ke JS Lobby -->
     <script src="/js/lobby.js"></script>
 </body>
+
 </html>
