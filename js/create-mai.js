@@ -117,6 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
                          .map(tag => tag.trim())
                          .filter(tag => tag.length > 0),
                 visibility: document.querySelector('input[name="visibility"]:checked').value,
+                isVnAvailable: document.getElementById('mai-is-vn').checked,
                 image: imageUrl
             };
             

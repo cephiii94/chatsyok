@@ -1,4 +1,4 @@
-// File: netlify/functions/save-mai.js (DIMODIFIKASI untuk keamanan)
+// File: netlify/functions/save-mai.js
 
 const admin = require('firebase-admin');
 
@@ -16,7 +16,7 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
-// BARU: Fungsi helper untuk verifikasi token
+// Fungsi helper untuk verifikasi token
 async function getUserIdFromToken(event) {
   const authHeader = event.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -26,13 +26,12 @@ async function getUserIdFromToken(event) {
   
   try {
     const decodedToken = await admin.auth().verifyIdToken(token);
-    return decodedToken.uid; // Ini adalah ID user yang AMAN
+    return decodedToken.uid; 
   } catch (error) {
     console.error("Verifikasi token gagal:", error);
     throw new Error('Token tidak valid atau kedaluwarsa.');
   }
 }
-
 
 exports.handler = async (event, context) => {
   if (event.httpMethod !== 'POST') {
@@ -41,7 +40,6 @@ exports.handler = async (event, context) => {
 
   let userId;
   try {
-    // BARU: Verifikasi user dulu
     userId = await getUserIdFromToken(event);
   } catch (error) {
     return { statusCode: 401, body: JSON.stringify({ error: error.message }) };
@@ -50,7 +48,7 @@ exports.handler = async (event, context) => {
   try {
     const data = JSON.parse(event.body);
 
-    // Validasi data wajib (creatorId dihapus, karena kita ambil dari token)
+    // Validasi data wajib
     if (!data.name || !data.description || !data.image || !data.greeting) {
       return { 
         statusCode: 400, 
@@ -59,6 +57,7 @@ exports.handler = async (event, context) => {
     }
 
     // --- Logika untuk ID Baru ---
+    // (Mencari ID terbesar untuk auto-increment sederhana)
     const charactersRef = db.collection('characters');
     const snapshot = await charactersRef.get();
     
@@ -70,7 +69,7 @@ exports.handler = async (event, context) => {
         }
     });
     
-    if (maxId < 4) { // Asumsi ID 1-4 adalah default
+    if (maxId < 4) { 
         maxId = 4;
     }
     
@@ -79,17 +78,23 @@ exports.handler = async (event, context) => {
     // Siapkan data MAI untuk disimpan
     const newMaiData = {
       name: data.name,
-      description: data.description, // Ini adalah prompt kepribadian
+      description: data.description, 
       tagline: data.tagline || '',   
       greeting: data.greeting,
       image: data.image,
       tags: data.tags || [],
-      visibility: data.visibility || 'public', // Default ke 'public'
-      // MODIFIKASI: Gunakan userId yang aman dari token
-      creatorId: userId 
+      visibility: data.visibility || 'public',
+      creatorId: userId,
+      
+      // ▼▼▼ TAMBAHAN: Simpan status VN ▼▼▼
+      // Pastikan disimpan sebagai boolean
+      isVnAvailable: data.isVnAvailable === true,
+      // ▲▲▲ AKHIR TAMBAHAN ▲▲▲
+      
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
     };
 
-    // Simpan dokumen dengan ID kustom baru
+    // Simpan dokumen
     await charactersRef.doc(newId).set(newMaiData);
 
     return {

@@ -1,11 +1,21 @@
-body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: 'Nunito', sans-serif; }
+/* Reset & Font Dasar */
+body, html { 
+    margin: 0; 
+    padding: 0; 
+    height: 100%; 
+    overflow: hidden; 
+    font-family: 'Nunito', sans-serif; 
+}
 
+/* Background dengan efek blur */
 .vn-background {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
     background-size: cover; background-position: center;
-    z-index: 1; filter: blur(2px); /* Sedikit blur biar karakter menonjol */
+    z-index: 1; filter: blur(2px); 
+    transition: background-image 0.5s ease-in-out;
 }
 
+/* Wadah Karakter (Tengah Bawah) */
 .character-container {
     position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
     height: 90vh; width: auto; z-index: 2;
@@ -14,14 +24,38 @@ body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family:
 
 .sprite-img {
     height: 100%; width: auto; object-fit: contain;
-    transition: opacity 0.3s ease-in-out; /* Efek transisi saat ganti ekspresi */
+    transition: opacity 0.3s ease-in-out; /* Transisi halus saat ganti ekspresi */
+    filter: drop-shadow(0 0 10px rgba(0,0,0,0.3));
 }
 
+/* Layer UI (Tombol & Dialog) */
 .ui-layer {
     position: absolute; width: 100%; height: 100%; z-index: 3;
     display: flex; flex-direction: column; justify-content: flex-end;
 }
 
+/* Tombol Kembali (Kiri Atas) */
+.btn-back {
+    position: absolute; top: 20px; left: 20px;
+    background: rgba(255,255,255,0.8); border: none; padding: 8px 12px;
+    border-radius: 8px; cursor: pointer; z-index: 10; font-weight: bold;
+    transition: background 0.2s;
+}
+.btn-back:hover { background: rgba(255,255,255,1); }
+
+/* Tombol Log Riwayat (Kanan Atas) */
+.btn-log {
+    position: absolute; top: 20px; right: 20px;
+    background: rgba(255, 255, 255, 0.2); 
+    border: 1px solid white; color: white;
+    padding: 8px 15px; border-radius: 20px;
+    cursor: pointer; z-index: 10; font-weight: bold;
+    backdrop-filter: blur(5px);
+    transition: background 0.3s;
+}
+.btn-log:hover { background: rgba(255, 255, 255, 0.4); }
+
+/* Kotak Dialog Utama */
 .dialogue-box {
     background: rgba(0, 0, 0, 0.8); /* Hitam transparan */
     color: white;
@@ -34,6 +68,7 @@ body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family:
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
 }
 
+/* Tag Nama Karakter */
 .name-tag {
     position: absolute; top: -20px; left: 20px;
     background: #ff6b6b; color: white;
@@ -41,12 +76,28 @@ body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family:
     border: 2px solid #fff;
 }
 
+/* Teks Dialog (Dengan Scrollbar Otomatis) */
 .dialogue-text {
-    font-size: 1.1rem; line-height: 1.6; margin-bottom: 20px;
+    font-size: 1.1rem; 
+    line-height: 1.6; 
+    margin-bottom: 20px;
     min-height: 60px;
-    white-space: pre-wrap; /* Preserves spaces and breaks */
+    
+    /* Agar teks panjang tidak meluber */
+    max-height: 150px;      
+    overflow-y: auto;       
+    padding-right: 10px;    
+    
+    white-space: pre-wrap; 
 }
 
+/* Kustomisasi Scrollbar Dialog */
+.dialogue-text::-webkit-scrollbar { width: 8px; }
+.dialogue-text::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.1); border-radius: 4px; }
+.dialogue-text::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.5); border-radius: 4px; }
+.dialogue-text::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.8); }
+
+/* Area Input User */
 .input-area {
     display: flex; gap: 10px; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 10px;
 }
@@ -55,14 +106,131 @@ body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family:
     flex-grow: 1; background: transparent; border: none; color: white;
     font-size: 1rem; outline: none;
 }
+#user-input::placeholder { color: rgba(255,255,255,0.5); }
 
 #btn-send {
     background: var(--bg-button, #90caf9); border: none; padding: 5px 15px;
-    border-radius: 5px; cursor: pointer; font-weight: bold;
+    border-radius: 5px; cursor: pointer; font-weight: bold; transition: opacity 0.2s;
+}
+#btn-send:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* --- FITUR LOG / RIWAYAT (OVERLAY) --- */
+
+/* Overlay Gelap */
+.log-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 100; 
+    display: flex; justify-content: center; align-items: center;
+    backdrop-filter: blur(5px);
+    opacity: 1; visibility: visible;
+    transition: opacity 0.3s, visibility 0.3s;
 }
 
-.btn-back {
-    position: absolute; top: 20px; left: 20px;
-    background: rgba(255,255,255,0.8); border: none; padding: 8px 12px;
-    border-radius: 8px; cursor: pointer; z-index: 10; font-weight: bold;
+.log-overlay.hidden { 
+    opacity: 0; visibility: hidden; 
+    pointer-events: none;
 }
+
+/* Container Log */
+.log-container {
+    width: 90%; max-width: 600px; height: 80%;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 15px;
+    padding: 20px;
+    display: flex; flex-direction: column;
+    color: white;
+}
+
+.log-container h2 {
+    text-align: center; margin-bottom: 20px; margin-top: 0;
+    color: #4ecdc4; border-bottom: 1px solid rgba(255,255,255,0.2); 
+    padding-bottom: 10px;
+}
+
+/* Area Scroll Log */
+#log-content {
+    flex-grow: 1; overflow-y: auto; padding-right: 10px;
+    display: flex; flex-direction: column; gap: 15px;
+}
+
+/* Scrollbar Log */
+#log-content::-webkit-scrollbar { width: 8px; }
+#log-content::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); }
+#log-content::-webkit-scrollbar-thumb { background: #ff6b6b; border-radius: 4px; }
+
+/* Item Percakapan di Log */
+.log-item { display: flex; flex-direction: column; }
+.log-sender { font-weight: bold; font-size: 0.9rem; margin-bottom: 4px; }
+.log-text { font-size: 1rem; line-height: 1.5; color: #ddd; }
+
+/* Warna Pembeda Sender */
+.log-item.user .log-sender { color: #4ecdc4; } /* Warna User (Tosca) */
+.log-item.bot .log-sender { color: #ff6b6b; }  /* Warna Bot (Merah Soft) */
+
+/* Tombol Tutup Log */
+.btn-close-log {
+    margin-top: 20px; align-self: center;
+    background: #ff6b6b; color: white; border: none;
+    padding: 10px 30px; border-radius: 20px; cursor: pointer;
+    font-weight: bold; transition: background 0.2s;
+}
+.btn-close-log:hover { background: #ff4757; }
+
+/* --- TAMBAHAN BARU: Tombol Hapus & Copy --- */
+
+/* Container tombol di bawah Log */
+.log-footer {
+    display: flex;
+    justify-content: space-between; /* Jarak antar tombol */
+    margin-top: 20px;
+    width: 100%;
+}
+
+/* Tombol Hapus (Merah) */
+.btn-delete-log {
+    background: rgba(220, 53, 69, 0.8); 
+    color: white; border: none;
+    padding: 10px 20px; border-radius: 20px; cursor: pointer;
+    font-weight: bold; transition: background 0.2s;
+    font-size: 0.9rem;
+}
+.btn-delete-log:hover { background: #ff4757; }
+
+/* Item Log (Perlu relative biar tombol copy bisa absolute) */
+.log-item {
+    position: relative;
+    padding: 8px;
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+
+.log-item:hover {
+    background: rgba(255, 255, 255, 0.05); /* Highlight tipis saat hover */
+}
+
+/* Tombol Copy (Kecil) */
+.log-copy-btn {
+    position: absolute;
+    top: 5px; right: 5px;
+    background: rgba(255, 255, 255, 0.2);
+    border: none; color: white;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 0.8rem;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; /* Tersembunyi default */
+    transition: opacity 0.2s, background 0.2s;
+}
+
+.log-copy-btn:hover {
+    background: rgba(78, 205, 196, 0.8); /* Warna Tosca saat hover */
+}
+
+/* Munculkan tombol copy saat item di-hover */
+.log-item:hover .log-copy-btn {
+    opacity: 1;
+}
+

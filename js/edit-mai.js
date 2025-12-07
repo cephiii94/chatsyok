@@ -52,6 +52,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('mai-tagline').value = data.tagline || '';
         document.getElementById('mai-description').value = data.description;
         document.getElementById('mai-tags').value = (data.tags || []).join(', ');
+        document.getElementById('mai-is-vn').checked = data.isVnAvailable === true;
         document.getElementById('avatar-preview').src = data.image;
         document.getElementById('current-image-url').value = data.image;
 
@@ -127,6 +128,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 description: document.getElementById('mai-description').value,
                 tags: document.getElementById('mai-tags').value.split(',').map(t => t.trim()).filter(t => t),
                 visibility: document.querySelector('input[name="visibility"]:checked').value,
+                isVnAvailable: document.getElementById('mai-is-vn').checked,
                 image: imageUrl
             };
 

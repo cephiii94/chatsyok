@@ -46,8 +46,7 @@ exports.handler = async (event, context) => {
 
   try {
     const data = JSON.parse(event.body);
-    const { id, name, description, tagline, greeting, image, tags, visibility } = data;
-
+const { id, name, description, tagline, greeting, image, tags, visibility, isVnAvailable } = data;
     if (!id) {
         return { statusCode: 400, body: JSON.stringify({ error: 'ID Karakter diperlukan.' }) };
     }
@@ -80,6 +79,7 @@ exports.handler = async (event, context) => {
         greeting,
         tags: tags || [],
         visibility: visibility || 'public',
+        isVnAvailable: isVnAvailable === true,
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
     };
 
