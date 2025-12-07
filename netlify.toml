@@ -1,2 +1,11 @@
 [build]
+  # Tentukan folder di mana file HTML, CSS, JS Anda berada. 
+  # Jika index.html ada di root folder, gunakan "."
+  publish = "."
+  # Tentukan folder untuk Netlify Functions
   functions = "netlify/functions"
+
+[dev]
+  # Paksa Netlify untuk menggunakan server statis bawaannya, bukan Next.js atau framework lain
+  framework = "#static" 
+  # Hapus baris 'command' agar Netlify tetap berjalan dan menyajikan file statis dari folder 'publish'

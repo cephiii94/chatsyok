@@ -44,6 +44,7 @@ body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family:
 .dialogue-text {
     font-size: 1.1rem; line-height: 1.6; margin-bottom: 20px;
     min-height: 60px;
+    white-space: pre-wrap; /* Preserves spaces and breaks */
 }
 
 .input-area {
