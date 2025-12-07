@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ChatSyok! - Pilih Karakter</title>
+    <link rel="stylesheet" href="lobby.css">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+    <div class="lobby-background"></div>
+
+    <div class="lobby-container">
+        <header class="lobby-header">
+            <h1>Pilih Teman Ngobrol</h1>
+            <p>Siapa yang ingin kamu ajak bicara hari ini?</p>
+        </header>
+
+        <div class="character-grid" id="character-grid">
+            <!-- Characters will be injected here by lobby.js -->
+        </div>
+
+        <button onclick="window.location.href='../index.html'" class="btn-home">🏠 Kembali ke Menu Utama</button>
+    </div>
+
+    <script src="lobby.js"></script>
+</body>
+
+</html>
