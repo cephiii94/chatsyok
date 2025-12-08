@@ -15,15 +15,12 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
-// --- HELPER BARU: Ambil Data Token Lengkap ---
-// Kita butuh ini untuk melihat apakah ada stempel "admin: true"
 async function getAuthTokenData(event) {
   const authHeader = event.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     throw new Error('Header Otorisasi tidak ditemukan.');
   }
   const token = authHeader.split('Bearer ')[1];
-  // verifyIdToken mengembalikan objek yang berisi uid DAN custom claims (admin)
   const decodedToken = await admin.auth().verifyIdToken(token);
   return decodedToken; 
 }
@@ -35,18 +32,19 @@ exports.handler = async (event, context) => {
 
   let userToken;
   try {
-    // Ambil data user beserta status admin-nya
     userToken = await getAuthTokenData(event);
   } catch (error) {
     return { statusCode: 401, body: JSON.stringify({ error: error.message }) };
   }
 
   const userId = userToken.uid;
-  const isAdmin = userToken.admin === true; // Cek status admin
+  const isAdmin = userToken.admin === true; 
 
   try {
     const data = JSON.parse(event.body);
-const { id, name, description, tagline, greeting, image, tags, visibility, isVnAvailable } = data;
+    // Tambahkan 'sprites' di sini
+    const { id, name, description, tagline, greeting, image, sprites, tags, visibility, isVnAvailable } = data;
+
     if (!id) {
         return { statusCode: 400, body: JSON.stringify({ error: 'ID Karakter diperlukan.' }) };
     }
@@ -60,14 +58,12 @@ const { id, name, description, tagline, greeting, image, tags, visibility, isVnA
 
     const currentData = docSnap.data();
 
-    // --- LOGIKA PENJAGA PINTU UTAMA ---
-    // Boleh lewat jika: Dia Pembuatnya ATAU Dia Admin
+    // Verifikasi Pemilik
     const isCreator = currentData.creatorId === userId;
-
     if (!isCreator && !isAdmin) {
         return { 
             statusCode: 403, 
-            body: JSON.stringify({ error: 'Eits! Anda bukan pemilik MAI ini dan bukan Admin.' }) 
+            body: JSON.stringify({ error: 'Anda bukan pemilik MAI ini.' }) 
         };
     }
 
@@ -86,12 +82,17 @@ const { id, name, description, tagline, greeting, image, tags, visibility, isVnA
     if (image) {
         updateData.image = image;
     }
+    
+    // UPDATE PENTING: Simpan sprites jika ada
+    if (sprites) {
+        updateData.sprites = sprites;
+    }
 
     await docRef.update(updateData);
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ success: true, message: 'MAI berhasil diupdate oleh ' + (isAdmin ? 'Admin' : 'Creator') })
+      body: JSON.stringify({ success: true })
     };
 
   } catch (error) {

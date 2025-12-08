@@ -1,5 +1,5 @@
-// vn-chat/script.js
-// Versi: Final Complete + Delete History & Copy Feature
+// vn-chat/chat.js
+// Versi: Dinamis dengan Multi-Sprite Support (Revisi Typo Fixed)
 
 // --- 1. GLOBAL VARIABLES ---
 let currentCharacterId = "1";
@@ -9,14 +9,15 @@ let currentUser = null;
 let currentSessionId = ''; 
 let currentEmotion = 'IDLE';
 
+// Sprite default (akan ditimpa oleh data dari database)
 const sprites = {
-    'IDLE': '/vn-chat/img/char/bri/idle.png',
-    'HAPPY': '/vn-chat/img/char/bri/idle.png',
-    'SAD': '/vn-chat/img/char/bri/idle.png',
-    'ANGRY': '/vn-chat/img/char/bri/idle.png',
-    'SURPRISED': '/vn-chat/img/char/bri/idle.png',
-    'SHY': '/vn-chat/img/char/bri/idle.png',
-    'THINKING': '/vn-chat/img/char/bri/idle.png',
+    'IDLE': '', 
+    'HAPPY': '',
+    'SAD': '',
+    'ANGRY': '',
+    'SURPRISED': '',
+    'SHY': '',
+    'THINKING': ''
 };
 
 // --- 2. HELPER FUNCTIONS ---
@@ -25,16 +26,14 @@ function generateUUID() {
     return 'vn-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
 }
 
-// Helper Konfirmasi Cantik (Sama seperti di Lobby)
 function showCustomConfirm(title, message) {
     return new Promise((resolve) => {
         const modal = document.getElementById('custom-confirm-modal');
-        if (!modal) { resolve(confirm(message)); return; } // Fallback
+        if (!modal) { resolve(confirm(message)); return; }
 
         document.getElementById('confirm-title').textContent = title;
         document.getElementById('confirm-msg').textContent = message;
         
-        // Reset tombol (kloning untuk hapus listener lama)
         const yesBtn = document.getElementById('btn-confirm-yes');
         const noBtn = document.getElementById('btn-confirm-cancel');
         const newYes = yesBtn.cloneNode(true);
@@ -54,23 +53,6 @@ function showCustomConfirm(title, message) {
         newYes.onclick = () => close(true);
         newNo.onclick = () => close(false);
     });
-}
-
-// Toast Notifikasi Sederhana
-function showToast(msg) {
-    const toast = document.getElementById('toast');
-    if (toast) {
-        toast.textContent = msg;
-        toast.classList.add('visible');
-        
-        // Hilangkan setelah 2 detik
-        setTimeout(() => {
-            toast.classList.remove('visible');
-        }, 2000);
-    } else {
-        // Fallback jika elemen tidak ada
-        alert(msg);
-    }
 }
 
 function typewriter(text) {
@@ -103,9 +85,17 @@ function enableInput(enabled) {
 }
 
 function updateSprite(emotion) {
-    const normalizedEmotion = emotion in sprites ? emotion : 'IDLE';
+    // Normalisasi emosi (cegah error jika emosi tidak dikenal)
+    const key = emotion ? emotion.toUpperCase() : 'IDLE';
+    const validEmotion = (key in sprites) ? key : 'IDLE';
+    
+    // Ambil URL gambar
+    let newSrc = sprites[validEmotion];
+    
+    // Fallback: Jika gambar untuk emosi ini kosong, pakai IDLE
+    if (!newSrc) newSrc = sprites['IDLE'];
+
     const imgEl = document.getElementById('char-sprite');
-    const newSrc = sprites[normalizedEmotion];
 
     if (imgEl && imgEl.src !== newSrc) {
         imgEl.style.opacity = 0; 
@@ -113,13 +103,14 @@ function updateSprite(emotion) {
             imgEl.src = newSrc;
             imgEl.style.opacity = 1; 
         }, 150);
-        currentEmotion = normalizedEmotion;
+        currentEmotion = validEmotion;
     }
 }
 
 function parseReply(rawText) {
     let cleanText = rawText;
     let emotion = 'IDLE';
+    // Deteksi tag [EMOSI] di awal kalimat
     const match = rawText && rawText.match(/^\[([A-Z]+)\]/);
     if (match) {
         emotion = match[1];
@@ -141,16 +132,34 @@ async function loadCharacterAndState() {
 
         document.getElementById('char-name').textContent = char.name;
 
-        if (char.image) {
-            const spriteEl = document.getElementById('char-sprite');
-            if(spriteEl) spriteEl.src = char.image;
-            Object.keys(sprites).forEach(key => { sprites[key] = char.image; });
+        // --- SETUP SPRITES ---
+        const defaultImg = char.image || "https://via.placeholder.com/400x600?text=No+Image";
+        
+        // Reset sprites dengan gambar default dulu (aman)
+        Object.keys(sprites).forEach(k => sprites[k] = defaultImg);
+
+        // Jika ada data sprites di database, timpa yang default
+        if (char.sprites) {
+            if (char.sprites.idle) sprites['IDLE'] = char.sprites.idle;
+            if (char.sprites.happy) sprites['HAPPY'] = char.sprites.happy;
+            if (char.sprites.sad) sprites['SAD'] = char.sprites.sad;
+            if (char.sprites.angry) sprites['ANGRY'] = char.sprites.angry;
+            if (char.sprites.surprised) sprites['SURPRISED'] = char.sprites.surprised;
+            if (char.sprites.shy) sprites['SHY'] = char.sprites.shy;
+            if (char.sprites.thinking) sprites['THINKING'] = char.sprites.thinking;
         }
 
+        // Tampilkan sprite awal (IDLE)
+// Tampilkan sprite awal (IDLE) dengan animasi fade-in
+        // Kita pakai updateSprite() karena dia sudah punya logika transisi opacity
+        updateSprite('IDLE');
+
+        // Background (jika ada)
         if (char.backgroundImage) {
             document.querySelector('.vn-background').style.backgroundImage = `url('${char.backgroundImage}')`;
         }
 
+        // Load History Chat
         if (currentUser) {
             const token = await currentUser.getIdToken();
             const histRes = await fetch(`/.netlify/functions/get-history?id=${currentCharacterId}&sessionId=${currentSessionId}`, {
@@ -160,11 +169,16 @@ async function loadCharacterAndState() {
 
             if (history && history.length > 0) {
                 const lastMsg = history[history.length - 1];
-                const { emotion, cleanText } = parseReply(lastMsg.text);
-                updateSprite(emotion);
-                
-                if (lastMsg.sender === 'user') typewriter(`(Kamu): ${cleanText}`);
-                else typewriter(cleanText);
+                // Jika pesan terakhir dari bot, ambil emosinya
+                if (lastMsg.sender !== 'user') {
+                    const { emotion, cleanText } = parseReply(lastMsg.text);
+                    updateSprite(emotion);
+                    typewriter(cleanText);
+                } else {
+                    // Jika user terakhir chat, bot dalam posisi berpikir/idle
+                    updateSprite('IDLE');
+                    typewriter(`(Kamu): ${lastMsg.text}`);
+                }
             } else {
                 typewriter(char.greeting || `Halo! Aku ${char.name}.`);
             }
@@ -176,124 +190,7 @@ async function loadCharacterAndState() {
     }
 }
 
-// --- 4. LOG / HISTORY UI & ACTIONS ---
-
-async function openLog() {
-    const logOverlay = document.getElementById('log-overlay');
-    const logContent = document.getElementById('log-content');
-    if(!logOverlay || !logContent) return;
-
-    logOverlay.classList.remove('hidden');
-    logContent.innerHTML = '<p style="text-align:center;">Memuat memori...</p>';
-
-    try {
-        const token = await currentUser.getIdToken();
-        const res = await fetch(`/.netlify/functions/get-history?id=${currentCharacterId}&sessionId=${currentSessionId}`, { 
-            headers: { 'Authorization': `Bearer ${token}` } 
-        });
-        const history = await res.json();
-        
-        logContent.innerHTML = ''; 
-
-        if (history.length === 0) {
-            logContent.innerHTML = '<p style="text-align:center; opacity:0.7;">Belum ada percakapan.</p>';
-        } else {
-            history.forEach(msg => {
-                const item = document.createElement('div');
-                const senderClass = msg.sender === 'user' ? 'user' : 'bot';
-                item.className = `log-item ${senderClass}`;
-                
-                const senderName = msg.sender === 'user' ? 'Kamu' : currentCharacterName;
-                const { cleanText } = parseReply(msg.text);
-
-                // Buat struktur pesan
-                const nameDiv = document.createElement('div');
-                nameDiv.className = 'log-sender';
-                nameDiv.textContent = senderName;
-
-                const textDiv = document.createElement('div');
-                textDiv.className = 'log-text';
-                textDiv.textContent = cleanText;
-
-                // Tombol Copy
-                const copyBtn = document.createElement('button');
-                copyBtn.className = 'log-copy-btn';
-                copyBtn.innerHTML = '📋'; // Icon papan klip
-                copyBtn.title = "Salin Teks";
-                copyBtn.onclick = () => {
-                    navigator.clipboard.writeText(cleanText);
-                    // Ubah icon sesaat
-                    copyBtn.innerHTML = '✅';
-                    setTimeout(() => copyBtn.innerHTML = '📋', 1000);
-                };
-
-                item.appendChild(nameDiv);
-                item.appendChild(textDiv);
-                item.appendChild(copyBtn);
-
-                logContent.appendChild(item);
-            });
-            logContent.scrollTop = logContent.scrollHeight;
-        }
-
-    } catch (e) {
-        logContent.innerHTML = '<p style="text-align:center; color:#ff6b6b;">Gagal memuat riwayat.</p>';
-    }
-}
-
-function closeLog() {
-    document.getElementById('log-overlay').classList.add('hidden');
-}
-
-async function deleteHistory() {
-    // 1. Konfirmasi
-    const isSure = await showCustomConfirm(
-        "Hapus Memori?", 
-        "Tindakan ini akan menghapus semua percakapan di sesi ini secara permanen. Mulai ulang?"
-    );
-
-    if (!isSure) return;
-
-    closeLog();
-    document.getElementById('dialogue-text').innerText = "Menghapus ingatan...";
-    
-    try {
-        const token = await currentUser.getIdToken();
-        // Panggil backend untuk hapus data di Firestore
-        const res = await fetch(`/.netlify/functions/delete-history?id=${currentCharacterId}&sessionId=${currentSessionId}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        if (!res.ok) throw new Error("Gagal menghapus data server");
-
-        // 2. Reset Sesi Lokal
-        // Hapus dari localStorage
-        const storageKey = `vn_session_${currentUser.uid}_${currentCharacterId}`;
-        localStorage.removeItem(storageKey);
-        
-        // Buat ID baru
-        currentSessionId = generateUUID();
-        localStorage.setItem(storageKey, currentSessionId);
-
-        // 3. Reset UI ke Awal
-        currentEmotion = 'IDLE';
-        updateSprite('IDLE');
-        
-        // Tampilkan pesan reset
-        document.getElementById('dialogue-text').innerText = "*Memori telah direset.*";
-        setTimeout(() => {
-            loadCharacterAndState(); // Load ulang sapaan awal
-        }, 1500);
-
-    } catch (e) {
-        console.error(e);
-        alert("Gagal menghapus: " + e.message);
-        document.getElementById('dialogue-text').innerText = "Gagal reset.";
-    }
-}
-
-// --- 5. MAIN CHAT LOGIC ---
+// --- 4. MAIN CHAT LOGIC ---
 
 async function sendMessage() {
     const input = document.getElementById('user-input');
@@ -306,6 +203,7 @@ async function sendMessage() {
 
     try {
         if (!currentUser) throw new Error("Sesi habis, silakan refresh.");
+        // PERBAIKAN: Typo constHV -> const
         const token = await currentUser.getIdToken();
 
         const res = await fetch('/.netlify/functions/get-chat-response-vn', {
@@ -350,6 +248,107 @@ async function saveMessage(sender, text) {
     } catch (e) { console.error("Gagal simpan:", e); }
 }
 
+// --- 5. HISTORY & LOG ---
+async function openLog() {
+    const logOverlay = document.getElementById('log-overlay');
+    const logContent = document.getElementById('log-content');
+    if(!logOverlay || !logContent) return;
+
+    logOverlay.classList.remove('hidden');
+    logContent.innerHTML = '<p style="text-align:center;">Memuat memori...</p>';
+
+    try {
+        const token = await currentUser.getIdToken();
+        const res = await fetch(`/.netlify/functions/get-history?id=${currentCharacterId}&sessionId=${currentSessionId}`, { 
+            headers: { 'Authorization': `Bearer ${token}` } 
+        });
+        const history = await res.json();
+        
+        logContent.innerHTML = ''; 
+
+        if (history.length === 0) {
+            logContent.innerHTML = '<p style="text-align:center; opacity:0.7;">Belum ada percakapan.</p>';
+        } else {
+            history.forEach(msg => {
+                const item = document.createElement('div');
+                const senderClass = msg.sender === 'user' ? 'user' : 'bot';
+                item.className = `log-item ${senderClass}`;
+                
+                const senderName = msg.sender === 'user' ? 'Kamu' : currentCharacterName;
+                const { cleanText } = parseReply(msg.text);
+
+                const nameDiv = document.createElement('div');
+                nameDiv.className = 'log-sender';
+                nameDiv.textContent = senderName;
+
+                const textDiv = document.createElement('div');
+                textDiv.className = 'log-text';
+                textDiv.textContent = cleanText;
+
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'log-copy-btn';
+                copyBtn.innerHTML = '📋';
+                copyBtn.title = "Salin Teks";
+                copyBtn.onclick = () => {
+                    navigator.clipboard.writeText(cleanText);
+                    copyBtn.innerHTML = '✅';
+                    setTimeout(() => copyBtn.innerHTML = '📋', 1000);
+                };
+
+                item.appendChild(nameDiv);
+                item.appendChild(textDiv);
+                item.appendChild(copyBtn);
+
+                logContent.appendChild(item);
+            });
+            logContent.scrollTop = logContent.scrollHeight;
+        }
+    } catch (e) {
+        logContent.innerHTML = '<p style="text-align:center; color:#ff6b6b;">Gagal memuat riwayat.</p>';
+    }
+}
+
+function closeLog() { document.getElementById('log-overlay').classList.add('hidden'); }
+
+async function deleteHistory() {
+    const isSure = await showCustomConfirm(
+        "Hapus Memori?", 
+        "Tindakan ini akan menghapus semua percakapan di sesi ini secara permanen. Mulai ulang?"
+    );
+
+    if (!isSure) return;
+    closeLog();
+    document.getElementById('dialogue-text').innerText = "Menghapus ingatan...";
+    
+    try {
+        const token = await currentUser.getIdToken();
+        const res = await fetch(`/.netlify/functions/delete-history?id=${currentCharacterId}&sessionId=${currentSessionId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!res.ok) throw new Error("Gagal menghapus data server");
+
+        // Reset Sesi Lokal
+        const storageKey = `vn_session_${currentUser.uid}_${currentCharacterId}`;
+        localStorage.removeItem(storageKey);
+        
+        currentSessionId = generateUUID();
+        localStorage.setItem(storageKey, currentSessionId);
+
+        currentEmotion = 'IDLE';
+        updateSprite('IDLE');
+        
+        document.getElementById('dialogue-text').innerText = "*Memori telah direset.*";
+        setTimeout(() => { loadCharacterAndState(); }, 1500);
+
+    } catch (e) {
+        console.error(e);
+        alert("Gagal menghapus: " + e.message);
+        document.getElementById('dialogue-text').innerText = "Gagal reset.";
+    }
+}
+
 // --- 6. INITIALIZATION ---
 
 function initVN() {
@@ -377,9 +376,16 @@ function initVN() {
 document.addEventListener('DOMContentLoaded', () => {
     const btnSend = document.getElementById('btn-send');
     const input = document.getElementById('user-input');
+    
+    // Tombol Log
     const btnLog = document.getElementById('btn-log');
+    if (btnLog) btnLog.addEventListener('click', openLog);
+    
     const btnCloseLog = document.getElementById('close-log');
-    const btnDeleteHistory = document.getElementById('btn-delete-history'); // Tombol Hapus Baru
+    if (btnCloseLog) btnCloseLog.addEventListener('click', closeLog);
+
+    const btnDeleteHistory = document.getElementById('btn-delete-history');
+    if (btnDeleteHistory) btnDeleteHistory.addEventListener('click', deleteHistory);
 
     if (btnSend) btnSend.addEventListener('click', sendMessage);
     if (input) {
@@ -387,9 +393,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (e.key === 'Enter') sendMessage();
         });
     }
-    if (btnLog) btnLog.addEventListener('click', openLog);
-    if (btnCloseLog) btnCloseLog.addEventListener('click', closeLog);
-    if (btnDeleteHistory) btnDeleteHistory.addEventListener('click', deleteHistory); // Listener Hapus
 
     const checkAuth = () => {
         const user = firebase.auth().currentUser;
@@ -407,6 +410,5 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     };
-    
     checkAuth();
 });

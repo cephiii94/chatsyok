@@ -89,8 +89,9 @@ textarea:focus {
     background-color: var(--bg-sidebar);
 }
 input[type="file"] {
-    /* Sembunyikan input file standar */
-    display: none;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    padding: 5px 0;
 }
 .avatar-upload small {
     color: var(--text-secondary);
@@ -140,4 +141,17 @@ input[type="radio"] {
 }
 #form-status.error {
     color: red;
+}
+
+/* File: css/create-mai.css (Tambahan di paling bawah) */
+
+/* Sembunyikan Grid Sprite secara default agar tidak muncul sebelum checkbox dicentang */
+#vn-sprites-container {
+    display: none;
+}
+
+/* Pastikan input file di dalam grid VN selalu terlihat (karena sebelumnya kita sembunyikan input file global) */
+#vn-sprites-container input[type="file"] {
+    display: block;
+    margin: 5px auto; /* Tengahkan tombol */
 }
