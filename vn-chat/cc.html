@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Sprite & Prompt Builder v5</title>
+    <style>
+        :root {
+            --primary: #9ACEEB; /* Soft Blue Favorit Tuan Cecep */
+            --primary-dark: #7FBFD6;
+            --bg: #F0F8FF;
+            --text: #334e68;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            width: 100%;
+            max-width: 800px;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(154, 206, 235, 0.4);
+            border-top: 6px solid var(--primary);
+        }
+
+        h2 { text-align: center; margin-bottom: 5px; color: var(--text); }
+        .subtitle { text-align: center; font-size: 0.9em; color: #666; margin-bottom: 25px; }
+
+        label { display: block; margin-bottom: 6px; font-weight: 700; font-size: 0.9em; color: #444; }
+        
+        /* Highlighting Logic Sections */
+        .logic-section {
+            background: #eef7fc;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #d0e7f5;
+            margin-bottom: 20px;
+        }
+
+        textarea, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            box-sizing: border-box;
+            background: #fff;
+            font-size: 14px;
+            margin-bottom: 15px;
+            transition: 0.3s;
+        }
+
+        textarea:focus, select:focus { outline: none; border-color: var(--primary); }
+        textarea { height: 70px; resize: vertical; }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+            width: 100%;
+            transition: 0.3s;
+            margin-top: 5px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        button:hover { background-color: var(--primary-dark); transform: translateY(-1px); }
+
+        .result-box {
+            margin-top: 25px;
+            background-color: #f8fbfe;
+            border: 2px dashed var(--primary);
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        #finalPrompt {
+            width: 100%; height: 130px; border: none; background: transparent;
+            font-family: monospace; color: #333; font-size: 13px; line-height: 1.4;
+        }
+        
+        .badge {
+            display: inline-block; padding: 2px 6px; border-radius: 4px; 
+            font-size: 0.7em; background: #FF9800; color: white; vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>✨ AI Sprite & Prompt Builder v5</h2>
+    <p class="subtitle">Spesialis Animasi & Konsistensi Karakter</p>
+
+    <div class="logic-section">
+        <label>🛠️ Tujuan Pembuatan (Penting!)</label>
+        <div class="grid-2">
+            <div>
+                <label style="font-weight:normal;">Mode Output</label>
+                <select id="outputMode" onchange="toggleAnimationOptions()">
+                    <option value="sheet">🎞️ Animation Sheet / Game Sprite</option>
+                    <option value="single">🖼️ Ilustrasi Tunggal (Poster/Cover)</option>
+                </select>
+            </div>
+            <div id="animTypeContainer">
+                <label style="font-weight:normal;">Gerakan Animasi <span class="badge">Auto-Logic</span></label>
+                <select id="animType">
+                    <option value="walk">🚶 Walking Cycle (Jalan)</option>
+                    <option value="run">🏃 Running Cycle (Lari)</option>
+                    <option value="idle">🧍 Idle/Stand (Diam Berbagai Arah)</option>
+                    <option value="combat">⚔️ Attack/Combat (Menyerang)</option>
+                </select>
+            </div>
+            <div id="singleActionContainer" style="display:none;">
+                <label style="font-weight:normal;">Pose Karakter</label>
+                <select id="singleAction">
+                    <option value="Standing confidently">Berdiri Percaya Diri</option>
+                    <option value="Sitting">Duduk</option>
+                    <option value="Dynamic pose">Pose Aksi</option>
+                </select>
+            </div>
+        </div>
+        
+        <div id="gridSettings">
+            <label style="font-weight:normal; margin-top:5px;">Layout Grid (Jumlah Panel)</label>
+            <select id="gridType">
+                <option value="grid 4x3, 12 panels">12 Frames (4x3) - Standar Animasi Lengkap</option>
+                <option value="grid 4x2, 8 panels">8 Frames (4x2) - Animasi Simpel</option>
+                <option value="character sheet, multiple views">Auto Sheet (Random)</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label>1. Deskripsi Karakter (Fisik & Baju Saja)</label>
+        <textarea id="charDesc" placeholder="Contoh: A beautiful 20-year-old anime girl, blue ponytail, wearing soft blue hoodie..."></textarea>
+    </div>
+
+    <div class="grid-2">
+        <div>
+            <label>2. Gaya Visual</label>
+            <select id="style">
+                <option value="Anime style">Anime Style (Standard)</option>
+                <option value="Chibi style">Chibi / Cute (Kepala Besar)</option>
+                <option value="Pixel art, 16-bit">Pixel Art (Retro Game)</option>
+                <option value="3D render, blender style">3D Style</option>
+            </select>
+        </div>
+        <div>
+            <label>3. Sudut Pandang (View)</label>
+            <select id="view">
+                <option value="Full body shot">Full Body (Wajib untuk Jalan/Lari)</option>
+                <option value="Cowboy shot">Cowboy Shot (Setengah Badan)</option>
+            </select>
+        </div>
+    </div>
+
+    <div>
+        <label>4. Latar Belakang</label>
+        <select id="bg">
+            <option value="(Simple white background:1.5), isolated on white">⚪ Putih Polos (Siap Crop)</option>
+            <option value="Green screen background">🟢 Green Screen</option>
+            <option value="City street background">🏙️ Kota (Hanya untuk Ilustrasi)</option>
+        </select>
+    </div>
+
+    <button onclick="generatePrompt()">🚀 Generate Prompt</button>
+
+    <div class="result-box">
+        <label>Hasil Prompt (Copy ke AI):</label>
+        <textarea id="finalPrompt" readonly></textarea>
+        <button style="margin-top:10px; background:#555; padding:10px; font-size:14px;" onclick="copyToClipboard()">Salin Teks</button>
+    </div>
+</div>
+
+<script>
+    function toggleAnimationOptions() {
+        const mode = document.getElementById('outputMode').value;
+        const animContainer = document.getElementById('animTypeContainer');
+        const singleContainer = document.getElementById('singleActionContainer');
+        const gridSettings = document.getElementById('gridSettings');
+
+        if (mode === 'sheet') {
+            animContainer.style.display = 'block';
+            singleContainer.style.display = 'none';
+            gridSettings.style.display = 'block';
+        } else {
+            animContainer.style.display = 'none';
+            singleContainer.style.display = 'block';
+            gridSettings.style.display = 'none';
+        }
+    }
+
+    function generatePrompt() {
+        // Ambil Data Dasar
+        let desc = document.getElementById('charDesc').value.trim();
+        const style = document.getElementById('style').value;
+        const view = document.getElementById('view').value;
+        const bg = document.getElementById('bg').value;
+        const mode = document.getElementById('outputMode').value;
+        
+        // Default desc
+        if (!desc) desc = "A character";
+
+        // --- THE MAGIC LOGIC (v5) ---
+        let finalOutput = "";
+        const qualityStart = "(Masterpiece, best quality),";
+        
+        // Logic Jika Mode = ANIMATION SHEET
+        if (mode === 'sheet') {
+            const animType = document.getElementById('animType').value;
+            const gridType = document.getElementById('gridType').value;
+            
+            // 1. Tentukan Kata Kunci Gerakan (Hardcoded agar konsisten)
+            let motionPrompt = "";
+            if (animType === 'walk') {
+                motionPrompt = "walking motion sequence, (front view walking, side view walking, back view walking), continuous movement cycle, showing legs moving";
+            } else if (animType === 'run') {
+                motionPrompt = "running motion sequence, (dynamic running pose), (side view run, front view run), action lines, speed";
+            } else if (animType === 'idle') {
+                motionPrompt = "character reference sheet, turnaround, (front view, side view, back view), standing still, idle pose";
+            } else if (animType === 'combat') {
+                motionPrompt = "combat poses, attacking, holding weapon, dynamic action sheet, fighting stance sequence";
+            }
+
+            // 2. Tentukan Kata Kunci Visual (Supaya mudah diedit/animasi)
+            // Kita tambah 'flat color' dan 'no shadows' agar AI tidak bikin shading ribet
+            const techSpecs = "(flat color, clean lines, no shadows:1.2), consistent details";
+
+            // 3. Rakit Prompt Sheet
+            finalOutput = `${qualityStart} ${style}, (character sheet, ${gridType}, consistent character), ${desc}, ${view}, ${motionPrompt}, ${techSpecs}, ${bg}, (8k resolution)`;
+        
+        } else {
+            // Logic Jika Mode = SINGLE ILLUSTRATION
+            const singleAction = document.getElementById('singleAction').value;
+            finalOutput = `${qualityStart} ${style}, ${view}, ${desc}, ${singleAction}, Gentle smile, ${bg}, (cinematic lighting, 8k)`;
+        }
+
+        document.getElementById('finalPrompt').value = finalOutput;
+    }
+
+    function copyToClipboard() {
+        const copyText = document.getElementById("finalPrompt");
+        copyText.select();
+        navigator.clipboard.writeText(copyText.value);
+    }
+</script>
+
+</body>
+</html>
