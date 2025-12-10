@@ -72,10 +72,12 @@ exports.handler = async (event, context) => {
     const displayPreview = sender === 'user' ? `Anda: ${previewText}` : previewText;
 
     // Set/Merge data sesi
+    // UPDATE BRI: Menambahkan isSaved: true agar langsung muncul di list (get-sessions)
     await sessionRef.set({
         id: sessionId,
         preview: displayPreview,
-        updatedAt: timestamp
+        updatedAt: timestamp,
+        isSaved: true // <--- AUTO-SAVE AKTIF!
     }, { merge: true }); 
 
     return {
