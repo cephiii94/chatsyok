@@ -216,7 +216,7 @@ exports.handler = async (event, context) => {
     // --- E. REQUEST KE GEMINI ---
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
     // Gunakan model Flash terbaru atau Pro sesuai selera Tuan
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${GEMINI_API_KEY}`;
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemma-3-27b-it:generateContent?key=${GEMINI_API_KEY}`;
 
     const payload = {
         contents: [{ parts: [] }],

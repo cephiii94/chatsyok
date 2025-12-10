@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Tanya Jawab Manual - TensorFlow.js</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/qna"></script>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #e3f2fd; /* Soft Blue Background */
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background-color: #ffffff;
+            width: 100%;
+            max-width: 600px;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(176, 190, 213, 0.4); /* Soft Shadow */
+            border: 1px solid #bbdefb;
+        }
+        h2 { color: #4fc3f7; text-align: center; }
+        
+        /* Area Database Teks */
+        .context-box {
+            background-color: #f1f8e9;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 0.9em;
+            color: #555;
+            margin-bottom: 20px;
+            border-left: 5px solid #81c784;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #b3e5fc;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 16px;
+            outline: none;
+            transition: 0.3s;
+        }
+        input[type="text"]:focus {
+            border-color: #29b6f6;
+            box-shadow: 0 0 8px rgba(41, 182, 246, 0.2);
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            background-color: #4fc3f7; /* Soft Blue Button */
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        button:hover { background-color: #039be5; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+
+        .answer-box {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #e1f5fe;
+            border-radius: 8px;
+            display: none; /* Sembunyi dulu */
+        }
+        .loading { font-style: italic; color: #888; text-align: center; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🤖 Bot Q&A Tanpa Server</h2>
+    
+    <p><strong>Database Teks (Context):</strong></p>
+    <div class="context-box" id="contextData">
+        Halo, nama saya Tuan Cecep Hardiansyah. Saya lahir pada tanggal 6 Maret 1994. 
+        Istri saya bernama Erlin Karlinda, dia lahir pada 18 Desember 1992. 
+        Kami menikah pada tanggal 20 Maret 2022. 
+        Anak pertama kami bernama Vanno Athar Rudiansyah yang lahir pada 6 Juni 2023. 
+        Anak kedua kami bernama Varren Zaydan Erdiansyah, lahir baru saja pada 25 Mei 2025.
+        Saya sangat menyukai warna biru pastel atau soft blue.
+    </div>
+
+    <input type="text" id="questionInput" placeholder="Tanya sesuatu (Cth: Siapa nama istri Cecep?)...">
+    <button id="askBtn" onclick="cariJawaban()" disabled>Sedang Memuat Model AI...</button>
+    
+    <div id="loadingStatus" class="loading">Sabar ya, sedang download otak AI ke browser...</div>
+
+    <div class="answer-box" id="resultBox">
+        <strong>Jawaban:</strong>
+        <p id="answerText" style="font-size: 1.2em; color: #0277bd;"></p>
+        <small>Skor Keyakinan: <span id="scoreText"></span></small>
+    </div>
+</div>
+
+<script>
+    let model;
+
+    // 1. Load Model saat halaman dibuka (Ini yang agak lama di awal)
+    async function loadModel() {
+        // Menggunakan model MobileBERT (versi ringan untuk browser)
+        model = await qna.load(); 
+        
+        // Kalau sudah selesai load:
+        document.getElementById('askBtn').innerText = "Tanyakan Sekarang";
+        document.getElementById('askBtn').disabled = false;
+        document.getElementById('loadingStatus').style.display = 'none';
+        console.log("Model Loaded!");
+    }
+
+    loadModel();
+
+    // 2. Fungsi Mencari Jawaban
+    async function cariJawaban() {
+        const question = document.getElementById('questionInput').value;
+        const passage = document.getElementById('contextData').innerText; // Mengambil teks dari kotak hijau
+
+        if (!question) return;
+
+        document.getElementById('loadingStatus').style.display = 'block';
+        document.getElementById('loadingStatus').innerText = "Sedang berpikir...";
+        document.getElementById('resultBox').style.display = 'none';
+
+        // PROSES PENCARIAN (Magic happens here)
+        const answers = await model.findAnswers(question, passage);
+
+        document.getElementById('loadingStatus').style.display = 'none';
+        const resultBox = document.getElementById('resultBox');
+        const answerText = document.getElementById('answerText');
+        const scoreText = document.getElementById('scoreText');
+
+        if (answers && answers.length > 0) {
+            // Tampilkan jawaban dengan skor tertinggi
+            resultBox.style.display = 'block';
+            answerText.innerText = answers[0].text; 
+            scoreText.innerText = Math.round(answers[0].score * 100) + "%";
+        } else {
+            resultBox.style.display = 'block';
+            answerText.innerText = "Maaf, informasi tersebut tidak ditemukan dalam teks database.";
+            scoreText.innerText = "-";
+        }
+    }
+</script>
+
+</body>
+</html>
