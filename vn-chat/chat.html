@@ -21,9 +21,12 @@
         
         <div class="top-buttons">
             <button id="btn-back" class="icon-btn" title="Kembali ke Lobi">↩️ Kembali</button>
-            <button id="btn-log" class="icon-btn" title="Lihat Riwayat">📜 Riwayat</button>
-            <button id="btn-settings" class="icon-btn" title="Pengaturan User">⚙️ Atur</button>
-            <button id="btn-delete-history" class="icon-btn danger" title="Hapus Memori">🗑️ Reset</button>
+
+            <div class="right-tools">
+                <button id="btn-log" class="icon-btn" title="Lihat Riwayat">📜 Riwayat</button>
+                <button id="btn-settings" class="icon-btn" title="Pengaturan User">⚙️ Atur</button>
+                <button id="btn-delete-history" class="icon-btn danger" title="Hapus Memori">🗑️ Reset</button>
+            </div>
         </div>
 
         <div class="dialogue-box">
@@ -43,8 +46,7 @@
                 <h3>Riwayat Percakapan</h3>
                 <button id="close-log">✖</button>
             </div>
-            <div id="log-content">
-                </div>
+            <div id="log-content"></div>
         </div>
     </div>
 
@@ -81,6 +83,18 @@
                 <button id="btn-confirm-cancel" class="btn-cancel">Batal</button>
                 <button id="btn-confirm-yes" class="btn-yes">Ya, Lakukan</button>
             </div>
+        </div>
+    </div>
+
+    <div id="custom-alert-modal" class="overlay hidden">
+        <div class="modal-box" style="text-align: center;">
+            <h3 id="alert-title" style="color: #023047; margin-top: 0;">Notifikasi</h3>
+            <p id="alert-msg" style="color: #333; font-size: 16px; margin: 20px 0;">
+                Pesan notifikasi...
+            </p>
+            <button id="btn-alert-ok" class="vn-btn-primary">
+                OK, Mengerti
+            </button>
         </div>
     </div>
 

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profil Pemain - Chatsyok</title>
+    
+    <link rel="stylesheet" href="css/lobby.css">
+    <link rel="stylesheet" href="css/profile.css">
+    
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+</head>
+<body>
+
+    <div class="background-container" style="filter: blur(8px); transform: scale(1.1);"></div>
+
+    <div class="profile-container">
+        <div class="profile-header">
+            <button onclick="window.location.href='index.html'" class="back-btn">↩️ Kembali ke Lobi</button>
+            <h2 class="page-title">Kartu Pemain</h2>
+        </div>
+
+        <div class="player-card">
+            
+            <div class="card-top">
+                <div class="avatar-frame">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Guest" alt="User Avatar" id="user-avatar">
+                </div>
+                <div class="user-info">
+                    <h2 id="display-name">Memuat...</h2>
+                    <p class="user-rank">Rank: <span id="rank-name" style="color:#0077b6;">...</span></p>
+                    
+                    <div class="level-info">
+                        <span class="lvl-badge">Lvl. <b id="level-num">1</b></span>
+                        <small class="xp-text"><span id="current-xp">0</span> / <span id="max-xp">100</span> XP</small>
+                    </div>
+                    <div class="xp-bar-container">
+                        <div class="xp-bar-fill" id="xp-bar" style="width: 0%;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="divider">
+
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <span class="emoji">💬</span>
+                    <h3>Total Chat</h3>
+                    <p id="stat-chat-count">0</p>
+                </div>
+                <div class="stat-box">
+                    <span class="emoji">❤️</span>
+                    <h3>Total Hati</h3>
+                    <p id="stat-hearts">0</p>
+                </div>
+                <div class="stat-box">
+                    <span class="emoji">🔥</span>
+                    <h3>Streak</h3>
+                    <p id="stat-streak">1 Hari</p>
+                </div>
+            </div>
+
+            <div class="badges-section">
+                <h4>🏅 Koleksi Lencana</h4>
+                <div class="badge-list">
+                    <div class="badge unlocked" title="Akun Terdaftar">🆔</div>
+                    <div class="badge locked" title="Terkunci: Ngobrol 100x">💬</div>
+                    <div class="badge locked" title="Terkunci: Sahabat Mai">❤️</div>
+                    <div class="badge locked" title="Terkunci: Begadang Gaming">🌙</div>
+                </div>
+            </div>
+
+            <button id="btn-edit-profile" class="edit-btn">
+                ✏️ Ubah Nama Panggilan
+            </button>
+        </div>
+    </div>
+
+    <script src="js/profile.js"></script>
+</body>
+</html>

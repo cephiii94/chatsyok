@@ -5,23 +5,20 @@ body, html {
     width: 100%;
     height: 100%;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    overflow: hidden; /* Mencegah scroll halaman utama */
+    overflow: hidden; 
     background-color: #000;
 }
 
 /* --- LAYERS --- */
-
-/* 1. Background Layer */
 .vn-background {
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
     background-size: cover;
     background-position: center;
-    background-image: url('img/bg/kamar.png'); /* Default BG */
+    background-image: url('img/bg/kamar.png'); 
     z-index: 1;
 }
 
-/* 2. Character Layer */
 .vn-character-container {
     position: absolute;
     bottom: 0; 
@@ -29,7 +26,7 @@ body, html {
     transform: translateX(-50%);
     width: 100%;
     height: 100%;
-    pointer-events: none; /* Agar klik tembus ke belakang */
+    pointer-events: none; 
     z-index: 2;
     display: flex;
     justify-content: center;
@@ -37,12 +34,11 @@ body, html {
 }
 
 #char-sprite {
-    max-height: 90vh; /* Agar tidak terlalu besar di layar HP */
+    max-height: 90vh; 
     height: auto;
     transition: opacity 0.2s ease-in-out;
 }
 
-/* 3. UI Layer (Dialog & Tombol) */
 .vn-ui-layer {
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
@@ -52,15 +48,29 @@ body, html {
     justify-content: space-between;
     padding: 20px;
     box-sizing: border-box;
-    pointer-events: none; /* Area kosong tidak menghalangi */
+    pointer-events: none; 
 }
 
-/* --- TOMBOL ATAS --- */
+/* --- TOMBOL ATAS (UPDATED) --- */
 .top-buttons {
     display: flex;
+    width: 100%;
+    justify-content: space-between; /* KUNCI: Pisah Kiri dan Kanan */
+    align-items: flex-start;
+    pointer-events: none; /* Agar area tengah bolong (bisa klik background) */
+    padding: 0 5px;
+}
+
+/* Container tombol kanan */
+.right-tools {
+    display: flex;
     gap: 10px;
-    justify-content: flex-end;
-    pointer-events: auto; /* Tombol bisa diklik */
+    pointer-events: auto; /* Aktifkan klik */
+}
+
+/* Tombol kiri dan elemen kanan harus bisa diklik */
+#btn-back {
+    pointer-events: auto;
 }
 
 .icon-btn {
@@ -71,7 +81,7 @@ body, html {
     cursor: pointer;
     font-weight: bold;
     font-size: 14px;
-    transition: background 0.2s;
+    transition: background 0.2s, transform 0.2s;
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 
@@ -88,10 +98,32 @@ body, html {
     background: rgba(255, 80, 80, 1);
 }
 
+/* TOMBOL CANTIK UTAMA (Untuk Modal Alert) */
+.vn-btn-primary {
+    background: #8ecae6;
+    color: #023047;
+    border: none;
+    padding: 10px 25px;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 14px;
+    cursor: pointer;
+    transition: transform 0.1s, background 0.2s;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+.vn-btn-primary:hover {
+    background: #219ebc;
+    color: white;
+    transform: scale(1.05);
+}
+.vn-btn-primary:active {
+    transform: scale(0.95);
+}
+
 /* --- KOTAK DIALOG --- */
 .dialogue-box {
-    background: rgba(0, 0, 0, 0.85); /* Hitam transparan elegan */
-    border: 2px solid #8ecae6; /* Soft Blue Border */
+    background: rgba(0, 0, 0, 0.85); 
+    border: 2px solid #8ecae6; 
     border-radius: 15px;
     padding: 20px;
     margin-bottom: 20px;
@@ -101,14 +133,14 @@ body, html {
     position: relative;
     max-width: 800px;
     width: 100%;
-    align-self: center; /* Tengah secara horizontal */
+    align-self: center; 
 }
 
 .name-tag {
     position: absolute;
     top: -15px;
     left: 20px;
-    background: #219ebc; /* Biru agak gelap */
+    background: #219ebc; 
     color: white;
     padding: 5px 15px;
     border-radius: 20px;
@@ -174,7 +206,7 @@ body, html {
     top: 0; left: 0;
     width: 100%; height: 100%;
     background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(3px); /* Efek blur di belakang popup */
+    backdrop-filter: blur(3px); 
     z-index: 2000;
     display: flex;
     justify-content: center;
@@ -188,7 +220,6 @@ body, html {
     opacity: 0;
 }
 
-/* Design Kotak Popup Umum */
 .modal-box, .log-box {
     background: #fff;
     width: 90%;
@@ -196,14 +227,78 @@ body, html {
     border-radius: 12px;
     padding: 20px;
     box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-    border: 3px solid #8ecae6; /* Soft blue border */
+    border: 3px solid #8ecae6; 
     animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-/* Animasi Popup Muncul */
 @keyframes popIn {
     from { transform: scale(0.8); opacity: 0; }
     to { transform: scale(1); opacity: 1; }
+}
+
+/* --- STYLING KHUSUS MODAL KONFIRMASI --- */
+.confirm-box {
+    text-align: center; /* Teks rata tengah biar rapi */
+    max-width: 400px;   /* Jangan terlalu lebar */
+}
+
+.confirm-box h3 {
+    color: #023047;     /* Biru gelap (sesuai tema) */
+    margin-top: 0;
+    font-size: 22px;
+}
+
+.confirm-box p {
+    color: #555;
+    margin-bottom: 25px;
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+/* Wadah tombol sejajar */
+.modal-actions {
+    display: flex;
+    justify-content: center; /* Tombol di tengah */
+    gap: 15px;               /* Jarak antar tombol */
+}
+
+/* Style Dasar Tombol di Modal */
+.btn-cancel, .btn-yes {
+    padding: 10px 24px;
+    border-radius: 8px;
+    border: none;
+    font-weight: bold;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+/* 1. Tombol BATAL (Abu-abu soft) */
+.btn-cancel {
+    background: #e5e5e5;
+    color: #555;
+}
+
+.btn-cancel:hover {
+    background: #d4d4d4;
+    transform: translateY(-2px);
+}
+
+/* 2. Tombol YA (Merah Estetik - Peringatan) */
+.btn-yes {
+    background: #ef476f;    /* Merah pink modern (tidak norak) */
+    color: white;
+    box-shadow: 0 4px 10px rgba(239, 71, 111, 0.4); /* Efek glowing dikit */
+}
+
+.btn-yes:hover {
+    background: #d64161;    /* Merah lebih gelap saat hover */
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(239, 71, 111, 0.6);
+}
+
+.btn-yes:active {
+    transform: scale(0.95); /* Efek terpencet */
 }
 
 /* --- LOG RIWAYAT KHUSUS --- */

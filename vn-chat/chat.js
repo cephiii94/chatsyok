@@ -1,5 +1,5 @@
 // vn-chat/chat.js
-// VERSI FINAL: Recovery Sesi + User Persona + Settings UI
+// VERSI FINAL: Recovery Sesi + User Persona + Settings UI + Custom Alerts
 
 // --- 1. GLOBAL VARIABLES ---
 let currentCharacterId = "1";
@@ -26,6 +26,20 @@ function generateUUID() {
     return 'vn-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
 }
 
+// FUNGSI BARU: Custom Alert Cantik
+function showNotification(title, message) {
+    const modal = document.getElementById('custom-alert-modal');
+    if (modal) {
+        document.getElementById('alert-title').innerText = title || "Info";
+        document.getElementById('alert-msg').innerText = message;
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+    } else {
+        // Fallback jika modal tidak ada
+        alert(`${title}: ${message}`);
+    }
+}
+
 function showCustomConfirm(title, message) {
     return new Promise((resolve) => {
         const modal = document.getElementById('custom-confirm-modal');
@@ -37,7 +51,6 @@ function showCustomConfirm(title, message) {
         const yesBtn = document.getElementById('btn-confirm-yes');
         const noBtn = document.getElementById('btn-confirm-cancel');
         
-        // Clone untuk hapus event listener lama
         const newYes = yesBtn.cloneNode(true);
         const newNo = noBtn.cloneNode(true);
         yesBtn.parentNode.replaceChild(newYes, yesBtn);
@@ -93,12 +106,11 @@ function updateSprite(emotion) {
     let newSrc = sprites[validEmotion] || sprites['IDLE'];
     const imgEl = document.getElementById('char-sprite');
 
-    console.log(`[VN] Updating sprite: Emotion=${key}, Valid=${validEmotion}, Src=${newSrc}`);
+    // console.log(`[VN] Updating sprite: Emotion=${key}, Valid=${validEmotion}, Src=${newSrc}`);
 
     if (imgEl) {
-        // Fallback jika error (misal gambar tidak ketemu)
         imgEl.onerror = () => {
-            console.error(`[VN] Failed to load image: ${newSrc}`);
+            // console.error(`[VN] Failed to load image: ${newSrc}`);
             if (imgEl.src !== 'https://placehold.co/400x600?text=Image+Not+Found') {
                 imgEl.src = 'https://placehold.co/400x600?text=Image+Not+Found';
             }
@@ -128,7 +140,6 @@ function parseReply(rawText) {
 
 // --- 3. LOAD DATA & SETTINGS ---
 
-// Load pengaturan User (Nama & Persona)
 function loadSettings() {
     const savedName = localStorage.getItem('vn_username');
     const savedPersona = localStorage.getItem('vn_persona');
@@ -136,14 +147,12 @@ function loadSettings() {
     if (savedName) currentUserName = savedName;
     if (savedPersona) currentUserPersona = savedPersona;
 
-    // Update Form UI
     const nameInput = document.getElementById('setting-username');
     const personaInput = document.getElementById('setting-persona');
     if (nameInput) nameInput.value = currentUserName;
     if (personaInput) personaInput.value = currentUserPersona;
 }
 
-// Simpan pengaturan User
 function saveSettings() {
     const nameInput = document.getElementById('setting-username').value.trim();
     const personaInput = document.getElementById('setting-persona').value.trim();
@@ -157,11 +166,10 @@ function saveSettings() {
     localStorage.setItem('vn_persona', currentUserPersona);
 
     document.getElementById('settings-overlay').classList.add('hidden');
-    // Opsional: Beri notifikasi kecil
-    // alert("Pengaturan tersimpan!"); 
+    // MENGGUNAKAN NOTIFIKASI BARU
+    showNotification("Sukses", "Pengaturan user berhasil disimpan!");
 }
 
-// Load Karakter & Sesi
 async function loadCharacterAndState() {
     try {
         const res = await fetch(`/.netlify/functions/get-character?id=${currentCharacterId}`);
@@ -173,12 +181,8 @@ async function loadCharacterAndState() {
 
         document.getElementById('char-name').textContent = char.name;
 
-        // Setup Sprites
         const defaultImg = char.image || "https://via.placeholder.com/400x600?text=No+Image";
         Object.keys(sprites).forEach(k => sprites[k] = defaultImg);
-
-        console.log("[VN] Character Data Loaded:", char);
-        console.log("[VN] Sprites from DB:", char.sprites);
 
         if (char.sprites) {
             if (char.sprites.idle) sprites['IDLE'] = char.sprites.idle;
@@ -190,15 +194,12 @@ async function loadCharacterAndState() {
             if (char.sprites.thinking) sprites['THINKING'] = char.sprites.thinking;
         }
         
-        console.log("[VN] Processed Sprites Map:", sprites);
-
         updateSprite('IDLE');
 
         if (char.backgroundImage) {
             document.querySelector('.vn-background').style.backgroundImage = `url('${char.backgroundImage}')`;
         }
 
-        // Load History Chat
         if (currentUser) {
             const token = await currentUser.getIdToken();
             const histRes = await fetch(`/.netlify/functions/get-history?id=${currentCharacterId}&sessionId=${currentSessionId}`, {
@@ -242,7 +243,6 @@ async function sendMessage() {
         if (!currentUser) throw new Error("Sesi habis, silakan refresh.");
         const token = await currentUser.getIdToken();
 
-        // Mengirim request dengan Persona & Nama User
         const res = await fetch('/.netlify/functions/get-chat-response-vn', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -252,7 +252,6 @@ async function sendMessage() {
                 characterName: currentCharacterName,
                 characterId: currentCharacterId,
                 sessionId: currentSessionId,
-                // Data Persona User
                 userName: currentUserName,
                 userPersona: currentUserPersona
             })
@@ -367,7 +366,6 @@ async function deleteHistory() {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
-        // Reset Sesi
         const storageKey = `vn_session_${currentUser.uid}_${currentCharacterId}`;
         localStorage.removeItem(storageKey);
         
@@ -382,31 +380,30 @@ async function deleteHistory() {
 
     } catch (e) {
         console.error(e);
-        alert("Gagal menghapus: " + e.message);
+        // UPDATE: Pakai notifikasi cantik
+        showNotification("Gagal", "Error menghapus: " + e.message);
         document.getElementById('dialogue-text').innerText = "Gagal reset.";
     }
 }
 
-// --- 6. INITIALIZATION (REVISI PENTING) ---
+// --- 6. INITIALIZATION ---
 
 async function initVN() {
     const params = new URLSearchParams(window.location.search);
     const idFromUrl = params.get('id');
     if (!idFromUrl) {
-        alert("ID tidak valid");
-        window.location.href = 'lobby.html';
+        // UPDATE: Pakai notifikasi cantik (tapi perlu delay redirect biar kebaca)
+        showNotification("Error", "ID Karakter tidak valid!");
+        setTimeout(() => { window.location.href = 'lobby.html'; }, 2000);
         return;
     }
     currentCharacterId = idFromUrl;
 
-    // Load Settings dulu (agar nama user siap)
     loadSettings();
 
     const storageKey = `vn_session_${currentUser.uid}_${currentCharacterId}`;
     let savedSession = localStorage.getItem(storageKey);
 
-    // --- RECOVERY LOGIC START ---
-    // Jika tidak ada di LocalStorage, Cek Server dulu sebelum buat baru.
     if (!savedSession) {
         console.log("Sesi lokal kosong. Memeriksa server...");
         try {
@@ -418,7 +415,6 @@ async function initVN() {
             if (res.ok) {
                 const sessions = await res.json();
                 if (sessions && sessions.length > 0) {
-                    // Ambil sesi paling terakhir diupdate
                     sessions.sort((a, b) => {
                         const dateA = new Date(a.updatedAt._seconds ? a.updatedAt._seconds * 1000 : a.updatedAt);
                         const dateB = new Date(b.updatedAt._seconds ? b.updatedAt._seconds * 1000 : b.updatedAt);
@@ -434,7 +430,6 @@ async function initVN() {
             console.warn("Gagal cek sesi server:", e);
         }
     }
-    // --- RECOVERY LOGIC END ---
 
     if (savedSession) {
         currentSessionId = savedSession;
@@ -447,11 +442,9 @@ async function initVN() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Tombol Kirim
     const btnSend = document.getElementById('btn-send');
     const input = document.getElementById('user-input');
     
-    // Tombol Back
     const btnBack = document.getElementById('btn-back');
     if (btnBack) {
         btnBack.addEventListener('click', () => {
@@ -459,18 +452,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Tombol Log
     const btnLog = document.getElementById('btn-log');
     if (btnLog) btnLog.addEventListener('click', openLog);
     
     const btnCloseLog = document.getElementById('close-log');
     if (btnCloseLog) btnCloseLog.addEventListener('click', closeLog);
 
-    // Tombol Delete
     const btnDeleteHistory = document.getElementById('btn-delete-history');
     if (btnDeleteHistory) btnDeleteHistory.addEventListener('click', deleteHistory);
 
-    // --- TOMBOL SETTINGS (BARU) ---
     const btnSettings = document.getElementById('btn-settings');
     const overlaySettings = document.getElementById('settings-overlay');
     const btnSaveSettings = document.getElementById('btn-save-settings');
@@ -488,7 +478,24 @@ document.addEventListener('DOMContentLoaded', () => {
             overlaySettings.classList.add('hidden');
         });
     }
-    // ------------------------------
+    
+    // --- EVENT LISTENER BARU UNTUK NOTIFIKASI ---
+    const btnAlertOk = document.getElementById('btn-alert-ok');
+    const alertModal = document.getElementById('custom-alert-modal');
+    if(btnAlertOk && alertModal) {
+        btnAlertOk.addEventListener('click', () => {
+            alertModal.classList.add('hidden');
+            alertModal.style.display = 'none';
+        });
+        // Opsional: Tutup jika klik area gelap
+        alertModal.addEventListener('click', (e) => {
+            if(e.target === alertModal) {
+                alertModal.classList.add('hidden');
+                alertModal.style.display = 'none';
+            }
+        });
+    }
+    // --------------------------------------------
 
     if (btnSend) btnSend.addEventListener('click', sendMessage);
     if (input) {
