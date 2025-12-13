@@ -5,10 +5,15 @@ const admin = require('firebase-admin');
 // Inisialisasi Firebase Admin
 if (!admin.apps.length) {
   try {
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount)
-    });
+    // Pastikan env variable FIREBASE_SERVICE_ACCOUNT ada
+    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount)
+      });
+    } else {
+      console.warn("FIREBASE_SERVICE_ACCOUNT tidak ditemukan.");
+    }
   } catch (e) {
     console.error("Gagal inisialisasi Firebase Admin:", e);
   }
@@ -17,75 +22,89 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 
 exports.handler = async (event, context) => {
+  // Header CORS (Penting agar frontend bisa akses)
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS'
+  };
+
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 200, headers, body: '' };
+  }
+
   try {
     const isGuest = event.queryStringParameters.guest === 'true';
-    // Ambil parameter mode (jika ada)
     const isVnMode = event.queryStringParameters.mode === 'vn';
 
     let query = db.collection('characters');
 
     // --- LOGIKA FILTERING ---
     if (isVnMode) {
-        // Mode VN: Cari yang isVnAvailable = true DAN visibilitasnya Publik/Default
-        console.log("Mengambil MAI untuk Mode Visual Novel");
         query = query.where('isVnAvailable', '==', true)
                      .where('visibility', 'in', ['default', 'public']);
     } 
     else if (isGuest) {
-        // Tamu: Hanya lihat 'default'
-        console.log("Mengambil MAI untuk Tamu (visibility: default)");
         query = query.where('visibility', '==', 'default');
     } 
     else {
-        // User Login: Lihat 'default' dan 'public'
-        console.log("Mengambil MAI untuk User Login (visibility: default, public)");
         query = query.where('visibility', 'in', ['default', 'public']);
     }
 
-    // Urutkan berdasarkan ID dokumen
-    const snapshot = await query
-                             .orderBy(admin.firestore.FieldPath.documentId())
-                             .get();
+    const snapshot = await query.get(); // Hapus orderBy sementara jika belum ada index
 
     if (snapshot.empty) {
-      // Kembalikan array kosong jika tidak ada data
       return {
         statusCode: 200, 
+        headers,
         body: JSON.stringify([]) 
       };
     }
 
-    // Ubah data snapshot menjadi array JSON
+    // Ubah data snapshot menjadi array JSON yang SINKRON dengan chat.js
     const characters = snapshot.docs.map(doc => {
+      const data = doc.data();
+      
       return {
-        id: doc.id, 
-        ...doc.data()
+        id: doc.id,
+        name: data.name || "Tanpa Nama",
+        role: data.role || "Character",
+        description: data.description || "Tidak ada deskripsi.",
+        
+        // MAPPING PENTING UNTUK VISUAL (Menangani berbagai kemungkinan nama field di DB)
+        // Chat.js butuh 'image' atau 'sprites.idle'
+        image: data.image || data.avatar || data.imageUrl || "https://placehold.co/400x600?text=No+Image",
+        
+        // Chat.js butuh 'backgroundImage'
+        backgroundImage: data.backgroundImage || data.bg || data.background || "img/bg/kamar.png",
+        
+        // Chat.js butuh struktur 'sprites'
+        sprites: data.sprites || {
+            idle: data.image || data.avatar || ""
+        },
+
+        // Properti lain diteruskan
+        isVnAvailable: data.isVnAvailable,
+        visibility: data.visibility
       };
     });
 
     return {
       statusCode: 200,
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify(characters)
     };
 
   } catch (error) {
     console.error("Error di get-all-characters:", error);
     
-    // Penanganan error khusus jika index Firestore belum dibuat
-    if (error.code === 9 || error.message.includes('The query requires an index')) {
-        return {
-            statusCode: 500,
-            body: JSON.stringify({ 
-                error: "Firestore Index Missing. Cek log Netlify untuk link pembuatan index.",
-                details: error.message
-            })
-        };
-    }
-
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: error.message || "Gagal mengambil data karakter." })
+      headers,
+      body: JSON.stringify({ 
+        error: "Gagal mengambil data karakter.", 
+        details: error.message 
+      })
     };
   }
 };

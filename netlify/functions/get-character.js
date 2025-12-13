@@ -2,57 +2,81 @@
 
 const admin = require('firebase-admin');
 
-// 1. Ambil kredensial rahasia dari Netlify Environment
-const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-
-// 2. Inisialisasi Firebase Admin (hanya jika belum ada)
-// Ini mencegah inisialisasi ganda saat 'hot-reloading'
+// Inisialisasi (Cek duplikasi agar tidak error di Netlify)
 if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
-  });
+    try {
+        if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+            admin.initializeApp({
+                credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT))
+            });
+        }
+    } catch (e) {
+        console.error("Firebase Admin Init Error:", e);
+    }
 }
 
-// 3. Inisialisasi Firestore
 const db = admin.firestore();
 
-// 4. Ini adalah 'handler' function-nya
 exports.handler = async (event, context) => {
-  // Ambil 'id' dari query URL (misal: /.../get-character?id=1)
-  const characterId = event.queryStringParameters.id || '1'; // Default '1'
+    const headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS'
+    };
 
-  try {
-    const docRef = db.collection('characters').doc(characterId);
-    const docSnap = await docRef.get();
-
-    let characterData;
-
-    if (docSnap.exists) {
-      characterData = docSnap.data();
-    } else {
-      // Jika ID tidak ada, ambil data default '1'
-      console.warn(`ID ${characterId} tidak ditemukan, mengambil default.`);
-      const defaultSnap = await db.collection('characters').doc('1').get();
-      if (defaultSnap.exists()) {
-        characterData = defaultSnap.data();
-      } else {
-        // Error parah jika '1' pun tidak ada
-        throw new Error("Karakter default (ID: 1) tidak ditemukan.");
-      }
+    if (event.httpMethod === 'OPTIONS') {
+        return { statusCode: 200, headers, body: '' };
     }
 
-    // 5. Kirim data sebagai JSON
-    return {
-      statusCode: 200,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(characterData)
-    };
+    const id = event.queryStringParameters.id;
 
-  } catch (error) {
-    console.error("Error di Netlify Function:", error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: "Gagal mengambil data karakter." })
-    };
-  }
+    if (!id) {
+        return {
+            statusCode: 400,
+            headers,
+            body: JSON.stringify({ error: "ID karakter diperlukan" })
+        };
+    }
+
+    try {
+        const doc = await db.collection('characters').doc(id).get();
+
+        if (!doc.exists) {
+            return {
+                statusCode: 404,
+                headers,
+                body: JSON.stringify({ error: "Karakter tidak ditemukan" })
+            };
+        }
+
+        const data = doc.data();
+
+        // Mapping Data agar sesuai dengan chat.js
+        const characterData = {
+            id: doc.id,
+            name: data.name || "Tanpa Nama",
+            description: data.description || "",
+            // Mapping Gambar
+            image: data.image || data.avatar || "https://placehold.co/400x600?text=No+Image",
+            backgroundImage: data.backgroundImage || data.bg || "img/bg/kamar.png",
+            sprites: data.sprites || {
+                 idle: data.image || data.avatar || ""
+            },
+            greeting: data.greeting || "Halo, apa kabar?"
+        };
+
+        return {
+            statusCode: 200,
+            headers,
+            body: JSON.stringify(characterData)
+        };
+
+    } catch (error) {
+        console.error("Error fetching character:", error);
+        return {
+            statusCode: 500,
+            headers,
+            body: JSON.stringify({ error: error.message })
+        };
+    }
 };

@@ -1,5 +1,5 @@
 // vn-chat/chat.js
-// Versi: Dinamis dengan Multi-Sprite Support (Revisi Typo Fixed)
+// VERSI FINAL: Recovery Sesi + User Persona + Settings UI
 
 // --- 1. GLOBAL VARIABLES ---
 let currentCharacterId = "1";
@@ -9,15 +9,15 @@ let currentUser = null;
 let currentSessionId = ''; 
 let currentEmotion = 'IDLE';
 
-// Sprite default (akan ditimpa oleh data dari database)
+// Persona User Default
+let currentUserName = "Teman"; 
+let currentUserPersona = "";   
+
+// Sprite default
 const sprites = {
     'IDLE': '', 
-    'HAPPY': '',
-    'SAD': '',
-    'ANGRY': '',
-    'SURPRISED': '',
-    'SHY': '',
-    'THINKING': ''
+    'HAPPY': '', 'SAD': '', 'ANGRY': '',
+    'SURPRISED': '', 'SHY': '', 'THINKING': ''
 };
 
 // --- 2. HELPER FUNCTIONS ---
@@ -36,6 +36,8 @@ function showCustomConfirm(title, message) {
         
         const yesBtn = document.getElementById('btn-confirm-yes');
         const noBtn = document.getElementById('btn-confirm-cancel');
+        
+        // Clone untuk hapus event listener lama
         const newYes = yesBtn.cloneNode(true);
         const newNo = noBtn.cloneNode(true);
         yesBtn.parentNode.replaceChild(newYes, yesBtn);
@@ -85,32 +87,37 @@ function enableInput(enabled) {
 }
 
 function updateSprite(emotion) {
-    // Normalisasi emosi (cegah error jika emosi tidak dikenal)
     const key = emotion ? emotion.toUpperCase() : 'IDLE';
     const validEmotion = (key in sprites) ? key : 'IDLE';
     
-    // Ambil URL gambar
-    let newSrc = sprites[validEmotion];
-    
-    // Fallback: Jika gambar untuk emosi ini kosong, pakai IDLE
-    if (!newSrc) newSrc = sprites['IDLE'];
-
+    let newSrc = sprites[validEmotion] || sprites['IDLE'];
     const imgEl = document.getElementById('char-sprite');
 
-    if (imgEl && imgEl.src !== newSrc) {
-        imgEl.style.opacity = 0; 
-        setTimeout(() => {
-            imgEl.src = newSrc;
-            imgEl.style.opacity = 1; 
-        }, 150);
-        currentEmotion = validEmotion;
+    console.log(`[VN] Updating sprite: Emotion=${key}, Valid=${validEmotion}, Src=${newSrc}`);
+
+    if (imgEl) {
+        // Fallback jika error (misal gambar tidak ketemu)
+        imgEl.onerror = () => {
+            console.error(`[VN] Failed to load image: ${newSrc}`);
+            if (imgEl.src !== 'https://placehold.co/400x600?text=Image+Not+Found') {
+                imgEl.src = 'https://placehold.co/400x600?text=Image+Not+Found';
+            }
+        };
+
+        if (imgEl.src !== newSrc) {
+            imgEl.style.opacity = 0; 
+            setTimeout(() => {
+                imgEl.src = newSrc;
+                imgEl.style.opacity = 1; 
+            }, 150);
+            currentEmotion = validEmotion;
+        }
     }
 }
 
 function parseReply(rawText) {
     let cleanText = rawText;
     let emotion = 'IDLE';
-    // Deteksi tag [EMOSI] di awal kalimat
     const match = rawText && rawText.match(/^\[([A-Z]+)\]/);
     if (match) {
         emotion = match[1];
@@ -119,8 +126,42 @@ function parseReply(rawText) {
     return { emotion, cleanText: cleanText || "" };
 }
 
-// --- 3. LOAD DATA & HISTORY ---
+// --- 3. LOAD DATA & SETTINGS ---
 
+// Load pengaturan User (Nama & Persona)
+function loadSettings() {
+    const savedName = localStorage.getItem('vn_username');
+    const savedPersona = localStorage.getItem('vn_persona');
+    
+    if (savedName) currentUserName = savedName;
+    if (savedPersona) currentUserPersona = savedPersona;
+
+    // Update Form UI
+    const nameInput = document.getElementById('setting-username');
+    const personaInput = document.getElementById('setting-persona');
+    if (nameInput) nameInput.value = currentUserName;
+    if (personaInput) personaInput.value = currentUserPersona;
+}
+
+// Simpan pengaturan User
+function saveSettings() {
+    const nameInput = document.getElementById('setting-username').value.trim();
+    const personaInput = document.getElementById('setting-persona').value.trim();
+
+    if (nameInput) {
+        currentUserName = nameInput;
+        localStorage.setItem('vn_username', currentUserName);
+    }
+    
+    currentUserPersona = personaInput;
+    localStorage.setItem('vn_persona', currentUserPersona);
+
+    document.getElementById('settings-overlay').classList.add('hidden');
+    // Opsional: Beri notifikasi kecil
+    // alert("Pengaturan tersimpan!"); 
+}
+
+// Load Karakter & Sesi
 async function loadCharacterAndState() {
     try {
         const res = await fetch(`/.netlify/functions/get-character?id=${currentCharacterId}`);
@@ -132,13 +173,13 @@ async function loadCharacterAndState() {
 
         document.getElementById('char-name').textContent = char.name;
 
-        // --- SETUP SPRITES ---
+        // Setup Sprites
         const defaultImg = char.image || "https://via.placeholder.com/400x600?text=No+Image";
-        
-        // Reset sprites dengan gambar default dulu (aman)
         Object.keys(sprites).forEach(k => sprites[k] = defaultImg);
 
-        // Jika ada data sprites di database, timpa yang default
+        console.log("[VN] Character Data Loaded:", char);
+        console.log("[VN] Sprites from DB:", char.sprites);
+
         if (char.sprites) {
             if (char.sprites.idle) sprites['IDLE'] = char.sprites.idle;
             if (char.sprites.happy) sprites['HAPPY'] = char.sprites.happy;
@@ -148,13 +189,11 @@ async function loadCharacterAndState() {
             if (char.sprites.shy) sprites['SHY'] = char.sprites.shy;
             if (char.sprites.thinking) sprites['THINKING'] = char.sprites.thinking;
         }
+        
+        console.log("[VN] Processed Sprites Map:", sprites);
 
-        // Tampilkan sprite awal (IDLE)
-// Tampilkan sprite awal (IDLE) dengan animasi fade-in
-        // Kita pakai updateSprite() karena dia sudah punya logika transisi opacity
         updateSprite('IDLE');
 
-        // Background (jika ada)
         if (char.backgroundImage) {
             document.querySelector('.vn-background').style.backgroundImage = `url('${char.backgroundImage}')`;
         }
@@ -169,13 +208,11 @@ async function loadCharacterAndState() {
 
             if (history && history.length > 0) {
                 const lastMsg = history[history.length - 1];
-                // Jika pesan terakhir dari bot, ambil emosinya
                 if (lastMsg.sender !== 'user') {
                     const { emotion, cleanText } = parseReply(lastMsg.text);
                     updateSprite(emotion);
                     typewriter(cleanText);
                 } else {
-                    // Jika user terakhir chat, bot dalam posisi berpikir/idle
                     updateSprite('IDLE');
                     typewriter(`(Kamu): ${lastMsg.text}`);
                 }
@@ -203,9 +240,9 @@ async function sendMessage() {
 
     try {
         if (!currentUser) throw new Error("Sesi habis, silakan refresh.");
-        // PERBAIKAN: Typo constHV -> const
         const token = await currentUser.getIdToken();
 
+        // Mengirim request dengan Persona & Nama User
         const res = await fetch('/.netlify/functions/get-chat-response-vn', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -214,7 +251,10 @@ async function sendMessage() {
                 characterProfile: currentCharacterProfile,
                 characterName: currentCharacterName,
                 characterId: currentCharacterId,
-                sessionId: currentSessionId
+                sessionId: currentSessionId,
+                // Data Persona User
+                userName: currentUserName,
+                userPersona: currentUserPersona
             })
         });
 
@@ -274,7 +314,7 @@ async function openLog() {
                 const senderClass = msg.sender === 'user' ? 'user' : 'bot';
                 item.className = `log-item ${senderClass}`;
                 
-                const senderName = msg.sender === 'user' ? 'Kamu' : currentCharacterName;
+                const senderName = msg.sender === 'user' ? currentUserName : currentCharacterName;
                 const { cleanText } = parseReply(msg.text);
 
                 const nameDiv = document.createElement('div');
@@ -322,14 +362,12 @@ async function deleteHistory() {
     
     try {
         const token = await currentUser.getIdToken();
-        const res = await fetch(`/.netlify/functions/delete-history?id=${currentCharacterId}&sessionId=${currentSessionId}`, {
+        await fetch(`/.netlify/functions/delete-history?id=${currentCharacterId}&sessionId=${currentSessionId}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
-        if (!res.ok) throw new Error("Gagal menghapus data server");
-
-        // Reset Sesi Lokal
+        // Reset Sesi
         const storageKey = `vn_session_${currentUser.uid}_${currentCharacterId}`;
         localStorage.removeItem(storageKey);
         
@@ -349,9 +387,9 @@ async function deleteHistory() {
     }
 }
 
-// --- 6. INITIALIZATION ---
+// --- 6. INITIALIZATION (REVISI PENTING) ---
 
-function initVN() {
+async function initVN() {
     const params = new URLSearchParams(window.location.search);
     const idFromUrl = params.get('id');
     if (!idFromUrl) {
@@ -361,8 +399,43 @@ function initVN() {
     }
     currentCharacterId = idFromUrl;
 
+    // Load Settings dulu (agar nama user siap)
+    loadSettings();
+
     const storageKey = `vn_session_${currentUser.uid}_${currentCharacterId}`;
-    const savedSession = localStorage.getItem(storageKey);
+    let savedSession = localStorage.getItem(storageKey);
+
+    // --- RECOVERY LOGIC START ---
+    // Jika tidak ada di LocalStorage, Cek Server dulu sebelum buat baru.
+    if (!savedSession) {
+        console.log("Sesi lokal kosong. Memeriksa server...");
+        try {
+            const token = await currentUser.getIdToken();
+            const res = await fetch(`/.netlify/functions/get-sessions?characterId=${currentCharacterId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (res.ok) {
+                const sessions = await res.json();
+                if (sessions && sessions.length > 0) {
+                    // Ambil sesi paling terakhir diupdate
+                    sessions.sort((a, b) => {
+                        const dateA = new Date(a.updatedAt._seconds ? a.updatedAt._seconds * 1000 : a.updatedAt);
+                        const dateB = new Date(b.updatedAt._seconds ? b.updatedAt._seconds * 1000 : b.updatedAt);
+                        return dateB - dateA; 
+                    });
+
+                    savedSession = sessions[0].id;
+                    console.log("Sesi dipulihkan dari server:", savedSession);
+                    localStorage.setItem(storageKey, savedSession);
+                }
+            }
+        } catch (e) {
+            console.warn("Gagal cek sesi server:", e);
+        }
+    }
+    // --- RECOVERY LOGIC END ---
+
     if (savedSession) {
         currentSessionId = savedSession;
     } else {
@@ -374,9 +447,18 @@ function initVN() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Tombol Kirim
     const btnSend = document.getElementById('btn-send');
     const input = document.getElementById('user-input');
     
+    // Tombol Back
+    const btnBack = document.getElementById('btn-back');
+    if (btnBack) {
+        btnBack.addEventListener('click', () => {
+            window.location.href = '../index.html';
+        });
+    }
+
     // Tombol Log
     const btnLog = document.getElementById('btn-log');
     if (btnLog) btnLog.addEventListener('click', openLog);
@@ -384,8 +466,29 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnCloseLog = document.getElementById('close-log');
     if (btnCloseLog) btnCloseLog.addEventListener('click', closeLog);
 
+    // Tombol Delete
     const btnDeleteHistory = document.getElementById('btn-delete-history');
     if (btnDeleteHistory) btnDeleteHistory.addEventListener('click', deleteHistory);
+
+    // --- TOMBOL SETTINGS (BARU) ---
+    const btnSettings = document.getElementById('btn-settings');
+    const overlaySettings = document.getElementById('settings-overlay');
+    const btnSaveSettings = document.getElementById('btn-save-settings');
+    const btnCloseSettings = document.getElementById('btn-close-settings');
+
+    if (btnSettings) {
+        btnSettings.addEventListener('click', () => {
+            loadSettings(); 
+            overlaySettings.classList.remove('hidden');
+        });
+    }
+    if (btnSaveSettings) btnSaveSettings.addEventListener('click', saveSettings);
+    if (btnCloseSettings) {
+        btnCloseSettings.addEventListener('click', () => {
+            overlaySettings.classList.add('hidden');
+        });
+    }
+    // ------------------------------
 
     if (btnSend) btnSend.addEventListener('click', sendMessage);
     if (input) {
