@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Papan Peringkat - Chatsyok</title>
+    
+    <link rel="stylesheet" href="css/lobby.css">
+    <link rel="stylesheet" href="css/leaderboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+</head>
+<body>
+
+    <div class="background-container"></div>
+
+    <div class="leaderboard-container">
+        <div class="lb-header">
+            <button onclick="window.location.href='index.html'" class="back-btn">
+                <i class="fas fa-arrow-left"></i> Kembali
+            </button>
+            <h1 class="page-title">🏆 Top Global Sepuh</h1>
+            <p class="subtitle">Siapa yang paling rajin chatting?</p>
+        </div>
+
+        <div class="lb-card">
+            <div class="lb-list-header">
+                <span class="col-rank">#</span>
+                <span class="col-user">Pemain</span>
+                <span class="col-stats">Level / XP</span>
+            </div>
+
+            <div id="loading-spinner" class="loading">
+                <i class="fas fa-circle-notch fa-spin"></i> Memuat Data Sepuh...
+            </div>
+
+            <div id="leaderboard-list" class="lb-list">
+                </div>
+            
+            <div id="my-rank-bar" class="my-rank-bar hidden">
+                <div class="rank-pos" id="my-rank-pos">-</div>
+                <div class="rank-info">
+                    <img id="my-avatar" src="" alt="">
+                    <span id="my-name">Anda</span>
+                </div>
+                <div class="rank-xp" id="my-xp">0 XP</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/leaderboard.js"></script>
+</body>
+</html>

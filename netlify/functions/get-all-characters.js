@@ -2,38 +2,38 @@
 
 const admin = require('firebase-admin');
 
-// Inisialisasi Firebase Admin
+// Inisialisasi Firebase Admin (Gaya Stabil)
 if (!admin.apps.length) {
   try {
-    // Pastikan env variable FIREBASE_SERVICE_ACCOUNT ada
-    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
-      });
-    } else {
-      console.warn("FIREBASE_SERVICE_ACCOUNT tidak ditemukan.");
-    }
+    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount)
+    });
   } catch (e) {
-    console.error("Gagal inisialisasi Firebase Admin:", e);
+    console.error("Firebase Init Error:", e);
+    // Kita tidak throw error di sini agar handler di bawah bisa menangkapnya dengan rapi
   }
 }
 
 const db = admin.firestore();
 
 exports.handler = async (event, context) => {
-  // Header CORS (Penting agar frontend bisa akses)
+  // Header CORS (Wajib ada)
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Allow-Methods': 'GET, OPTIONS'
   };
 
+  // Handle Preflight Request
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 200, headers, body: '' };
   }
 
   try {
+    // Cek apakah db sudah siap
+    if (!db) throw new Error("Koneksi Database belum siap.");
+
     const isGuest = event.queryStringParameters.guest === 'true';
     const isVnMode = event.queryStringParameters.mode === 'vn';
 
@@ -41,17 +41,20 @@ exports.handler = async (event, context) => {
 
     // --- LOGIKA FILTERING ---
     if (isVnMode) {
+        // Mode VN: Hanya karakter yang support VN dan Public/Default
         query = query.where('isVnAvailable', '==', true)
                      .where('visibility', 'in', ['default', 'public']);
     } 
     else if (isGuest) {
+        // Tamu: Hanya karakter Default
         query = query.where('visibility', '==', 'default');
     } 
     else {
+        // User Login: Default + Public
         query = query.where('visibility', 'in', ['default', 'public']);
     }
 
-    const snapshot = await query.get(); // Hapus orderBy sementara jika belum ada index
+    const snapshot = await query.get();
 
     if (snapshot.empty) {
       return {
@@ -61,7 +64,7 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Ubah data snapshot menjadi array JSON yang SINKRON dengan chat.js
+    // Ubah data snapshot menjadi array JSON
     const characters = snapshot.docs.map(doc => {
       const data = doc.data();
       
@@ -71,21 +74,19 @@ exports.handler = async (event, context) => {
         role: data.role || "Character",
         description: data.description || "Tidak ada deskripsi.",
         
-        // MAPPING PENTING UNTUK VISUAL (Menangani berbagai kemungkinan nama field di DB)
-        // Chat.js butuh 'image' atau 'sprites.idle'
+        // Image Fallback
         image: data.image || data.avatar || data.imageUrl || "https://placehold.co/400x600?text=No+Image",
         
-        // Chat.js butuh 'backgroundImage'
-        backgroundImage: data.backgroundImage || data.bg || data.background || "img/bg/kamar.png",
+        // Background Fallback
+        backgroundImage: data.backgroundImage || data.bg || "img/bg/kamar.png",
         
-        // Chat.js butuh struktur 'sprites'
+        // Sprites Structure (Penting untuk VN)
         sprites: data.sprites || {
-            idle: data.image || data.avatar || ""
+            idle: data.image || ""
         },
 
-        // Properti lain diteruskan
-        isVnAvailable: data.isVnAvailable,
-        visibility: data.visibility
+        isVnAvailable: data.isVnAvailable || false,
+        visibility: data.visibility || 'default'
       };
     });
 
