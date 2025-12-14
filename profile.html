@@ -7,31 +7,40 @@
     
     <link rel="stylesheet" href="css/lobby.css">
     <link rel="stylesheet" href="css/profile.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="js/firebase-config.js"></script>
 </head>
 <body>
 
-    <div class="background-container" style="filter: blur(8px); transform: scale(1.1);"></div>
+    <div class="background-container"></div>
 
     <div class="profile-container">
-        <div class="profile-header">
-            <button onclick="window.location.href='index.html'" class="back-btn">↩️ Kembali ke Lobi</button>
-            <h2 class="page-title">Kartu Pemain</h2>
+        
+        <div class="profile-header-nav">
+            <button onclick="window.location.href='index.html'" class="back-btn">
+                <i class="fas fa-arrow-left"></i> Kembali ke Lobi
+            </button>
         </div>
 
         <div class="player-card">
             
-            <div class="card-top">
+            <div class="card-sidebar">
                 <div class="avatar-frame">
                     <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Guest" alt="User Avatar" id="user-avatar">
                 </div>
-                <div class="user-info">
+                
+                <div class="user-identity">
                     <h2 id="display-name">Memuat...</h2>
-                    <p class="user-rank">Rank: <span id="rank-name" style="color:#0077b6;">...</span></p>
-                    
+                    <div class="rank-badge">
+                        Rank: <span id="rank-name">...</span>
+                    </div>
+                </div>
+
+                <div class="level-wrapper">
                     <div class="level-info">
                         <span class="lvl-badge">Lvl. <b id="level-num">1</b></span>
                         <small class="xp-text"><span id="current-xp">0</span> / <span id="max-xp">100</span> XP</small>
@@ -40,41 +49,48 @@
                         <div class="xp-bar-fill" id="xp-bar" style="width: 0%;"></div>
                     </div>
                 </div>
+
+                <button id="btn-edit-profile" class="edit-btn">
+                    <i class="fas fa-pen"></i> Edit Profil
+                </button>
             </div>
 
-            <hr class="divider">
+            <div class="card-content">
+                <h3 class="section-title">Statistik Permainan</h3>
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-icon chat-color"><i class="fas fa-comments"></i></div>
+                        <div class="stat-data">
+                            <h3>Total Chat</h3>
+                            <p id="stat-chat-count">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-icon heart-color"><i class="fas fa-heart"></i></div>
+                        <div class="stat-data">
+                            <h3>Total Hati</h3>
+                            <p id="stat-hearts">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-icon fire-color"><i class="fas fa-fire"></i></div>
+                        <div class="stat-data">
+                            <h3>Streak</h3>
+                            <p id="stat-streak">1 Hari</p>
+                        </div>
+                    </div>
+                </div>
 
-            <div class="stats-grid">
-                <div class="stat-box">
-                    <span class="emoji">💬</span>
-                    <h3>Total Chat</h3>
-                    <p id="stat-chat-count">0</p>
-                </div>
-                <div class="stat-box">
-                    <span class="emoji">❤️</span>
-                    <h3>Total Hati</h3>
-                    <p id="stat-hearts">0</p>
-                </div>
-                <div class="stat-box">
-                    <span class="emoji">🔥</span>
-                    <h3>Streak</h3>
-                    <p id="stat-streak">1 Hari</p>
+                <div class="badges-section">
+                    <h3 class="section-title">Koleksi Lencana</h3>
+                    <div class="badge-list">
+                        <div class="badge unlocked" title="Akun Terdaftar">🆔</div>
+                        <div class="badge locked" title="Terkunci: Ngobrol 100x">💬</div>
+                        <div class="badge locked" title="Terkunci: Sahabat Mai">❤️</div>
+                        <div class="badge locked" title="Terkunci: Begadang Gaming">🌙</div>
+                    </div>
                 </div>
             </div>
-
-            <div class="badges-section">
-                <h4>🏅 Koleksi Lencana</h4>
-                <div class="badge-list">
-                    <div class="badge unlocked" title="Akun Terdaftar">🆔</div>
-                    <div class="badge locked" title="Terkunci: Ngobrol 100x">💬</div>
-                    <div class="badge locked" title="Terkunci: Sahabat Mai">❤️</div>
-                    <div class="badge locked" title="Terkunci: Begadang Gaming">🌙</div>
-                </div>
-            </div>
-
-            <button id="btn-edit-profile" class="edit-btn">
-                ✏️ Ubah Nama Panggilan
-            </button>
         </div>
     </div>
 

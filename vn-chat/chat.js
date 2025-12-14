@@ -138,6 +138,45 @@ function parseReply(rawText) {
     return { emotion, cleanText: cleanText || "" };
 }
 
+function showXPFloating(amount) {
+    const el = document.createElement('div');
+    el.textContent = `✨ +${amount} XP`;
+    
+    // Styling langsung di JS biar praktis
+    Object.assign(el.style, {
+        position: 'fixed',
+        top: '80px', // Sedikit di bawah notifikasi biasa
+        right: '20px',
+        background: 'rgba(255, 215, 0, 0.9)', // Warna Emas
+        color: '#333',
+        padding: '8px 15px',
+        borderRadius: '20px',
+        fontWeight: 'bold',
+        fontSize: '14px',
+        boxShadow: '0 4px 10px rgba(0,0,0,0.2)',
+        zIndex: '9999',
+        pointerEvents: 'none',
+        transition: 'all 0.5s ease',
+        opacity: '0',
+        transform: 'translateY(10px)'
+    });
+
+    document.body.appendChild(el);
+
+    // Animasi Masuk
+    requestAnimationFrame(() => {
+        el.style.opacity = '1';
+        el.style.transform = 'translateY(0)';
+    });
+
+    // Animasi Keluar & Hapus
+    setTimeout(() => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(-20px)';
+        setTimeout(() => el.remove(), 500);
+    }, 2000);
+}
+
 // --- 3. LOAD DATA & SETTINGS ---
 
 function loadSettings() {
@@ -228,6 +267,78 @@ async function loadCharacterAndState() {
     }
 }
 
+function showLevelUpVN(newLevel) {
+    const modal = document.getElementById('level-up-overlay');
+    const levelDisplay = document.getElementById('new-level-display');
+    const box = modal.querySelector('.level-up-box');
+
+    // Reset konten jika bekas Badge
+    if (box && box.dataset.type === 'badge') {
+        box.innerHTML = `
+            <div class="level-stars">⭐⭐⭐</div>
+            <h1 class="level-title">LEVEL UP!</h1>
+            <div class="level-number-container">
+                <span class="level-label">LEVEL</span>
+                <span id="new-level-display">${newLevel}</span>
+            </div>
+            <p class="level-msg">Hebat! Kamu semakin sepuh!</p>
+            <button id="btn-close-level" class="level-btn">Lanjut Cerita ▶️</button>
+        `;
+        box.dataset.type = 'level';
+    } else {
+        if (levelDisplay) levelDisplay.textContent = newLevel;
+    }
+
+    if (modal) {
+        modal.classList.remove('hidden');
+        setTimeout(() => modal.classList.add('active'), 10);
+        
+        // Pasang event listener tombol tutup
+        // Kita pakai timeout biar elemennya render dulu
+        setTimeout(() => {
+            const btn = document.getElementById('btn-close-level');
+            if (btn) btn.onclick = () => closeModalVN(modal);
+        }, 100);
+    }
+}
+
+function showBadgeVN(badge) {
+    const modal = document.getElementById('level-up-overlay');
+    const box = modal.querySelector('.level-up-box');
+
+    if (modal && box) {
+        // Tandai bahwa ini tampilan badge
+        box.dataset.type = 'badge';
+
+        // Ganti isi HTML Modal jadi Badge
+        box.innerHTML = `
+            <div class="level-stars" style="font-size: 50px;">${badge.icon}</div>
+            <h1 class="level-title" style="color: #00bcd4; text-shadow: 2px 2px 0 #005662;">LENCANA BARU!</h1>
+            <div class="level-number-container" style="background: rgba(0, 188, 212, 0.2);">
+                <span class="level-label" style="color: #e0f7fa;">DIBUKA</span>
+                <span style="display:block; font-size: 24px; font-weight:bold; color:white; margin-top:5px;">
+                    ${badge.name}
+                </span>
+            </div>
+            <p class="level-msg">Keren! Koleksi lencanamu bertambah.</p>
+            <button id="btn-close-badge-vn" class="level-btn" style="background: #00bcd4; color: white;">Lanjut ▶️</button>
+        `;
+
+        modal.classList.remove('hidden');
+        setTimeout(() => modal.classList.add('active'), 10);
+
+        setTimeout(() => {
+            const btn = document.getElementById('btn-close-badge-vn');
+            if (btn) btn.onclick = () => closeModalVN(modal);
+        }, 100);
+    }
+}
+
+function closeModalVN(modal) {
+    modal.classList.remove('active');
+    setTimeout(() => modal.classList.add('hidden'), 300);
+}
+
 // --- 4. MAIN CHAT LOGIC ---
 
 async function sendMessage() {
@@ -279,12 +390,104 @@ async function saveMessage(sender, text) {
     try {
         if(!currentUser) return;
         const token = await currentUser.getIdToken();
-        await fetch('/.netlify/functions/save-message', {
+        const res = await fetch('/.netlify/functions/save-message', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ characterId: currentCharacterId, sender, text, sessionId: currentSessionId })
         });
+
+        if (res.ok) {
+            const data = await res.json();
+            
+            // 1. Notifikasi XP (Floating Text)
+            if (sender === 'user' && data.xpAdded) {
+                if (typeof showXPFloating === 'function') {
+                    showXPFloating(data.xpAdded);
+                }
+            }
+
+            // 2. CEK LEVEL UP
+            if (data.levelUp && data.newLevel) {
+                showLevelUpVN(data.newLevel);
+            }
+            // 3. CEK BADGE BARU
+            else if (data.newBadges && data.newBadges.length > 0) {
+                showBadgeVN(data.newBadges[0]);
+            }
+        }
     } catch (e) { console.error("Gagal simpan:", e); }
+}
+
+// --- HELPER FUNCTIONS BARU UNTUK VN ---
+
+function showLevelUpVN(newLevel) {
+    const modal = document.getElementById('level-up-overlay');
+    const levelDisplay = document.getElementById('new-level-display');
+    const closeBtn = document.getElementById('btn-close-level');
+    const box = modal.querySelector('.level-up-box');
+
+    // Reset konten jika bekas Badge
+    // (Ini penting agar tidak tertukar tampilannya)
+    if (box.dataset.type === 'badge') {
+        box.innerHTML = `
+            <div class="level-stars">⭐⭐⭐</div>
+            <h1 class="level-title">LEVEL UP!</h1>
+            <div class="level-number-container">
+                <span class="level-label">LEVEL</span>
+                <span id="new-level-display">${newLevel}</span>
+            </div>
+            <p class="level-msg">Hebat! Kamu semakin sepuh!</p>
+            <button id="btn-close-level" class="level-btn">Lanjut Cerita ▶️</button>
+        `;
+        // Re-attach event listener karena elemennya baru dibuat ulang
+        document.getElementById('btn-close-level').onclick = () => closeModalVN(modal);
+        box.dataset.type = 'level';
+    } else {
+        if (levelDisplay) levelDisplay.textContent = newLevel;
+    }
+
+    if (modal) {
+        modal.classList.remove('hidden');
+        setTimeout(() => modal.classList.add('active'), 10);
+        
+        // Pasang event listener (jika belum ada/hilang)
+        const btn = document.getElementById('btn-close-level');
+        if (btn) btn.onclick = () => closeModalVN(modal);
+    }
+}
+
+function showBadgeVN(badge) {
+    const modal = document.getElementById('level-up-overlay');
+    const box = modal.querySelector('.level-up-box');
+
+    if (modal && box) {
+        // Tandai bahwa ini tampilan badge
+        box.dataset.type = 'badge';
+
+        // Ganti isi HTML Modal jadi Badge
+        box.innerHTML = `
+            <div class="level-stars" style="font-size: 50px;">${badge.icon}</div>
+            <h1 class="level-title" style="color: #00bcd4; text-shadow: 2px 2px 0 #005662;">LENCANA BARU!</h1>
+            <div class="level-number-container" style="background: rgba(0, 188, 212, 0.2);">
+                <span class="level-label" style="color: #e0f7fa;">DIBUKA</span>
+                <span style="display:block; font-size: 24px; font-weight:bold; color:white; margin-top:5px;">
+                    ${badge.name}
+                </span>
+            </div>
+            <p class="level-msg">Keren! Koleksi lencanamu bertambah.</p>
+            <button id="btn-close-badge-vn" class="level-btn" style="background: #00bcd4; color: white;">Lanjut ▶️</button>
+        `;
+
+        modal.classList.remove('hidden');
+        setTimeout(() => modal.classList.add('active'), 10);
+
+        document.getElementById('btn-close-badge-vn').onclick = () => closeModalVN(modal);
+    }
+}
+
+function closeModalVN(modal) {
+    modal.classList.remove('active');
+    setTimeout(() => modal.classList.add('hidden'), 300);
 }
 
 // --- 5. HISTORY & LOG ---

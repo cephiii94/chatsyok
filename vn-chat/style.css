@@ -367,3 +367,74 @@ body, html {
     .text-content { font-size: 14px; }
     #char-sprite { max-height: 80vh; }
 }
+/* --- LEVEL UP & BADGE MODAL --- */
+.level-up-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+}
+
+.level-up-overlay.active {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.level-up-box {
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    padding: 30px;
+    border-radius: 20px;
+    text-align: center;
+    border: 3px solid #ffd700;
+    box-shadow: 0 0 40px rgba(255, 215, 0, 0.6);
+    transform: scale(0.5);
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    max-width: 80%;
+    color: white;
+}
+
+.level-up-overlay.active .level-up-box { transform: scale(1); }
+
+.level-stars { font-size: 24px; margin-bottom: 5px; }
+
+.level-title {
+    font-size: 32px; margin: 0; color: #ffd700;
+    font-weight: 900; text-shadow: 2px 2px 0 #000;
+}
+
+.level-number-container {
+    margin: 15px 0; background: rgba(255, 255, 255, 0.1);
+    padding: 10px; border-radius: 10px;
+}
+
+.level-label { display: block; font-size: 12px; color: #aaccff; letter-spacing: 2px; }
+
+#new-level-display {
+    font-size: 60px; font-weight: bold; color: white;
+    text-shadow: 0 4px 10px rgba(0,0,0,0.3); line-height: 1;
+}
+
+.level-msg { color: #ddd; margin-bottom: 20px; font-size: 14px; font-style: italic; }
+
+.level-btn {
+    background: #ffd700; color: #333; border: none;
+    padding: 10px 25px; font-size: 14px; font-weight: bold;
+    border-radius: 50px; cursor: pointer;
+    box-shadow: 0 4px 10px rgba(255, 215, 0, 0.4);
+}
+.level-btn:hover { transform: scale(1.05); background: #ffea00; }
+
+/* Confetti Animations */
+.confetti { position: absolute; width: 8px; height: 8px; animation: fall 2s linear infinite; }
+.c1 { left: 20%; background: gold; animation-delay: 0s; }
+.c2 { left: 50%; background: cyan; animation-delay: 0.5s; }
+.c3 { left: 80%; background: magenta; animation-delay: 1s; }
+.c4 { left: 30%; background: lime; animation-delay: 1.5s; }
+@keyframes fall { 0% { top: -10%; transform: rotate(0deg); } 100% { top: 110%; transform: rotate(360deg); } }
+

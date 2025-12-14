@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Syarat & Ketentuan - Chatsyok</title>
+    <link rel="stylesheet" href="css/lobby.css">
+    <style>
+        /* CSS Khusus Halaman Terms */
+        body {
+            background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+            color: #e0e0e0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .terms-container {
+            max-width: 800px;
+            margin: 40px auto;
+            background: rgba(15, 23, 42, 0.95); /* Gelap transparan */
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+
+        h1 {
+            color: #4cc9f0;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        h2 {
+            color: #4895ef;
+            border-bottom: 2px solid #4895ef;
+            padding-bottom: 10px;
+            margin-top: 30px;
+            font-size: 1.4em;
+        }
+
+        p, li {
+            font-size: 0.95rem;
+            color: #b8c1ec;
+            margin-bottom: 15px;
+        }
+
+        ul {
+            padding-left: 20px;
+        }
+
+        .highlight {
+            color: #f72585; /* Warna kontras untuk poin penting */
+            font-weight: bold;
+        }
+
+        .btn-back {
+            display: block;
+            width: fit-content;
+            margin: 0 auto 30px;
+            padding: 12px 30px;
+            background: linear-gradient(90deg, #4361ee, #3a0ca3);
+            color: white;
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-align: center;
+        }
+
+        .btn-back:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(67, 97, 238, 0.4);
+        }
+
+        .last-updated {
+            text-align: center;
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 40px;
+        }
+
+        /* Scrollbar cantik */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #4895ef; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+    <div class="terms-container">
+        <a href="login.html" class="btn-back">↩️ Kembali ke Halaman Login</a>
+
+        <h1>Ketentuan Layanan</h1>
+        <p style="text-align: center; color: #aaa;">Selamat datang di Dunia Chatsyok!</p>
+
+        <h2>1. Penerimaan Syarat</h2>
+        <p>Dengan mendaftar, mengakses, atau bermain <strong>Chatsyok</strong> ("Layanan"), Anda setuju untuk terikat oleh Syarat dan Ketentuan ini. Jika Anda tidak setuju, mohon untuk tidak menggunakan layanan ini.</p>
+
+        <h2>2. Kebijakan Privasi & Data Pengguna</h2>
+        <p>Kami menghargai privasi Anda. Demi menjalankan fitur permainan (Save Progress, Level, Chat History), kami mengumpulkan dan menyimpan data berikut melalui autentikasi pihak ketiga (Google Firebase):</p>
+        <ul>
+            <li><strong>Identitas Publik:</strong> Nama Tampilan (Display Name), Alamat Email, dan Foto Profil (Avatar) yang terhubung dengan akun Google Anda.</li>
+            <li><strong>Data Permainan:</strong> Statistik permainan seperti XP, Level, Rank, dan Pencapaian (Badge).</li>
+            <li><strong>Riwayat Percakapan:</strong> Log obrolan (chat history) antara Anda dan Karakter AI disimpan di server kami untuk fitur "Ingatan Karakter" dan kelanjutan cerita.</li>
+        </ul>
+        <p class="highlight">Kami tidak akan pernah menjual data pribadi Anda kepada pihak ketiga. Email Anda hanya digunakan untuk keperluan identifikasi akun unik (Login).</p>
+
+        <h2>3. Penggunaan Karakter AI (Artificial Intelligence)</h2>
+        <p>Karakter dalam Chatsyok ditenagai oleh Kecerdasan Buatan (AI). Harap dipahami bahwa:</p>
+        <ul>
+            <li>Semua balasan karakter dihasilkan secara otomatis oleh komputer.</li>
+            <li><strong>Fiksi Sementata:</strong> Karakter mungkin melakukan "halusinasi" (mengarang fakta). Jangan jadikan ucapan karakter sebagai saran medis, hukum, atau finansial yang nyata.</li>
+            <li>Karakter didesain untuk hiburan semata.</li>
+        </ul>
+
+        <h2>4. Etika Pengguna (User Conduct)</h2>
+        <p>Demi kenyamanan bersama, Anda dilarang keras untuk:</p>
+        <ul>
+            <li>Menggunakan bahasa kasar, ujaran kebencian (SARA), atau konten seksual eksplisit secara berlebihan.</li>
+            <li>Mencoba meretas, memanipulasi (cheat), atau mengeksploitasi bug sistem untuk menaikkan Level/XP secara tidak wajar.</li>
+            <li>Melakukan spamming pada server API kami.</li>
+        </ul>
+        <p>Pelanggaran terhadap poin ini dapat mengakibatkan <span class="highlight">Banned Permanen</span> pada akun Anda tanpa peringatan.</p>
+
+        <h2>5. Barang Virtual & Mata Uang</h2>
+        <p>Fitur seperti "XP", "Level", "Koin", atau "Lencana" adalah aset virtual dalam game yang tidak memiliki nilai uang di dunia nyata. Aset ini tidak dapat ditukar dengan uang tunai atau dipindahkan ke akun lain.</p>
+
+        <h2>6. Penafian (Disclaimer)</h2>
+        <p>Layanan ini disediakan "sebagaimana adanya" (as-is). Pengembang (Dev) berhak untuk mengubah, menunda, atau menghentikan layanan kapan saja untuk keperluan pemeliharaan atau update tanpa pemberitahuan sebelumnya.</p>
+
+        <h2>7. Kontak Pengembang</h2>
+        <p>Jika Anda memiliki pertanyaan mengenai data Anda atau ingin mengajukan penghapusan akun, silakan hubungi tim pengembang melalui GitHub atau kontak yang tersedia di aplikasi.</p>
+
+        <div class="last-updated">
+            Terakhir diperbarui: Desember 2024<br>
+            &copy; 2024 Chatsyok Dev Team.
+        </div>
+    </div>
+
+</body>
+</html>

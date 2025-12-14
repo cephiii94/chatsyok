@@ -1,15 +1,15 @@
 // File: js/chat.js
-// Versi: Final Complete + Auto-Expand Textarea
+// Versi: Final Complete + Gamification Update
 
 // === 1. GLOBAL VARIABLES ===
 let currentChatbotProfile = "", currentCharacterName = "", currentCharacterGreeting = "", currentCharacterId = "1";
 let currentUser = null, currentUserPersona = "";
-let currentSessionId = null; // ID Sesi yang sedang aktif
-let editingSessionId = null; // ID Sesi yang sedang diedit judulnya
+let currentSessionId = null;
+let editingSessionId = null;
 
 // Status Session
-let isCurrentSessionSaved = false; // Menandai apakah sesi saat ini sudah disimpan
-let isSavingForNewChat = false;    // Menandai kalau kita menyimpan karena ingin buat chat baru
+let isCurrentSessionSaved = false;
+let isSavingForNewChat = false;
 
 // Elemen UI
 let chatTranscript, chatInput, sendButton, uploadButton, fileInput, backButton, maiSprite;
@@ -17,7 +17,9 @@ let personaDisplayContainer, personaEditContainer, personaTextDisplay, editPerso
 let imageViewerModal, fullImage;
 let isUserNearBottom = true; 
 let currentSelectedFile = null;
-let lastUserMessage = ""; // Menyimpan pesan terakhir user untuk fitur regenerate
+let lastUserMessage = ""; 
+
+
 
 const DEFAULT_AVATAR = "https://ui-avatars.com/api/?name=AI&background=random&color=fff&size=256";
 
@@ -46,7 +48,8 @@ function showToast(message) {
             toast.classList.add('hidden');
         }, 2000); 
     } else {
-        alert(message); 
+        // Fallback jika elemen toast tidak ada di HTML
+        console.log("Toast:", message);
     }
 }
 
@@ -92,6 +95,73 @@ function extractNameFromPersona(text) {
         return match[1].split(/[.,!;\n]/)[0].trim();
     }
     return null;
+}
+
+function showLevelUpModal(newLevel) {
+    const modal = document.getElementById('level-up-overlay');
+    const levelDisplay = document.getElementById('new-level-display');
+    const closeBtn = document.getElementById('btn-close-level');
+
+    if (modal && levelDisplay) {
+        levelDisplay.textContent = newLevel; // Set angka level baru
+        modal.classList.remove('hidden');
+        
+        // Delay sedikit agar transisi CSS 'active' berjalan mulus
+        setTimeout(() => {
+            modal.classList.add('active');
+        }, 10);
+
+        // Suara Level Up (Opsional, pakai link sound effect free)
+        // const audio = new Audio('https://www.myinstants.com/media/sounds/level-up.mp3');
+        // audio.volume = 0.5;
+        // audio.play().catch(e => console.log("Audio play blocked"));
+
+        closeBtn.onclick = () => {
+            modal.classList.remove('active');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        };
+    }
+}
+
+function showBadgeModal(badge) {
+    // Kita gunakan elemen HTML Modal Level Up yang sudah ada, tapi kita ganti isinya sementara
+    const modal = document.getElementById('level-up-overlay');
+    const box = modal.querySelector('.level-up-box');
+    
+    // Simpan konten asli Level Up biar bisa dikembalikan nanti (Opsional, tapi praktik bagus)
+    const originalContent = box.innerHTML;
+
+    if (modal) {
+        // Ganti tampilan jadi tampilan Badge
+        box.innerHTML = `
+            <div class="level-stars" style="font-size: 50px;">${badge.icon}</div>
+            <h1 class="level-title" style="color: #00bcd4; text-shadow: 2px 2px 0 #005662;">LENCANA BARU!</h1>
+            <div class="level-number-container" style="background: rgba(0, 188, 212, 0.2);">
+                <span class="level-label" style="color: #e0f7fa;">DIBUKA</span>
+                <span style="display:block; font-size: 24px; font-weight:bold; color:white; margin-top:5px;">
+                    ${badge.name}
+                </span>
+            </div>
+            <p class="level-msg">Selamat! Koleksimu bertambah!</p>
+            <button id="btn-close-badge" class="level-btn" style="background: #00bcd4; color: white;">Keren!</button>
+        `;
+
+        modal.classList.remove('hidden');
+        setTimeout(() => modal.classList.add('active'), 10);
+
+        // Event listener untuk tombol tutup badge
+        document.getElementById('btn-close-badge').onclick = () => {
+            modal.classList.remove('active');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                // Kembalikan isi modal ke tampilan Level Up asli (Reset)
+                // Agar kalau nanti naik level, tampilannya tidak error
+                setTimeout(() => box.innerHTML = originalContent, 100); 
+            }, 300);
+        };
+    }
 }
 
 // === 3. CORE LOGIC ===
@@ -365,11 +435,10 @@ async function handleSendMessage() {
     const text = chatInput.value.trim();
     if ((!text && !currentSelectedFile) || chatInput.disabled) return;
     
-    // ▼▼▼ TAMBAHAN BRI: Reset tinggi input setelah kirim ▼▼▼
+    // Reset tinggi input
     chatInput.value = ''; 
-    chatInput.style.height = '50px'; // Reset height
+    chatInput.style.height = '50px'; 
     chatInput.style.overflowY = 'hidden';
-    // ▲▲▲ AKHIR TAMBAHAN ▲▲▲
 
     chatInput.disabled = true; sendButton.disabled = true;
 
@@ -378,22 +447,48 @@ async function handleSendMessage() {
     } else {
         addMessageToTranscript(text, 'user');
         lastUserMessage = text; 
+        // Simpan pesan & dapatkan XP
         await saveMessage('user', text);
+        // Trigger AI
         await triggerAI(text);
     }
     
     chatInput.disabled = false; sendButton.disabled = false; chatInput.focus();
 }
 
+// [GAMIFIKASI] Update fungsi saveMessage untuk menangkap XP
 async function saveMessage(sender, text) {
     try {
         const token = await getAuthToken();
-        await fetch('/.netlify/functions/save-message', {
+        const res = await fetch('/.netlify/functions/save-message', {
             method: 'POST', 
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ characterId: currentCharacterId, sender, text, sessionId: currentSessionId })
         });
-    } catch (e) { console.error(e); }
+        
+        if (res.ok) {
+            const data = await res.json();
+            
+            // 1. Notifikasi XP
+            if (sender === 'user' && data.xpAdded) {
+                if (typeof showXPFloating === 'function') {
+                    showXPFloating(data.xpAdded);
+                } else {
+                    showToast(`✨ +${data.xpAdded} XP`);
+                }
+            }
+
+            // 2. CEK LEVEL UP (Prioritas 1)
+            if (data.levelUp && data.newLevel) {
+                showLevelUpModal(data.newLevel);
+            }
+            // 3. CEK BADGE BARU (Prioritas 2 - Muncul setelah Level Up kalau barengan)
+            else if (data.newBadges && data.newBadges.length > 0) {
+                // Tampilkan badge pertama yang didapat (jika dapet banyak sekaligus, tampilkan satu per satu di pengembangan selanjutnya)
+                showBadgeModal(data.newBadges[0]);
+            }
+        }
+    } catch (e) { console.error("Error save msg:", e); }
 }
 
 async function triggerAI(messageContent) {
@@ -526,6 +621,7 @@ async function handleFileUpload(f,c) {
         });
         if(!res.ok) throw new Error();
         const d = await res.json();
+        // Upload juga memberi XP
         await saveMessage('user', d.secure_url);
         if(c) { addMessageToTranscript(c,'user'); await saveMessage('user',c); }
         await triggerAI(d.secure_url);
@@ -563,16 +659,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Event Listeners Dasar
     if(sendButton) sendButton.onclick = handleSendMessage;
     
-    // ▼▼▼ TAMBAHAN BRI: Auto-Expand Textarea Listener ▼▼▼
+    // Auto-Expand Textarea
     if(chatInput) {
-        // Fungsi untuk mengatur tinggi otomatis
         const adjustInputHeight = () => {
-            chatInput.style.height = 'auto'; // Reset dulu ke auto biar bisa ngukur scrollHeight
-            const maxHeight = 150; // Sesuai CSS
+            chatInput.style.height = 'auto'; 
+            const maxHeight = 150; 
             const newHeight = Math.min(chatInput.scrollHeight, maxHeight); 
             chatInput.style.height = newHeight + 'px';
             
-            // Jika konten lebih tinggi dari 150px, munculkan scrollbar
             if (chatInput.scrollHeight > maxHeight) {
                 chatInput.style.overflowY = 'auto';
             } else {
@@ -580,21 +674,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         };
 
-        // Panggil saat ngetik
         chatInput.addEventListener('input', adjustInputHeight);
-
-        // Panggil juga di onkeydown agar instan
         chatInput.onkeydown = (e) => { 
             if(e.key==='Enter' && !e.shiftKey) { 
                 e.preventDefault(); 
                 handleSendMessage(); 
             } else {
-                // Gunakan setTimeout agar nilai input sudah terupdate saat kita ukur
                 setTimeout(adjustInputHeight, 0); 
             }
         };
     }
-    // ▲▲▲ AKHIR TAMBAHAN ▲▲▲
 
     if(uploadButton && fileInput) {
         uploadButton.onclick = () => fileInput.click();
