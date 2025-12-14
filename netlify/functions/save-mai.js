@@ -87,8 +87,10 @@ exports.handler = async (event, context) => {
       creatorId: userId,
       
       // ▼▼▼ TAMBAHAN: Simpan status VN ▼▼▼
-      // Pastikan disimpan sebagai boolean
       isVnAvailable: data.isVnAvailable === true,
+      
+      // [BRI UPDATE: Simpan goal ke database]
+      gameGoal: data.gameGoal || '', 
       // ▲▲▲ AKHIR TAMBAHAN ▲▲▲
       
       createdAt: admin.firestore.FieldValue.serverTimestamp()

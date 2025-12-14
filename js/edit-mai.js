@@ -1,8 +1,9 @@
 // File: js/edit-mai.js
-// Versi: Edit Multi-Sprite + Admin Check + UI Toggle
 
+// === HELPER FUNCTIONS ===
 function getAuthTokenSafe() {
     return new Promise((resolve, reject) => {
+        if (!firebase.apps.length) return reject(new Error("Firebase belum init"));
         const auth = firebase.auth();
         const user = auth.currentUser;
         if (user) {
@@ -33,7 +34,10 @@ async function uploadSingleImage(file, token) {
     const base64 = await readFileAsBase64(file);
     const res = await fetch('/.netlify/functions/upload-image', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ file: base64 })
     });
     if (!res.ok) throw new Error("Gagal upload gambar.");
@@ -41,192 +45,247 @@ async function uploadSingleImage(file, token) {
     return data.secure_url;
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
-    const params = new URLSearchParams(window.location.search);
-    const charId = params.get('id');
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('edit-mai-form');
+    const submitButton = document.getElementById('submit-btn');
+    const deleteButton = document.getElementById('delete-btn');
+    const formStatus = document.getElementById('form-status');
+    
+    // UI Elements
+    const maiIdInput = document.getElementById('mai-id');
+    const nameInput = document.getElementById('mai-name');
+    const greetingInput = document.getElementById('mai-greeting');
+    const taglineInput = document.getElementById('mai-tagline');
+    const descInput = document.getElementById('mai-description');
+    const tagsInput = document.getElementById('mai-tags');
+    const avatarPreview = document.getElementById('avatar-preview');
+    const mainImageInput = document.getElementById('mai-image');
+    
+    // VN Elements
+    const vnCheckbox = document.getElementById('mai-is-vn');
+    const vnSpritesContainer = document.getElementById('vn-sprites-container');
+    const vnGoalContainer = document.getElementById('vn-goal-container'); // [BRI UPDATE]
+    const gameGoalInput = document.getElementById('mai-game-goal'); // [BRI UPDATE]
+
+    // --- 1. TOGGLE LOGIC ---
+    const toggleVnSprites = () => {
+        if (vnCheckbox) {
+            if (vnCheckbox.checked) {
+                if(vnSpritesContainer) vnSpritesContainer.style.display = 'grid';
+                if(vnGoalContainer) vnGoalContainer.style.display = 'block'; // [BRI UPDATE]
+            } else {
+                if(vnSpritesContainer) vnSpritesContainer.style.display = 'none';
+                if(vnGoalContainer) vnGoalContainer.style.display = 'none'; // [BRI UPDATE]
+            }
+        }
+    };
+    if(vnCheckbox) {
+        vnCheckbox.addEventListener('change', toggleVnSprites);
+    }
+
+    // Ambil ID dari URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const charId = urlParams.get('id');
 
     if (!charId) {
-        alert("ID Karakter tidak ditemukan.");
+        alert("ID Karakter tidak ditemukan!");
         window.location.href = 'index.html';
         return;
     }
 
-    // Elemen VN Toggle
-    const vnCheckbox = document.getElementById('mai-is-vn');
-    const vnSpritesGrid = document.getElementById('vn-sprites-grid'); // ID di edit.html beda dikit (grid)
+    // Global variable untuk menyimpan state lama
+    let currentData = {};
 
-    // Fungsi Toggle UI
-    const toggleVnSprites = () => {
-        if (vnCheckbox && vnSpritesGrid) {
-            vnSpritesGrid.style.display = vnCheckbox.checked ? 'grid' : 'none';
-        }
-    };
-    if(vnCheckbox) vnCheckbox.addEventListener('change', toggleVnSprites);
-
-    // --- CEK ADMIN (Tampilkan Container Utama VN jika admin) ---
-    const auth = firebase.auth();
-    auth.onAuthStateChanged(async (user) => {
-        if (user) {
-            try {
-                const tokenResult = await user.getIdTokenResult();
-                if (tokenResult.claims.admin) {
-                    const vnContainer = document.getElementById('vn-section-container');
-                    if (vnContainer) vnContainer.style.display = 'block';
-                }
-            } catch (e) { console.error("Gagal cek admin:", e); }
-        }
-    });
-
-    // --- Load Data Lama ---
-    try {
-        const response = await fetch(`/.netlify/functions/get-character?id=${charId}`);
-        if (!response.ok) throw new Error("Gagal mengambil data.");
-        
-        const data = await response.json();
-
-        // Isi form dasar
-        document.getElementById('mai-id').value = charId;
-        document.getElementById('mai-name').value = data.name;
-        document.getElementById('mai-greeting').value = data.greeting;
-        document.getElementById('mai-tagline').value = data.tagline || '';
-        document.getElementById('mai-description').value = data.description;
-        document.getElementById('mai-tags').value = (data.tags || []).join(', ');
-        
-        // Load Status VN & Update Toggle UI
-        if(vnCheckbox) {
-            vnCheckbox.checked = data.isVnAvailable === true;
-            toggleVnSprites(); // Update tampilan grid sesuai data
-        }
-
-        // Avatar Utama
-        document.getElementById('avatar-preview').src = data.image;
-        document.getElementById('current-image-url').value = data.image;
-
-        if (data.visibility === 'private') document.getElementById('vis-private').checked = true;
-        else document.getElementById('vis-public').checked = true;
-
-        // Load Sprites
-        const emotions = ['happy', 'sad', 'angry', 'shy', 'surprised'];
-        const existingSprites = data.sprites || {};
-
-        emotions.forEach(emo => {
-            const previewEl = document.getElementById(`preview-${emo}`);
-            const hiddenEl = document.getElementById(`current-${emo}-url`);
-            
-            if (existingSprites[emo]) {
-                previewEl.src = existingSprites[emo];
-                hiddenEl.value = existingSprites[emo];
-            } else {
-                previewEl.src = "https://via.placeholder.com/100?text=Empty";
-                hiddenEl.value = ""; 
-            }
-        });
-
-    } catch (error) {
-        console.error(error);
-        alert("Gagal memuat data karakter.");
-    }
-
-    // --- Handle Image Preview ---
-    const imageInput = document.getElementById('mai-image');
-    imageInput.addEventListener('change', () => {
-        const file = imageInput.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (e) => { document.getElementById('avatar-preview').src = e.target.result; }
-            reader.readAsDataURL(file);
-        }
-    });
-
-    // --- Handle Submit ---
-    document.getElementById('edit-mai-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const submitBtn = document.getElementById('submit-btn');
-        const statusMsg = document.getElementById('form-status');
-        
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Menyimpan...';
-        statusMsg.textContent = 'Memproses...';
-        statusMsg.className = '';
-
+    // --- 2. LOAD DATA ---
+    const loadCharacterData = async () => {
         try {
+            formStatus.textContent = "Mengambil data...";
             const token = await getAuthTokenSafe();
             
-            // 1. Avatar Utama
-            let imageUrl = document.getElementById('current-image-url').value;
-            const mainFile = imageInput.files[0];
-            if (mainFile) {
-                statusMsg.textContent = 'Meng-upload avatar utama...';
-                imageUrl = await uploadSingleImage(mainFile, token);
+            const res = await fetch(`/.netlify/functions/get-character?id=${charId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!res.ok) throw new Error("Gagal mengambil data karakter.");
+            
+            const data = await res.json();
+            currentData = data; 
+
+            // Cek Admin & VN Section
+            const auth = firebase.auth();
+            const user = auth.currentUser;
+            const tokenResult = await user.getIdTokenResult();
+            if (tokenResult.claims.admin) {
+                const vnContainer = document.getElementById('vn-section-container');
+                if(vnContainer) vnContainer.style.display = 'block';
             }
 
-            // 2. Sprites (Cek upload baru atau pakai lama)
-            const sprites = {};
-            const emotions = ['happy', 'sad', 'angry', 'shy', 'surprised'];
+            // Populate Form
+            maiIdInput.value = charId;
+            nameInput.value = data.name || '';
+            greetingInput.value = data.greeting || '';
+            taglineInput.value = data.tagline || '';
+            descInput.value = data.description || '';
+            tagsInput.value = (data.tags || []).join(', ');
             
-            sprites['idle'] = imageUrl; // Update idle jika avatar utama berubah
+            if (data.image) avatarPreview.src = data.image;
 
-            // Hanya proses sprite jika checkbox dicentang
-            if (vnCheckbox && vnCheckbox.checked) {
+            // Radio Button Visibility
+            if (data.visibility === 'private') {
+                document.querySelector('input[name="visibility"][value="private"]').checked = true;
+            } else {
+                document.querySelector('input[name="visibility"][value="public"]').checked = true;
+            }
+
+            // Populate VN Data
+            if (data.isVnAvailable) {
+                vnCheckbox.checked = true;
+                // [BRI UPDATE: Isi Goal jika ada]
+                if(gameGoalInput) gameGoalInput.value = data.gameGoal || '';
+            } else {
+                vnCheckbox.checked = false;
+            }
+            toggleVnSprites();
+
+            // Preview Sprites Lama
+            const emotions = ['happy', 'sad', 'angry', 'shy', 'surprised'];
+            if (data.sprites) {
+                emotions.forEach(emo => {
+                    const preview = document.getElementById(`preview-${emo}`);
+                    if (preview && data.sprites[emo]) {
+                        preview.src = data.sprites[emo];
+                    } else if (preview) {
+                        preview.style.display = 'none';
+                    }
+                });
+            }
+
+            formStatus.textContent = "";
+
+        } catch (error) {
+            console.error(error);
+            formStatus.textContent = "Error loading data.";
+            formStatus.className = 'error';
+        }
+    };
+
+    // --- 3. SUBMIT / UPDATE ---
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        let token;
+        try {
+            token = await getAuthTokenSafe();
+        } catch (error) {
+            formStatus.textContent = 'Sesi habis. Login ulang.';
+            return;
+        }
+
+        submitButton.disabled = true;
+        submitButton.textContent = 'Menyimpan...';
+        formStatus.textContent = 'Mengupload perubahan...';
+        formStatus.className = '';
+
+        try {
+            // A. Upload Gambar Utama Baru (Jika ada)
+            let newMainImageUrl = currentData.image;
+            if (mainImageInput.files[0]) {
+                formStatus.textContent = 'Upload avatar baru...';
+                newMainImageUrl = await uploadSingleImage(mainImageInput.files[0], token);
+            }
+
+            // B. Upload Sprites Baru (Jika ada & VN aktif)
+            let updatedSprites = currentData.sprites || {};
+            // Pastikan idle update jika main image ganti
+            if (newMainImageUrl !== currentData.image) {
+                updatedSprites['idle'] = newMainImageUrl;
+            }
+
+            if (vnCheckbox.checked) {
+                const emotions = ['happy', 'sad', 'angry', 'shy', 'surprised'];
                 for (const emo of emotions) {
-                    const spriteInput = document.getElementById(`sprite-${emo}`);
-                    const currentUrl = document.getElementById(`current-${emo}-url`).value;
-
-                    if (spriteInput.files[0]) {
-                        statusMsg.textContent = `Meng-upload sprite: ${emo}...`;
-                        const newUrl = await uploadSingleImage(spriteInput.files[0], token);
-                        sprites[emo] = newUrl;
-                    } else if (currentUrl) {
-                        sprites[emo] = currentUrl;
+                    const input = document.getElementById(`sprite-${emo}`);
+                    if (input && input.files[0]) {
+                        formStatus.textContent = `Upload sprite: ${emo}...`;
+                        const url = await uploadSingleImage(input.files[0], token);
+                        updatedSprites[emo] = url;
                     }
                 }
             }
 
-            // 3. Update Data
-            statusMsg.textContent = 'Menyimpan perubahan...';
-            const payload = {
+            // C. Siapkan Payload Update
+            const updateData = {
                 id: charId,
-                name: document.getElementById('mai-name').value,
-                greeting: document.getElementById('mai-greeting').value,
-                tagline: document.getElementById('mai-tagline').value,
-                description: document.getElementById('mai-description').value,
-                tags: document.getElementById('mai-tags').value.split(',').map(t => t.trim()).filter(t => t),
+                name: nameInput.value,
+                greeting: greetingInput.value,
+                tagline: taglineInput.value,
+                description: descInput.value,
+                tags: tagsInput.value.split(',').map(t => t.trim()).filter(t => t),
                 visibility: document.querySelector('input[name="visibility"]:checked').value,
-                isVnAvailable: vnCheckbox ? vnCheckbox.checked : false,
-                image: imageUrl,
-                sprites: sprites
+                
+                isVnAvailable: vnCheckbox.checked,
+                
+                // [BRI UPDATE: Kirim Goal yang diedit]
+                gameGoal: gameGoalInput ? gameGoalInput.value : '',
+
+                image: newMainImageUrl,
+                sprites: updatedSprites
             };
 
-            const updateRes = await fetch('/.netlify/functions/update-mai', {
+            const saveRes = await fetch('/.netlify/functions/update-mai', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify(payload)
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(updateData)
             });
 
-            if (!updateRes.ok) {
-                const err = await updateRes.json();
-                throw new Error(err.error || "Gagal update.");
-            }
+            if (!saveRes.ok) throw new Error("Gagal update database.");
 
-            statusMsg.textContent = "Berhasil! Kembali ke chat...";
-            statusMsg.className = "success";
+            sessionStorage.removeItem('mai_chars_user'); // Clear cache
+            formStatus.textContent = 'Update Berhasil!';
+            formStatus.className = 'success';
             
-            sessionStorage.removeItem('mai_chars_user'); 
-
-            setTimeout(() => {
-                window.location.href = `chat.html?id=${charId}`;
-            }, 1500);
+            setTimeout(() => { window.location.href = 'index.html'; }, 1000);
 
         } catch (error) {
             console.error(error);
-            statusMsg.textContent = `Error: ${error.message}`;
-            statusMsg.className = "error";
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Simpan Perubahan';
+            formStatus.textContent = `Error: ${error.message}`;
+            formStatus.className = 'error';
+            submitButton.disabled = false;
+            submitButton.textContent = 'Simpan Perubahan';
         }
     });
 
-    document.getElementById('cancel-btn').addEventListener('click', () => {
-        window.location.href = `chat.html?id=${charId}`;
+    // --- 4. DELETE ---
+    deleteButton.addEventListener('click', async () => {
+        if(!confirm("Yakin ingin menghapus karakter ini? Tindakan tidak bisa dibatalkan.")) return;
+
+        try {
+            const token = await getAuthTokenSafe();
+            const res = await fetch('/.netlify/functions/delete-mai', {
+                method: 'POST',
+                headers: {
+                     'Content-Type': 'application/json',
+                     'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ id: charId })
+            });
+            
+            if(!res.ok) throw new Error("Gagal menghapus.");
+            
+            alert("Karakter dihapus.");
+            window.location.href = 'index.html';
+
+        } catch (e) {
+            alert("Error: " + e.message);
+        }
+    });
+
+    // Init Load
+    const auth = firebase.auth();
+    auth.onAuthStateChanged((user) => {
+        if(user) loadCharacterData();
     });
 });

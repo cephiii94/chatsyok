@@ -1,5 +1,5 @@
 // File: js/create-mai.js
-// Versi: Multi-Upload + Admin Check + UI Toggle (Auto-Hide Sprites)
+// Versi: Multi-Upload + Admin Check + UI Toggle (Auto-Hide Sprites & Goal)
 
 function getAuthTokenSafe() {
     return new Promise((resolve, reject) => {
@@ -55,24 +55,27 @@ document.addEventListener('DOMContentLoaded', () => {
     // Elemen VN
     const vnCheckbox = document.getElementById('mai-is-vn');
     const vnSpritesContainer = document.getElementById('vn-sprites-container');
+    const vnGoalContainer = document.getElementById('vn-goal-container'); // [BRI UPDATE]
 
-    // --- LOGIKA UI: TOGGLE SPRITES ---
-    // Sembunyikan grid sprite jika checkbox tidak dicentang
-// --- LOGIKA UI: TOGGLE SPRITES ---
+    // --- LOGIKA UI: TOGGLE SPRITES & GOAL ---
     const toggleVnSprites = () => {
-        if (vnCheckbox && vnSpritesContainer) {
+        if (vnCheckbox) {
             if (vnCheckbox.checked) {
-                vnSpritesContainer.style.display = 'grid'; // Munculkan saat dicentang
+                // Munculkan Sprites & Goal
+                if (vnSpritesContainer) vnSpritesContainer.style.display = 'grid';
+                if (vnGoalContainer) vnGoalContainer.style.display = 'block'; // [BRI UPDATE]
             } else {
-                vnSpritesContainer.style.display = 'none'; // Sembunyikan saat tidak dicentang
+                // Sembunyikan Sprites & Goal
+                if (vnSpritesContainer) vnSpritesContainer.style.display = 'none';
+                if (vnGoalContainer) vnGoalContainer.style.display = 'none'; // [BRI UPDATE]
             }
         }
     };
     
-    // Jalankan sekali saat loading agar sinkron dengan kondisi awal checkbox
+    // Jalankan sekali saat loading agar sinkron
     if(vnCheckbox) {
         vnCheckbox.addEventListener('change', toggleVnSprites);
-        toggleVnSprites(); // <--- Ini penting! Memastikan status awal benar.
+        toggleVnSprites(); 
     }
 
     // --- CEK STATUS LOGIN & ADMIN ---
@@ -158,6 +161,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 tags: document.getElementById('mai-tags').value.split(',').map(t => t.trim()).filter(t => t),
                 visibility: document.querySelector('input[name="visibility"]:checked').value,
                 isVnAvailable: vnCheckbox.checked,
+                
+                // [BRI UPDATE: Kirim Goal ke Backend]
+                gameGoal: document.getElementById('mai-game-goal') ? document.getElementById('mai-game-goal').value : '',
+
                 image: mainImageUrl,
                 sprites: sprites 
             };

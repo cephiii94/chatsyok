@@ -13,31 +13,34 @@
     <div id="app-container">
         
         <header class="mobile-header">
+            <button id="hamburger-btn"><span></span><span></span><span></span></button>
             <h1>Edit MAI</h1>
         </header>
         
-        <aside class="lobby-sidebar">
+        <aside class="lobby-sidebar" id="lobby-sidebar">
             <h1>ChatApp</h1>
             <nav class="lobby-sidebar-nav">
                 <a href="index.html">Home</a>
                 <a href="create-mai.html">Buat Bot</a>
+                <a href="#">Komunitas</a>
             </nav>
         </aside>
 
         <main class="lobby-main">
             <header class="lobby-header">
-                <h2>Edit Karakter AI</h2>
+                <h2>Edit Karakter</h2>
+                <p>Ubah detail kepribadian dan tampilan MAI.</p>
             </header>
 
             <form id="edit-mai-form" class="form-container">
                 <input type="hidden" id="mai-id">
-                <input type="hidden" id="current-image-url">
 
                 <div class="form-group avatar-group">
-                    <label>Avatar Utama (Klik untuk ganti)</label>
+                    <label>Avatar Utama / Idle</label>
                     <div class="avatar-upload">
-                        <img src="" alt="Avatar Lama" id="avatar-preview" class="image-preview">
+                        <img src="" alt="Preview" id="avatar-preview" class="image-preview">
                         <input type="file" id="mai-image" accept="image/*">
+                        <small>Klik untuk ganti gambar (Biarkan kosong jika tidak ingin ubah)</small>
                     </div>
                 </div>
 
@@ -54,7 +57,7 @@
 
                 <div class="form-group">
                     <label for="mai-tagline">Deskripsi Singkat</label>
-                    <textarea id="mai-tagline" rows="2"></textarea>
+                    <textarea id="mai-tagline" rows="2" maxlength="150"></textarea>
                 </div>
 
                 <div class="form-group">
@@ -63,78 +66,84 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="mai-tags">Kategori</label>
+                    <label for="mai-tags">Kategori (Pisahkan dengan koma)</label>
                     <input type="text" id="mai-tags">
                 </div>
 
                 <div class="form-group">
                     <label>Visibilitas</label>
                     <div class="radio-group">
-                        <label><input type="radio" name="visibility" value="public" id="vis-public"> Publik</label>
-                        <label><input type="radio" name="visibility" value="private" id="vis-private"> Privat</label>
+                        <label><input type="radio" name="visibility" value="public"> Publik</label>
+                        <label><input type="radio" name="visibility" value="private"> Privat</label>
                     </div>
                 </div>
 
-                <div class="form-group" style="background: #f0f8ff; padding: 20px; border-radius: 12px; border: 1px dashed #90caf9;">
-                    <div id="vn-section-container" class="form-group" style="display: none; background: #f0f8ff; padding: 20px; border-radius: 12px; border: 1px dashed #90caf9;">
-                        
-                        <label class="checkbox-container" style="font-weight:700; color:#1e3a5a; margin-bottom:15px; display:block;">
-                            <input type="checkbox" id="mai-is-vn">
-                            Aktifkan Mode Visual Novel?
-                        </label>
-                        
-                        <div id="vn-sprites-grid" style="display: none; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 20px;">
-                            
-                            <div class="sprite-edit-item" style="text-align: center;">
-                                <label style="font-size:0.8rem; font-weight:600;">Senang (Happy)</label>
-                                <img id="preview-happy" src="https://via.placeholder.com/100?text=Empty" style="width:80px; height:80px; object-fit:contain; border:1px solid #ddd; margin: 5px auto; display:block; border-radius:8px;">
-                                <input type="file" id="sprite-happy" accept="image/*" style="font-size:0.7rem; width:100%;">
-                                <input type="hidden" id="current-happy-url">
-                            </div>
+                <div id="vn-section-container" class="form-group" style="display: none; background: #f0f8ff; padding: 20px; border-radius: 12px; border: 1px dashed #90caf9;">
+                    
+                    <label class="checkbox-container" style="font-weight:700; color:#1e3a5a; margin-bottom:10px; display:block;">
+                        <input type="checkbox" id="mai-is-vn">
+                        Aktifkan Mode Visual Novel?
+                    </label>
 
-                            <div class="sprite-edit-item" style="text-align: center;">
-                                <label style="font-size:0.8rem; font-weight:600;">Sedih (Sad)</label>
-                                <img id="preview-sad" src="https://via.placeholder.com/100?text=Empty" style="width:80px; height:80px; object-fit:contain; border:1px solid #ddd; margin: 5px auto; display:block; border-radius:8px;">
-                                <input type="file" id="sprite-sad" accept="image/*" style="font-size:0.7rem; width:100%;">
-                                <input type="hidden" id="current-sad-url">
-                            </div>
-
-                            <div class="sprite-edit-item" style="text-align: center;">
-                                <label style="font-size:0.8rem; font-weight:600;">Marah (Angry)</label>
-                                <img id="preview-angry" src="https://via.placeholder.com/100?text=Empty" style="width:80px; height:80px; object-fit:contain; border:1px solid #ddd; margin: 5px auto; display:block; border-radius:8px;">
-                                <input type="file" id="sprite-angry" accept="image/*" style="font-size:0.7rem; width:100%;">
-                                <input type="hidden" id="current-angry-url">
-                            </div>
-
-                            <div class="sprite-edit-item" style="text-align: center;">
-                                <label style="font-size:0.8rem; font-weight:600;">Malu (Shy)</label>
-                                <img id="preview-shy" src="https://via.placeholder.com/100?text=Empty" style="width:80px; height:80px; object-fit:contain; border:1px solid #ddd; margin: 5px auto; display:block; border-radius:8px;">
-                                <input type="file" id="sprite-shy" accept="image/*" style="font-size:0.7rem; width:100%;">
-                                <input type="hidden" id="current-shy-url">
-                            </div>
-
-                            <div class="sprite-edit-item" style="text-align: center;">
-                                <label style="font-size:0.8rem; font-weight:600;">Kaget (Surprised)</label>
-                                <img id="preview-surprised" src="https://via.placeholder.com/100?text=Empty" style="width:80px; height:80px; object-fit:contain; border:1px solid #ddd; margin: 5px auto; display:block; border-radius:8px;">
-                                <input type="file" id="sprite-surprised" accept="image/*" style="font-size:0.7rem; width:100%;">
-                                <input type="hidden" id="current-surprised-url">
-                            </div>
-                        </div>
+                    <div id="vn-goal-container" style="margin-top: 15px; margin-bottom: 20px; display: none;">
+                        <label for="mai-game-goal" style="font-weight: 600; color: #d32f2f; display:block; margin-bottom:5px;">🎯 Tujuan Cerita / Game Goal</label>
+                        <textarea id="mai-game-goal" rows="3" placeholder="Contoh: User harus berhasil mengajak karakter kencan... (Wajib diisi untuk Story Mode)" style="width: 100%; padding: 10px; border: 2px solid #ffccbc; border-radius: 8px; font-family: inherit;"></textarea>
                     </div>
+                    <p style="font-size: 0.85rem; color: #555; margin-bottom: 15px;">
+                        Upload variasi ekspresi. (Biarkan kosong jika tidak ingin ubah)
+                    </p>
+
+                    <div id="vn-sprites-container" style="display: none; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 15px;">
+                        
+                        <div style="text-align: center;">
+                            <label style="font-size:0.8rem;">Senang (Happy)</label>
+                            <img src="" id="preview-happy" style="width:50px; height:50px; object-fit:cover; display:block; margin:0 auto 5px; background:#ddd; border-radius:4px;">
+                            <input type="file" id="sprite-happy" accept="image/*" style="font-size:0.75rem; width:100%;">
+                        </div>
+                        
+                        <div style="text-align: center;">
+                            <label style="font-size:0.8rem;">Sedih (Sad)</label>
+                            <img src="" id="preview-sad" style="width:50px; height:50px; object-fit:cover; display:block; margin:0 auto 5px; background:#ddd; border-radius:4px;">
+                            <input type="file" id="sprite-sad" accept="image/*" style="font-size:0.75rem; width:100%;">
+                        </div>
+                        
+                        <div style="text-align: center;">
+                            <label style="font-size:0.8rem;">Marah (Angry)</label>
+                            <img src="" id="preview-angry" style="width:50px; height:50px; object-fit:cover; display:block; margin:0 auto 5px; background:#ddd; border-radius:4px;">
+                            <input type="file" id="sprite-angry" accept="image/*" style="font-size:0.75rem; width:100%;">
+                        </div>
+                        
+                        <div style="text-align: center;">
+                            <label style="font-size:0.8rem;">Malu (Shy)</label>
+                            <img src="" id="preview-shy" style="width:50px; height:50px; object-fit:cover; display:block; margin:0 auto 5px; background:#ddd; border-radius:4px;">
+                            <input type="file" id="sprite-shy" accept="image/*" style="font-size:0.75rem; width:100%;">
+                        </div>
+                        
+                        <div style="text-align: center;">
+                            <label style="font-size:0.8rem;">Kaget (Surprised)</label>
+                            <img src="" id="preview-surprised" style="width:50px; height:50px; object-fit:cover; display:block; margin:0 auto 5px; background:#ddd; border-radius:4px;">
+                            <input type="file" id="sprite-surprised" accept="image/*" style="font-size:0.75rem; width:100%;">
+                        </div>
+
+                    </div>
+                </div>
 
                 <div class="form-group">
                     <button type="submit" class="submit-btn" id="submit-btn">Simpan Perubahan</button>
-                    <button type="button" class="submit-btn" id="cancel-btn" style="background-color: #ccc; margin-top: 10px;">Batal</button>
+                    <button type="button" id="delete-btn" style="background:#ff5252; margin-top:10px; width:100%; color:white; border:none; padding:12px; border-radius:8px; font-weight:600; cursor:pointer;">Hapus Karakter</button>
                     <div id="form-status" style="margin-top: 10px;"></div>
                 </div>
             </form>
         </main>
     </div>
+    
+    <div id="menu-overlay" class="overlay"></div>
 
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
     <script src="/js/firebase-config.js"></script>
-    <script src="/js/auth-guard.js"></script>
-    <script src="/js/edit-mai.js"></script> 
+    <script src="/js/auth-guard.js"></script> 
+    <script src="/js/lobby.js"></script>
+    <script src="/js/edit-mai.js"></script>
 </body>
 </html>

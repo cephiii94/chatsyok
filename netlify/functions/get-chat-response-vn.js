@@ -1,9 +1,10 @@
-// File: netlify/functions/get-chat-response.js
-// VERSI FINAL + FIX SESSION: Support Waktu, Lokasi, File, dan Sesi Terisolasi
+// File: netlify/functions/get-chat-response-vn.js
+// VERSI: GEMINI 2.5 FLASH (THE LATEST & GREATEST)
+// Menggunakan model 'gemini-2.5-flash' sesuai akses Tuan.
 
 const admin = require('firebase-admin');
 
-// 1. Inisialisasi Firebase Admin
+// 1. Inisialisasi Firebase
 if (!admin.apps.length) {
   try {
     const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
@@ -17,7 +18,7 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
-// 2. Helper Auth (Verifikasi Token)
+// 2. Helper Auth
 async function getUserIdFromToken(event) {
   const authHeader = event.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -28,251 +29,208 @@ async function getUserIdFromToken(event) {
   return decodedToken.uid;
 }
 
-// 3. Helper Download File (Gambar/PDF) dengan Retry & User-Agent
+// 3. Helper Download File
 async function urlToGenerativePart(fileUrl) {
     console.log("Downloading file:", fileUrl);
-    
-    const maxRetries = 3;
-    let lastError;
-
-    for (let i = 0; i < maxRetries; i++) {
-        try {
-            const response = await fetch(fileUrl, {
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                    'Connection': 'close' 
-                }
-            });
-
-            if (!response.ok) throw new Error(`Status: ${response.status} ${response.statusText}`);
-            
-            const buffer = await response.arrayBuffer();
-            const base64Data = Buffer.from(buffer).toString('base64');
-            const mimeType = response.headers.get('content-type') || 'image/jpeg';
-
-            return {
-                inlineData: {
-                    data: base64Data,
-                    mimeType: mimeType
-                }
-            };
-
-        } catch (err) {
-            console.warn(`Percobaan download ke-${i + 1} gagal: ${err.message}`);
-            lastError = err;
-            await new Promise(resolve => setTimeout(resolve, 1000));
-        }
+    try {
+        const response = await fetch(fileUrl);
+        if (!response.ok) throw new Error('Network response was not ok');
+        const buffer = await response.arrayBuffer();
+        return {
+            inlineData: {
+                data: Buffer.from(buffer).toString('base64'),
+                mimeType: response.headers.get('content-type') || 'image/jpeg'
+            }
+        };
+    } catch (error) {
+        console.error("File download error:", error);
+        return null;
     }
-    throw new Error(`Gagal download setelah ${maxRetries}x percobaan. Error: ${lastError.message}`);
 }
 
 // 4. Handler Utama
 exports.handler = async (event, context) => {
-  if (event.httpMethod !== 'POST') {
-      return { statusCode: 405, body: 'Method Not Allowed' };
-  }
-
-  let userId;
-  try {
-    userId = await getUserIdFromToken(event);
-  } catch (error) {
-    return { statusCode: 401, body: JSON.stringify({ error: error.message }) };
-  }
+  if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
 
   try {
+    const userId = await getUserIdFromToken(event);
     const body = JSON.parse(event.body);
     
-    // --- UPDATE 1: AMBIL SESSION ID ---
+    // Ambil data dari body
     const { 
-        userMessage, 
-        characterProfile, 
-        characterId, 
-        userPersona, 
-        userName, 
-        userLocalTime,
-        sessionId // <--- Ini penting!
+        userMessage, characterProfile, characterId, 
+        userPersona, userName, userLocalTime, sessionId,
+        mode = 'free', gameGoal = '' 
     } = body;
-
+    
     const characterName = body.characterName || 'Chatbot';
+
+    // --- SETUP LOGIKA MODE ---
+    // Mode Story aktif jika: mode='story' DAN ada gameGoal
+    const isStoryMode = (mode === 'story' && gameGoal && gameGoal.trim().length > 0);
     
-    if (!userMessage || !characterProfile || !characterId || !sessionId) {
-      return { statusCode: 400, body: 'Data wajib (termasuk Session ID) tidak lengkap.' };
-    }
-
-    // --- A. LOGIKA WAKTU & LOKASI ---
+    let systemInstruction = "";
     
-    let timeString;
-    if (userLocalTime) {
-        timeString = userLocalTime;
-    } else {
-        const now = new Date();
-        timeString = now.toLocaleString('id-ID', { 
-            timeZone: 'Asia/Jakarta', 
-            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', 
-            hour: '2-digit', minute: '2-digit', timeZoneName: 'short'
-        });
-    }
+    if (isStoryMode) {
+        // === PROMPT KHUSUS STORY MODE (GAME) ===
+        systemInstruction = `
+        ROLE: You are "${characterName}" and a Game Master for a Visual Novel.
+        GAME GOAL: "${gameGoal}"
 
-    const userCity = event.headers['x-nf-client-connection-ip-city'];
-    const userCountry = event.headers['x-nf-client-connection-ip-country'];
-    const userLocation = userCity ? `${userCity}, ${userCountry}` : 'Indonesia';
-
-    // --- B. PROSES FILE ---
-    const isFile = userMessage.startsWith('https://res.cloudinary.com');
-    let filePart = null;
-    let textMessageForPrompt = userMessage;
-
-    if (isFile) {
-        console.log("📂 Memproses lampiran file...");
-        try {
-            filePart = await urlToGenerativePart(userMessage);
-            
-            if (filePart.inlineData.mimeType === 'application/pdf') {
-                textMessageForPrompt = "[SYSTEM: Pengguna melampirkan dokumen PDF. Baca dan analisis isinya.]";
-            } else {
-                textMessageForPrompt = "[SYSTEM: Pengguna melampirkan sebuah GAMBAR. Lihat dan komentari visualnya.]";
-            }
-        } catch (imgErr) {
-            console.error("Gagal proses file:", imgErr);
-            textMessageForPrompt = `[SYSTEM ERROR: Gagal mengunduh lampiran. Pesan error: ${imgErr.message}]`;
+        TASK:
+        1. Reply to the user as the character (Immerse in role).
+        2. Advance the plot based on the GAME GOAL.
+        3. Provide 3 distinct choices for the user.
+        
+        OUTPUT FORMAT (STRICT JSON ONLY, NO MARKDOWN):
+        {
+          "message": "[EMOTION] Your character dialogue here...",
+          "choices": [
+            { "text": "Choice A (Positive/Helpful)", "type": "good" },
+            { "text": "Choice B (Neutral)", "type": "neutral" },
+            { "text": "Choice C (Negative/Risky)", "type": "bad" }
+          ],
+          "gameStatus": "ongoing"
         }
+        
+        EMOTIONS: [IDLE], [HAPPY], [SAD], [ANGRY], [SHY], [SURPRISED].
+        IMPORTANT: Do not wrap the output in \`\`\`json blocks. Just raw JSON.
+        `;
+    } else {
+        // === PROMPT FREE MODE (CHAT BIASA) ===
+        systemInstruction = `
+        ROLE: You are "${characterName}".
+        PROFILE: "${characterProfile}"
+        TASK: Chat naturally with the user. Keep it concise.
+        FORMAT: Start with [EMOTION]. Example: "[HAPPY] Hello there!"
+        EMOTIONS: [IDLE], [HAPPY], [SAD], [ANGRY], [SHY], [SURPRISED].
+        `;
     }
 
-    // --- C. RIWAYAT CHAT (DIPERBAIKI) ---
-    // Update 2: Query Firestore masuk ke 'sessions -> sessionId'
-    const historySnapshot = await db.collection('characters')
-                                    .doc(characterId)
-                                    .collection('chats')
-                                    .doc(userId)
-                                    .collection('sessions') // Masuk ke koleksi sessions
-                                    .doc(sessionId)         // Masuk ke ID sesi spesifik
-                                    .collection('messages')
-                                    .orderBy('timestamp', 'desc') // Ambil yg terbaru dulu
-                                    .limit(10) // Ambil 10 terakhir
-                                    .get();
-
-    const historyDocs = historySnapshot.docs.reverse(); // Balik jadi (Lama -> Baru)
-    let historyContext = "";
+    // --- KONTEKS RIWAYAT ---
+    // Ambil 6 pesan terakhir agar AI ingat konteks
+    const historySnapshot = await db.collection('characters').doc(characterId)
+        .collection('chats').doc(userId).collection('sessions').doc(sessionId)
+        .collection('messages').orderBy('timestamp', 'desc').limit(6).get();
     
-    if (!historyDocs.empty) {
-        historyContext = "RIWAYAT OBROLAN (Sesi Ini):\n";
-        historyDocs.forEach(doc => {
-            const data = doc.data();
-            
-            // CEGAH DOUBLE INPUT:
-            // Karena 'saveMessage' dipanggil sebelum API ini, pesan terakhir di DB adalah pesan user saat ini.
-            // Kita skip pesan terakhir dari riwayat agar tidak dobel dengan "PESAN BARU" di prompt.
-            if (data.text === userMessage && data.sender === 'user') {
-                return; // Skip, karena ini akan masuk lewat variabel 'PESAN BARU'
-            }
+    let historyText = "";
+    const historyDocs = historySnapshot.docs.reverse(); // Urutkan dari lama ke baru
+    
+    historyDocs.forEach(doc => {
+        const d = doc.data();
+        if(d.text !== userMessage) { // Skip pesan yang baru dikirim user sekarang
+             let txt = d.text;
+             // Jika pesan sebelumnya adalah JSON (dari bot story mode), ambil message-nya saja
+             try { 
+                 if (d.sender !== 'user' && txt.trim().startsWith('{')) {
+                    txt = JSON.parse(txt).message;
+                 }
+             } catch(e){} 
+             historyText += `${d.sender}: ${txt}\n`;
+        }
+    });
 
-            const role = data.sender === 'user' ? 'User' : characterName;
-            let cleanText = (data.text || "").replace(/\n/g, " ");
-            if (cleanText.startsWith('https://res.cloudinary.com')) {
-                cleanText = "[Lampiran File]";
-            }
-            historyContext += `${role}: "${cleanText}"\n`;
-        });
-        historyContext += "--- BATAS RIWAYAT ---\n";
-    }
-
-    // --- D. SUSUN PROMPT ---
-    const userRoleText = userPersona ? `Peran User: "${userPersona}".` : "Peran User: Teman bicara.";
-
-    const finalPrompt = `
-      PERINTAH SISTEM (MODE VISUAL NOVEL):
-      Berperanlah sebagai karakter imajiner berikut dalam sebuah game simulasi kencan/visual novel.
-
-      PROFIL KARAKTER:
-      - Nama: "${characterName}"
-      - Deskripsi: "${characterProfile}"
-      
-      DATA REAL-TIME:
-      - Waktu User: ${timeString}
-      - Lokasi User: ${userLocation}
-      - Nama User: "${userName || 'Teman'}"
-      - ${userRoleText}
-
-      ATURAN EKSPRESI (WAJIB):
-      Kamu HARUS menyertakan "Tag Emosi" di AWAL responmu dalam kurung siku.
-      Pilihan Tag: [IDLE], [HAPPY], [SAD], [ANGRY], [SURPRISED], [SHY], [THINKING].
-      
-      Contoh:
-      User: "Hai, kamu terlihat cantik."
-      Respon: "[SHY] Eh? Ah... terima kasih. Kamu bikin aku malu saja."
-
-      User: "Aku lupa bawa dompet."
-      Respon: "[ANGRY] Kebiasaan deh! Terus siapa yang mau bayar makanannya?"
-
-ATURAN MAIN:
-      1. FORMAT WAJIB: Selalu gunakan spasi (spacebar) yang benar antar kata dan tanda baca agar mudah dibaca. JANGAN GABUNG KATA.
-      2. Jawab santai, natural, seperti chat WhatsApp. 
-      3. Jawab SINGKAT (2-3 kalimat), kecuali menjelaskan isi PDF/Gambar.
-      4. JANGAN menyapa detail waktu/hari/tanggal kecuali ditanya.
-      5. Jangan mengulang kata-kata User.
-      6. Jangan berjanji melakukan aksi fisik.
-      7. Tetap pada karakter (Roleplay).
-      8. Jangan menyebut kamu AI.
-      9. HINDARI PENGULANGAN: Jika di riwayat kamu sudah menyapa, jangan menyapa lagi. Langsung ke topik.
-      10. tidak usah sebut nama jika persona tidak menyebutkan nama user.
-
-      KONTEKS RIWAYAT:
-      ${historyContext}
-
-      PESAN BARU: "${textMessageForPrompt}"
-      
-      RESPON ${characterName} (Dengan Tag Emosi):
+    const fullPrompt = `
+    ${systemInstruction}
+    
+    CONTEXT INFO:
+    User: ${userName} (${userPersona || 'Player'})
+    Time: ${userLocalTime || 'Unknown'}
+    
+    CHAT HISTORY:
+    ${historyText}
+    
+    LATEST USER INPUT: "${userMessage}"
+    
+    YOUR RESPONSE:
     `;
 
-    // --- E. REQUEST KE GEMINI ---
-    const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-    // Gunakan model Flash terbaru atau Pro sesuai selera Tuan
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemma-3-27b-it:generateContent?key=${GEMINI_API_KEY}`;
+    // --- REQUEST KE GEMINI 2.5 FLASH ---
+    // [UPDATE PENTING]: Menggunakan model yang Tuan miliki
+    const modelName = "gemini-2.5-flash"; 
+    
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
     const payload = {
         contents: [{ parts: [] }],
-        safetySettings: [
-            { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-            { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-            { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-            { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-        ],
-        generationConfig: {
-            temperature: 0.85,
-            maxOutputTokens: 2000,
+        generationConfig: { 
+            temperature: 0.8,
+            maxOutputTokens: 1000
         }
     };
 
-    if (filePart) payload.contents[0].parts.push(filePart);
-    payload.contents[0].parts.push({ text: finalPrompt });
-
-    const apiResponse = await fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    if (!apiResponse.ok) {
-        const err = await apiResponse.json();
-        throw new Error(`Gemini Error: ${err.error?.message || 'Unknown error'}`);
+    // Tambahkan File jika ada
+    if (userMessage.startsWith('http')) {
+        const fileData = await urlToGenerativePart(userMessage);
+        if(fileData) {
+            payload.contents[0].parts.push(fileData);
+            payload.contents[0].parts.push({ text: fullPrompt + "\n(User sent an image/file above)" });
+        } else {
+            payload.contents[0].parts.push({ text: fullPrompt });
+        }
+    } else {
+        payload.contents[0].parts.push({ text: fullPrompt });
     }
 
-    const responseData = await apiResponse.json();
-    const candidateText = responseData?.candidates?.[0]?.content?.parts?.[0]?.text;
+    // Hit API
+    const apiRes = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
 
-    let botReply = candidateText ? candidateText.trim() : "Maaf, saya tidak bisa merespon pesan ini (mungkin terfilter).";
+    if (!apiRes.ok) {
+        const err = await apiRes.json();
+        console.error("Gemini 2.5 Error:", JSON.stringify(err));
+        throw new Error(`Gemini 2.5 Error: ${err.error?.message || apiRes.statusText}`);
+    }
+
+    const data = await apiRes.json();
+    let reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "[SAD] (No response)";
+
+    // --- CLEANING / PARSING JSON ---
+    if (isStoryMode) {
+        // Hapus markdown block ```json jika AI bandel menambahkannya
+        reply = reply.replace(/```json/g, '').replace(/```/g, '').trim();
+        
+        try { 
+            // Cek apakah valid JSON
+            JSON.parse(reply); 
+        } catch (e) { 
+            console.error("JSON Parse Error:", reply);
+            // Fallback UI jika JSON rusak
+            reply = JSON.stringify({
+                message: "[SHY] (Maaf, aku sedikit bingung... Boleh ulangi?)",
+                choices: [
+                    { text: "Lanjut cerita", type: "neutral" },
+                    { text: "Ulangi pertanyaan", type: "neutral" }
+                ],
+                gameStatus: "ongoing"
+            });
+        }
+    }
 
     return {
-      statusCode: 200,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ reply: botReply })
+        statusCode: 200,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reply, mode: isStoryMode ? 'story' : 'free' })
     };
 
   } catch (error) {
-    console.error("Handler Error:", error);
-    return { 
-        statusCode: 200, 
-        body: JSON.stringify({ reply: `(Sistem Error: ${error.message})` }) 
+    console.error("Function Error:", error);
+    // Return format JSON valid meski error agar frontend tidak crash
+    const errorJson = JSON.stringify({
+        message: `[SYSTEM] Error: ${error.message}`,
+        choices: [],
+        gameStatus: "ongoing"
+    });
+    
+    return {
+        statusCode: 200,
+        body: JSON.stringify({ 
+            reply: errorJson, 
+            isError: true 
+        })
     };
   }
 };

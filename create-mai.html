@@ -77,14 +77,18 @@
                     </div>
                 </div>
 
-                <div class="form-group" style="background: #f0f8ff; padding: 20px; border-radius: 12px; border: 1px dashed #90caf9;">
                 <div id="vn-section-container" class="form-group" style="display: none; background: #f0f8ff; padding: 20px; border-radius: 12px; border: 1px dashed #90caf9;">
                     
                     <label class="checkbox-container" style="font-weight:700; color:#1e3a5a; margin-bottom:10px; display:block;">
                         <input type="checkbox" id="mai-is-vn">
                         Aktifkan Mode Visual Novel?
                     </label>
-                    
+
+                    <div id="vn-goal-container" style="margin-top: 15px; margin-bottom: 20px; display: none;">
+                        <label for="mai-game-goal" style="font-weight: 600; color: #d32f2f; display:block; margin-bottom:5px;">🎯 Tujuan Cerita / Game Goal</label>
+                        <textarea id="mai-game-goal" rows="3" placeholder="Contoh: User harus berhasil mengajak karakter kencan, atau memecahkan misteri... (Wajib diisi untuk Story Mode)" style="width: 100%; padding: 10px; border: 2px solid #ffccbc; border-radius: 8px; font-family: inherit;"></textarea>
+                        <small style="color: #666;">Skenario ini akan menjadi panduan AI dalam mengarahkan cerita.</small>
+                    </div>
                     <p style="font-size: 0.85rem; color: #555; margin-bottom: 15px;">
                         Upload variasi ekspresi. Jika kosong, akan menggunakan Avatar Utama.
                     </p>
