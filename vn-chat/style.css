@@ -151,10 +151,21 @@ body, html {
 
 .text-content {
     min-height: 60px;
+    /* Tambahan Bri: Batasi tinggi teks dan beri scroll jika kepanjangan */
+    max-height: 150px; 
+    overflow-y: auto; /* Munculkan scrollbar jika teks panjang */
+    
     font-size: 16px;
     line-height: 1.5;
     margin-bottom: 15px;
     margin-top: 10px;
+    
+    /* Tambahan Bri: Beri bantalan kosong di bawah supaya teks tidak tertutup tombol choice */
+    padding-bottom: 50px; 
+    
+    /* Opsional: Biar scrollbar-nya cantik */
+    scrollbar-width: thin; 
+    scrollbar-color: #8ecae6 rgba(0,0,0,0.1);
 }
 
 /* --- INPUT AREA --- */

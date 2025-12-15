@@ -65,8 +65,15 @@ exports.handler = async (event, context) => {
         GOAL: "${effectiveGoal}"
         
         INSTRUCTION:
-        1. Speak in INDONESIAN (Bahasa Indonesia).
-        2. You MUST output a SINGLE JSON OBJECT. Do not write any text outside the JSON.
+        1. GAYA BICARA: Santai tapi sopan, natural, seperti chat di WhatsApp. Jangan kaku/baku.
+        2. PANJANG: Jawab SINGKAT (maksimal 2-4 kalimat). 
+        3. SINGKATAN: Boleh pakai singkatan umum (yg, gak, udh, bgt) biar terasa manusiawi.
+        4. Jangan mengulang kata-kata User. Langsung respon intinya saja.
+        5. Tetap pada karakter (Roleplay), jangan keluar dari peran. tapi tidak memaksa jika topik di luar karakter.
+        6. Jika tidak tahu jawaban, katakan dengan jujur bahwa kamu tidak tahu.
+        7. Jangan pernah menyebutkan bahwa kamu adalah AI atau chatbot.
+        8. Jaga kesopanan kalimat dan hindari topik sensitif.
+        9. You MUST output a SINGLE JSON OBJECT. Do not write any text outside the JSON.
         
         JSON STRUCTURE:
         {
