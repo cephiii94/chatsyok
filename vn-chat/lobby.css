@@ -190,3 +190,101 @@ html {
         transform: translateY(0);
     }
 }
+
+/* --- GAYA POP-UP MODAL (Tambahkan di bagian bawah) --- */
+
+.overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+.overlay.hidden {
+    display: none;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.modal-box {
+    background: white;
+    padding: 25px;
+    border-radius: 20px;
+    width: 90%;
+    max-width: 400px;
+    text-align: center;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes popIn {
+    from { transform: scale(0.8); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.modal-title {
+    margin: 0 0 10px;
+    color: #2d3436;
+    font-size: 1.5rem;
+}
+
+.modal-desc {
+    color: #636e72;
+    margin-bottom: 20px;
+}
+
+.mode-options {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.mode-btn {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    border: none;
+    border-radius: 15px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    text-align: left;
+}
+
+.mode-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.mode-btn .icon { font-size: 2rem; }
+.mode-btn .text { display: flex; flex-direction: column; }
+.mode-btn strong { font-size: 1.1rem; display: block; margin-bottom: 3px; }
+.mode-btn small { font-size: 0.85rem; opacity: 0.8; }
+
+/* Warna Tombol */
+.free-mode {
+    background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+    color: #444;
+}
+
+.story-mode {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-cancel {
+    background: transparent;
+    border: none;
+    color: #b2bec3;
+    margin-top: 20px;
+    cursor: pointer;
+    font-weight: bold;
+}
+.btn-cancel:hover { color: #636e72; }
+

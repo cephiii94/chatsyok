@@ -1,4 +1,4 @@
-// File: netlify/functions/get-chat-response.js
+// File: netlify/functions/get-chat-response-vn-fm.js (free mode)
 // VERSI FINAL + FIX SESSION: Support Waktu, Lokasi, File, dan Sesi Terisolasi
 
 const admin = require('firebase-admin');

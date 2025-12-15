@@ -1,56 +1,24 @@
 // vn-chat/chat.js
-// VERSI: ULTIMATE FIXED (Full Feature + Compact UI + Restore All Functions)
+// VERSI FINAL: Recovery Sesi + User Persona + Settings UI + Custom Alerts
 
 // --- 1. GLOBAL VARIABLES ---
 let currentCharacterId = "1";
 let currentCharacterName = "MAI";
 let currentCharacterProfile = "MAI default.";
-let currentCharacter = null;
 let currentUser = null; 
 let currentSessionId = ''; 
 let currentEmotion = 'IDLE';
 
-// Persona & State
+// Persona User Default
 let currentUserName = "Teman"; 
 let currentUserPersona = "";   
-let isStoryMode = false; // Mode toggle
 
 // Sprite default
 const sprites = {
-    'IDLE': '', 'HAPPY': '', 'SAD': '', 'ANGRY': '',
+    'IDLE': '', 
+    'HAPPY': '', 'SAD': '', 'ANGRY': '',
     'SURPRISED': '', 'SHY': '', 'THINKING': ''
 };
-
-// --- SETUP UI PILIHAN (REVISI: COMPACT & POSISI DI ATAS CHAT AREA) ---
-const existingContainer = document.getElementById('choices-container');
-if (existingContainer) existingContainer.remove(); 
-
-const choicesContainer = document.createElement('div');
-choicesContainer.id = 'choices-container';
-choicesContainer.style.cssText = `
-    position: fixed; 
-    bottom: 130px; /* Posisi di atas area chat */
-    left: 50%; 
-    transform: translateX(-50%); 
-    width: 95%; 
-    max-width: 380px; /* Lebar dibatasi agar rapi */
-    display: none; 
-    flex-direction: column; 
-    gap: 8px; /* Jarak antar tombol rapat */
-    z-index: 2000;
-    padding: 10px;
-    background: transparent; 
-    animation: slideUp 0.4s ease;
-`;
-document.body.appendChild(choicesContainer);
-
-// Style Animasi
-const styleSheet = document.createElement("style");
-styleSheet.innerText = `
-@keyframes slideUp { from { opacity: 0; transform: translate(-50%, 20px); } to { opacity: 1; transform: translate(-50%, 0); } }
-`;
-document.head.appendChild(styleSheet);
-
 
 // --- 2. HELPER FUNCTIONS ---
 
@@ -58,7 +26,7 @@ function generateUUID() {
     return 'vn-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
 }
 
-// Fitur: Custom Notification
+// FUNGSI BARU: Custom Alert Cantik
 function showNotification(title, message) {
     const modal = document.getElementById('custom-alert-modal');
     if (modal) {
@@ -67,11 +35,11 @@ function showNotification(title, message) {
         modal.classList.remove('hidden');
         modal.style.display = 'flex';
     } else {
+        // Fallback jika modal tidak ada
         alert(`${title}: ${message}`);
     }
 }
 
-// Fitur: Custom Confirm
 function showCustomConfirm(title, message) {
     return new Promise((resolve) => {
         const modal = document.getElementById('custom-confirm-modal');
@@ -102,7 +70,6 @@ function showCustomConfirm(title, message) {
     });
 }
 
-// Fitur: Efek Mengetik
 function typewriter(text) {
     const el = document.getElementById('dialogue-text');
     if(!el) return;
@@ -116,29 +83,15 @@ function typewriter(text) {
             i++;
             setTimeout(type, speed);
         } else {
-            // Jika Story Mode, jangan nyalakan input (karena user harus klik tombol)
-            if (!isStoryMode) {
-                enableInput(true);
-            }
+            enableInput(true);
         }
     }
     type();
 }
 
-// Fitur: UI Control (Input Area)
 function enableInput(enabled) {
     const input = document.getElementById('user-input');
     const btn = document.getElementById('btn-send');
-    const inputArea = document.querySelector('.input-area'); 
-
-    // Handle Tampilan Story Mode
-    if (isStoryMode) {
-        if(inputArea) inputArea.style.display = 'none';
-        return; 
-    } else {
-        if(inputArea) inputArea.style.display = 'flex';
-    }
-
     if(input) {
         input.disabled = !enabled;
         if(enabled) input.focus();
@@ -146,7 +99,6 @@ function enableInput(enabled) {
     if(btn) btn.disabled = !enabled;
 }
 
-// Fitur: Ganti Sprite
 function updateSprite(emotion) {
     const key = emotion ? emotion.toUpperCase() : 'IDLE';
     const validEmotion = (key in sprites) ? key : 'IDLE';
@@ -154,8 +106,11 @@ function updateSprite(emotion) {
     let newSrc = sprites[validEmotion] || sprites['IDLE'];
     const imgEl = document.getElementById('char-sprite');
 
+    // console.log(`[VN] Updating sprite: Emotion=${key}, Valid=${validEmotion}, Src=${newSrc}`);
+
     if (imgEl) {
         imgEl.onerror = () => {
+            // console.error(`[VN] Failed to load image: ${newSrc}`);
             if (imgEl.src !== 'https://placehold.co/400x600?text=Image+Not+Found') {
                 imgEl.src = 'https://placehold.co/400x600?text=Image+Not+Found';
             }
@@ -172,35 +127,49 @@ function updateSprite(emotion) {
     }
 }
 
-// Fitur: Parse Emosi
 function parseReply(rawText) {
-    let cleanText = rawText || "";
+    let cleanText = rawText;
     let emotion = 'IDLE';
-    const match = cleanText.match(/^\[([A-Z]+)\]/);
+    const match = rawText && rawText.match(/^\[([A-Z]+)\]/);
     if (match) {
         emotion = match[1];
-        cleanText = cleanText.replace(match[0], '').trim();
+        cleanText = rawText.replace(match[0], '').trim();
     }
-    return { emotion, cleanText };
+    return { emotion, cleanText: cleanText || "" };
 }
 
-// Fitur: XP Melayang
 function showXPFloating(amount) {
     const el = document.createElement('div');
     el.textContent = `✨ +${amount} XP`;
+    
+    // Styling langsung di JS biar praktis
     Object.assign(el.style, {
-        position: 'fixed', top: '80px', right: '20px',
-        background: 'rgba(255, 215, 0, 0.9)', color: '#333',
-        padding: '8px 15px', borderRadius: '20px',
-        fontWeight: 'bold', fontSize: '14px', zIndex: '9999',
-        pointerEvents: 'none', transition: 'all 0.5s ease',
-        opacity: '0', transform: 'translateY(10px)'
+        position: 'fixed',
+        top: '80px', // Sedikit di bawah notifikasi biasa
+        right: '20px',
+        background: 'rgba(255, 215, 0, 0.9)', // Warna Emas
+        color: '#333',
+        padding: '8px 15px',
+        borderRadius: '20px',
+        fontWeight: 'bold',
+        fontSize: '14px',
+        boxShadow: '0 4px 10px rgba(0,0,0,0.2)',
+        zIndex: '9999',
+        pointerEvents: 'none',
+        transition: 'all 0.5s ease',
+        opacity: '0',
+        transform: 'translateY(10px)'
     });
+
     document.body.appendChild(el);
+
+    // Animasi Masuk
     requestAnimationFrame(() => {
         el.style.opacity = '1';
         el.style.transform = 'translateY(0)';
     });
+
+    // Animasi Keluar & Hapus
     setTimeout(() => {
         el.style.opacity = '0';
         el.style.transform = 'translateY(-20px)';
@@ -208,11 +177,12 @@ function showXPFloating(amount) {
     }, 2000);
 }
 
-// --- 3. SETTINGS & CHARACTER LOADING ---
+// --- 3. LOAD DATA & SETTINGS ---
 
 function loadSettings() {
     const savedName = localStorage.getItem('vn_username');
     const savedPersona = localStorage.getItem('vn_persona');
+    
     if (savedName) currentUserName = savedName;
     if (savedPersona) currentUserPersona = savedPersona;
 
@@ -230,10 +200,12 @@ function saveSettings() {
         currentUserName = nameInput;
         localStorage.setItem('vn_username', currentUserName);
     }
+    
     currentUserPersona = personaInput;
     localStorage.setItem('vn_persona', currentUserPersona);
 
     document.getElementById('settings-overlay').classList.add('hidden');
+    // MENGGUNAKAN NOTIFIKASI BARU
     showNotification("Sukses", "Pengaturan user berhasil disimpan!");
 }
 
@@ -242,41 +214,31 @@ async function loadCharacterAndState() {
         const res = await fetch(`/.netlify/functions/get-character?id=${currentCharacterId}`);
         if (!res.ok) throw new Error("Karakter tidak ditemukan");
         const char = await res.json();
-        currentCharacter = char;
         
         currentCharacterProfile = char.description; 
         currentCharacterName = char.name;
+
         document.getElementById('char-name').textContent = char.name;
 
-        // [LOGIKA UI BERDASARKAN MODE]
-        const inputArea = document.querySelector('.input-area');
-        const userInput = document.getElementById('user-input');
-
-        if (isStoryMode) {
-            console.log("🎮 MODE: STORY");
-            if(inputArea) inputArea.style.display = 'none'; // Sembunyikan area input
-        } else {
-            console.log("☕ MODE: FREE");
-            if(inputArea) inputArea.style.display = 'flex';
-            if(userInput) {
-                userInput.disabled = false;
-                userInput.placeholder = "Ketik pesan...";
-            }
-        }
-
-        // Setup Sprites
         const defaultImg = char.image || "https://via.placeholder.com/400x600?text=No+Image";
         Object.keys(sprites).forEach(k => sprites[k] = defaultImg);
+
         if (char.sprites) {
-            Object.keys(char.sprites).forEach(key => sprites[key.toUpperCase()] = char.sprites[key]);
+            if (char.sprites.idle) sprites['IDLE'] = char.sprites.idle;
+            if (char.sprites.happy) sprites['HAPPY'] = char.sprites.happy;
+            if (char.sprites.sad) sprites['SAD'] = char.sprites.sad;
+            if (char.sprites.angry) sprites['ANGRY'] = char.sprites.angry;
+            if (char.sprites.surprised) sprites['SURPRISED'] = char.sprites.surprised;
+            if (char.sprites.shy) sprites['SHY'] = char.sprites.shy;
+            if (char.sprites.thinking) sprites['THINKING'] = char.sprites.thinking;
         }
+        
         updateSprite('IDLE');
 
         if (char.backgroundImage) {
             document.querySelector('.vn-background').style.backgroundImage = `url('${char.backgroundImage}')`;
         }
 
-        // Load History
         if (currentUser) {
             const token = await currentUser.getIdToken();
             const histRes = await fetch(`/.netlify/functions/get-history?id=${currentCharacterId}&sessionId=${currentSessionId}`, {
@@ -285,43 +247,17 @@ async function loadCharacterAndState() {
             const history = await histRes.json();
 
             if (history && history.length > 0) {
-                // Restore chat terakhir
                 const lastMsg = history[history.length - 1];
-                
                 if (lastMsg.sender !== 'user') {
-                    let displayText = lastMsg.text;
-                    let choicesToRestore = null;
-
-                    // Cek apakah ini format Story (JSON)
-                    if(isStoryMode) {
-                        try {
-                           if (displayText.startsWith('{')) {
-                               const parsed = JSON.parse(displayText);
-                               displayText = parsed.message;
-                               choicesToRestore = parsed.choices;
-                           }
-                        } catch(e){}
-                    }
-
-                    const { emotion, cleanText } = parseReply(displayText);
+                    const { emotion, cleanText } = parseReply(lastMsg.text);
                     updateSprite(emotion);
                     typewriter(cleanText);
-                    
-                    // Restore tombol pilihan jika ada
-                    if(choicesToRestore) setTimeout(() => showChoices(choicesToRestore), 500);
-
                 } else {
                     updateSprite('IDLE');
                     typewriter(`(Kamu): ${lastMsg.text}`);
                 }
             } else {
-                // HISTORY KOSONG (NEW GAME)
-                if (isStoryMode) {
-                    console.log("🚀 Memulai cerita baru...");
-                    sendMessage("[START STORY]"); 
-                } else {
-                    typewriter(char.greeting || `Halo! Aku ${char.name}.`);
-                }
+                typewriter(char.greeting || `Halo! Aku ${char.name}.`);
             }
         }
     } catch (e) {
@@ -331,197 +267,13 @@ async function loadCharacterAndState() {
     }
 }
 
-// --- 4. MAIN CHAT LOGIC ---
-
-async function sendMessage(manualText = null) {
-    const input = document.getElementById('user-input');
-    const text = manualText || input.value.trim();
-    if (!text) return;
-
-    if(input) input.value = '';
-    
-    enableInput(false); 
-    choicesContainer.style.display = 'none';
-
-    // Tampilkan "..." kecuali saat trigger [START STORY]
-    if (text !== "[START STORY]") {
-        document.getElementById('dialogue-text').innerText = "..."; 
-    }
-
-    try {
-        if (!currentUser) throw new Error("Sesi habis, silakan refresh.");
-        const token = await currentUser.getIdToken();
-
-        // Payload ke Backend
-        const payload = {
-            userMessage: text,
-            characterProfile: currentCharacterProfile,
-            characterName: currentCharacterName,
-            characterId: currentCharacterId,
-            sessionId: currentSessionId,
-            userName: currentUserName,
-            userPersona: currentUserPersona,
-            
-            // [MODE LOGIC]
-            mode: isStoryMode ? 'story' : 'free',
-            gameGoal: currentCharacter ? (currentCharacter.gameGoal || '') : ''
-        };
-
-        const res = await fetch('/.netlify/functions/get-chat-response-vn', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify(payload)
-        });
-
-        if (!res.ok) throw new Error("Gagal respon server (" + res.status + ")");
-
-        // Simpan pesan user (kecuali pesan sistem)
-        if (text !== "[START STORY]") {
-            saveMessage('user', text); 
-        }
-
-        const data = await res.json();
-        
-        // --- HANDLE RESPONSE ---
-        if (isStoryMode || data.mode === 'story') {
-            handleStoryResponse(data.reply);
-        } else {
-            // Free Mode
-            const { emotion, cleanText } = parseReply(data.reply);
-            updateSprite(emotion);
-            typewriter(cleanText);
-            saveMessage('bot', data.reply); 
-        }
-
-    } catch (e) {
-        console.error(e);
-        document.getElementById('dialogue-text').innerText = "Error: " + e.message;
-        // Buka input lagi jika error (hanya di Free Mode)
-        if (!isStoryMode) enableInput(true); 
-    }
-}
-
-function handleStoryResponse(jsonRaw) {
-    let data;
-    try {
-        if (typeof jsonRaw === 'object') {
-            data = jsonRaw;
-        } else {
-            // Bersihkan markdown JSON
-            let cleanStr = jsonRaw.replace(/```json/gi, '').replace(/```/g, '').trim();
-            const firstBrace = cleanStr.indexOf('{');
-            const lastBrace = cleanStr.lastIndexOf('}');
-            if (firstBrace !== -1 && lastBrace !== -1) {
-                cleanStr = cleanStr.substring(firstBrace, lastBrace + 1);
-            }
-            data = JSON.parse(cleanStr);
-        }
-    } catch (e) {
-        console.error("JSON Error:", e);
-        // Fallback
-        const { emotion, cleanText } = parseReply(typeof jsonRaw === 'string' ? jsonRaw : "Error data.");
-        updateSprite(emotion);
-        typewriter(cleanText);
-        return;
-    }
-
-    // 1. Teks & Emosi
-    const { emotion, cleanText } = parseReply(data.message);
-    updateSprite(emotion);
-    typewriter(cleanText);
-
-    // 2. Simpan Full JSON ke History
-    saveMessage('bot', JSON.stringify(data));
-
-    // 3. Tampilkan Pilihan
-    const delay = Math.min(cleanText.length * 20 + 500, 3000);
-    
-    if (data.choices && data.choices.length > 0) {
-        setTimeout(() => showChoices(data.choices), delay);
-    } else {
-        setTimeout(() => enableInput(true), delay);
-    }
-}
-
-// --- FUNGSI TAMPILAN PILIHAN (REVISI: COMPACT) ---
-function showChoices(choices) {
-    choicesContainer.innerHTML = '';
-    
-    choices.forEach(choice => {
-        const btn = document.createElement('button');
-        btn.textContent = choice.text;
-        
-        // Warna Button Transparan & Elegan
-        let borderColor = 'rgba(255, 255, 255, 0.4)';
-        let bg = 'rgba(0, 0, 0, 0.6)'; // Hitam transparan (Default)
-        
-        if (choice.type === 'good') { bg = 'rgba(39, 174, 96, 0.7)'; borderColor = '#2ecc71'; } // Hijau
-        if (choice.type === 'bad') { bg = 'rgba(192, 57, 43, 0.7)'; borderColor = '#e74c3c'; } // Merah
-        
-        btn.style.cssText = `
-            background: ${bg}; 
-            border: 1px solid ${borderColor}; 
-            color: white; 
-            padding: 10px 15px; /* Lebih ramping */
-            border-radius: 25px;
-            font-weight: 500; 
-            font-size: 0.95rem; /* Font pas, gak kegedean */
-            cursor: pointer;
-            text-align: center;
-            transition: all 0.2s ease;
-            font-family: 'Nunito', sans-serif;
-            width: 100%;
-            backdrop-filter: blur(2px);
-        `;
-        
-        // Efek Hover
-        btn.onmouseover = () => {
-            btn.style.background = 'rgba(255, 255, 255, 0.2)';
-            btn.style.transform = 'scale(1.02)';
-        };
-        btn.onmouseout = () => {
-            btn.style.background = bg;
-            btn.style.transform = 'scale(1)';
-        };
-
-        btn.onclick = () => {
-            choicesContainer.style.display = 'none';
-            sendMessage(choice.text); 
-        };
-        
-        choicesContainer.appendChild(btn);
-    });
-    
-    choicesContainer.style.display = 'flex';
-}
-
-// --- 5. LEVELING & SAVE ---
-
-async function saveMessage(sender, text) {
-    try {
-        if(!currentUser) return;
-        const token = await currentUser.getIdToken();
-        const res = await fetch('/.netlify/functions/save-message', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ characterId: currentCharacterId, sender, text, sessionId: currentSessionId })
-        });
-
-        if (res.ok) {
-            const data = await res.json();
-            // Fitur XP & Level Up
-            if (sender === 'user' && data.xpAdded) showXPFloating(data.xpAdded);
-            if (data.levelUp && data.newLevel) showLevelUpVN(data.newLevel);
-            else if (data.newBadges && data.newBadges.length > 0) showBadgeVN(data.newBadges[0]);
-        }
-    } catch (e) { console.error("Gagal simpan:", e); }
-}
-
 function showLevelUpVN(newLevel) {
     const modal = document.getElementById('level-up-overlay');
+    const levelDisplay = document.getElementById('new-level-display');
     const box = modal.querySelector('.level-up-box');
 
-    if (box.dataset.type === 'badge') {
+    // Reset konten jika bekas Badge
+    if (box && box.dataset.type === 'badge') {
         box.innerHTML = `
             <div class="level-stars">⭐⭐⭐</div>
             <h1 class="level-title">LEVEL UP!</h1>
@@ -532,18 +284,21 @@ function showLevelUpVN(newLevel) {
             <p class="level-msg">Hebat! Kamu semakin sepuh!</p>
             <button id="btn-close-level" class="level-btn">Lanjut Cerita ▶️</button>
         `;
-        document.getElementById('btn-close-level').onclick = () => closeModalVN(modal);
         box.dataset.type = 'level';
     } else {
-        const levelDisplay = document.getElementById('new-level-display');
         if (levelDisplay) levelDisplay.textContent = newLevel;
     }
 
     if (modal) {
         modal.classList.remove('hidden');
         setTimeout(() => modal.classList.add('active'), 10);
-        const btn = document.getElementById('btn-close-level');
-        if (btn) btn.onclick = () => closeModalVN(modal);
+        
+        // Pasang event listener tombol tutup
+        // Kita pakai timeout biar elemennya render dulu
+        setTimeout(() => {
+            const btn = document.getElementById('btn-close-level');
+            if (btn) btn.onclick = () => closeModalVN(modal);
+        }, 100);
     }
 }
 
@@ -552,7 +307,10 @@ function showBadgeVN(badge) {
     const box = modal.querySelector('.level-up-box');
 
     if (modal && box) {
+        // Tandai bahwa ini tampilan badge
         box.dataset.type = 'badge';
+
+        // Ganti isi HTML Modal jadi Badge
         box.innerHTML = `
             <div class="level-stars" style="font-size: 50px;">${badge.icon}</div>
             <h1 class="level-title" style="color: #00bcd4; text-shadow: 2px 2px 0 #005662;">LENCANA BARU!</h1>
@@ -568,6 +326,161 @@ function showBadgeVN(badge) {
 
         modal.classList.remove('hidden');
         setTimeout(() => modal.classList.add('active'), 10);
+
+        setTimeout(() => {
+            const btn = document.getElementById('btn-close-badge-vn');
+            if (btn) btn.onclick = () => closeModalVN(modal);
+        }, 100);
+    }
+}
+
+function closeModalVN(modal) {
+    modal.classList.remove('active');
+    setTimeout(() => modal.classList.add('hidden'), 300);
+}
+
+// --- 4. MAIN CHAT LOGIC ---
+
+async function sendMessage() {
+    const input = document.getElementById('user-input');
+    const text = input.value.trim();
+    if (!text) return;
+
+    input.value = '';
+    enableInput(false); 
+    document.getElementById('dialogue-text').innerText = "..."; 
+
+    try {
+        if (!currentUser) throw new Error("Sesi habis, silakan refresh.");
+        const token = await currentUser.getIdToken();
+
+        const res = await fetch('/.netlify/functions/get-chat-response-vn', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({
+                userMessage: text,
+                characterProfile: currentCharacterProfile,
+                characterName: currentCharacterName,
+                characterId: currentCharacterId,
+                sessionId: currentSessionId,
+                userName: currentUserName,
+                userPersona: currentUserPersona
+            })
+        });
+
+        if (!res.ok) throw new Error("Gagal respon server (" + res.status + ")");
+
+        saveMessage('user', text); 
+
+        const data = await res.json();
+        const { emotion, cleanText } = parseReply(data.reply);
+
+        updateSprite(emotion);
+        typewriter(cleanText);
+        saveMessage('bot', data.reply); 
+
+    } catch (e) {
+        console.error(e);
+        document.getElementById('dialogue-text').innerText = "Error: " + e.message;
+        enableInput(true); 
+    }
+}
+
+async function saveMessage(sender, text) {
+    try {
+        if(!currentUser) return;
+        const token = await currentUser.getIdToken();
+        const res = await fetch('/.netlify/functions/save-message', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ characterId: currentCharacterId, sender, text, sessionId: currentSessionId })
+        });
+
+        if (res.ok) {
+            const data = await res.json();
+            
+            // 1. Notifikasi XP (Floating Text)
+            if (sender === 'user' && data.xpAdded) {
+                if (typeof showXPFloating === 'function') {
+                    showXPFloating(data.xpAdded);
+                }
+            }
+
+            // 2. CEK LEVEL UP
+            if (data.levelUp && data.newLevel) {
+                showLevelUpVN(data.newLevel);
+            }
+            // 3. CEK BADGE BARU
+            else if (data.newBadges && data.newBadges.length > 0) {
+                showBadgeVN(data.newBadges[0]);
+            }
+        }
+    } catch (e) { console.error("Gagal simpan:", e); }
+}
+
+// --- HELPER FUNCTIONS BARU UNTUK VN ---
+
+function showLevelUpVN(newLevel) {
+    const modal = document.getElementById('level-up-overlay');
+    const levelDisplay = document.getElementById('new-level-display');
+    const closeBtn = document.getElementById('btn-close-level');
+    const box = modal.querySelector('.level-up-box');
+
+    // Reset konten jika bekas Badge
+    // (Ini penting agar tidak tertukar tampilannya)
+    if (box.dataset.type === 'badge') {
+        box.innerHTML = `
+            <div class="level-stars">⭐⭐⭐</div>
+            <h1 class="level-title">LEVEL UP!</h1>
+            <div class="level-number-container">
+                <span class="level-label">LEVEL</span>
+                <span id="new-level-display">${newLevel}</span>
+            </div>
+            <p class="level-msg">Hebat! Kamu semakin sepuh!</p>
+            <button id="btn-close-level" class="level-btn">Lanjut Cerita ▶️</button>
+        `;
+        // Re-attach event listener karena elemennya baru dibuat ulang
+        document.getElementById('btn-close-level').onclick = () => closeModalVN(modal);
+        box.dataset.type = 'level';
+    } else {
+        if (levelDisplay) levelDisplay.textContent = newLevel;
+    }
+
+    if (modal) {
+        modal.classList.remove('hidden');
+        setTimeout(() => modal.classList.add('active'), 10);
+        
+        // Pasang event listener (jika belum ada/hilang)
+        const btn = document.getElementById('btn-close-level');
+        if (btn) btn.onclick = () => closeModalVN(modal);
+    }
+}
+
+function showBadgeVN(badge) {
+    const modal = document.getElementById('level-up-overlay');
+    const box = modal.querySelector('.level-up-box');
+
+    if (modal && box) {
+        // Tandai bahwa ini tampilan badge
+        box.dataset.type = 'badge';
+
+        // Ganti isi HTML Modal jadi Badge
+        box.innerHTML = `
+            <div class="level-stars" style="font-size: 50px;">${badge.icon}</div>
+            <h1 class="level-title" style="color: #00bcd4; text-shadow: 2px 2px 0 #005662;">LENCANA BARU!</h1>
+            <div class="level-number-container" style="background: rgba(0, 188, 212, 0.2);">
+                <span class="level-label" style="color: #e0f7fa;">DIBUKA</span>
+                <span style="display:block; font-size: 24px; font-weight:bold; color:white; margin-top:5px;">
+                    ${badge.name}
+                </span>
+            </div>
+            <p class="level-msg">Keren! Koleksi lencanamu bertambah.</p>
+            <button id="btn-close-badge-vn" class="level-btn" style="background: #00bcd4; color: white;">Lanjut ▶️</button>
+        `;
+
+        modal.classList.remove('hidden');
+        setTimeout(() => modal.classList.add('active'), 10);
+
         document.getElementById('btn-close-badge-vn').onclick = () => closeModalVN(modal);
     }
 }
@@ -577,8 +490,7 @@ function closeModalVN(modal) {
     setTimeout(() => modal.classList.add('hidden'), 300);
 }
 
-// --- 6. HISTORY & LOG UTILS (INI YANG SEBELUMNYA HILANG) ---
-
+// --- 5. HISTORY & LOG ---
 async function openLog() {
     const logOverlay = document.getElementById('log-overlay');
     const logContent = document.getElementById('log-content');
@@ -605,15 +517,7 @@ async function openLog() {
                 item.className = `log-item ${senderClass}`;
                 
                 const senderName = msg.sender === 'user' ? currentUserName : currentCharacterName;
-                
-                let displayText = msg.text;
-                try {
-                     if(displayText.trim().startsWith('{')) {
-                        displayText = JSON.parse(displayText).message;
-                     }
-                } catch(e){}
-
-                const { cleanText } = parseReply(displayText);
+                const { cleanText } = parseReply(msg.text);
 
                 const nameDiv = document.createElement('div');
                 nameDiv.className = 'log-sender';
@@ -623,8 +527,20 @@ async function openLog() {
                 textDiv.className = 'log-text';
                 textDiv.textContent = cleanText;
 
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'log-copy-btn';
+                copyBtn.innerHTML = '📋';
+                copyBtn.title = "Salin Teks";
+                copyBtn.onclick = () => {
+                    navigator.clipboard.writeText(cleanText);
+                    copyBtn.innerHTML = '✅';
+                    setTimeout(() => copyBtn.innerHTML = '📋', 1000);
+                };
+
                 item.appendChild(nameDiv);
                 item.appendChild(textDiv);
+                item.appendChild(copyBtn);
+
                 logContent.appendChild(item);
             });
             logContent.scrollTop = logContent.scrollHeight;
@@ -634,15 +550,17 @@ async function openLog() {
     }
 }
 
-function closeLog() { 
-    const logOverlay = document.getElementById('log-overlay');
-    if(logOverlay) logOverlay.classList.add('hidden'); 
-}
+function closeLog() { document.getElementById('log-overlay').classList.add('hidden'); }
 
 async function deleteHistory() {
-    const isSure = await showCustomConfirm("Hapus Memori?", "Reset cerita ini?");
+    const isSure = await showCustomConfirm(
+        "Hapus Memori?", 
+        "Tindakan ini akan menghapus semua percakapan di sesi ini secara permanen. Mulai ulang?"
+    );
+
     if (!isSure) return;
     closeLog();
+    document.getElementById('dialogue-text').innerText = "Menghapus ingatan...";
     
     try {
         const token = await currentUser.getIdToken();
@@ -651,86 +569,120 @@ async function deleteHistory() {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
-        // Reset Session Key sesuai mode
-        const sessionKey = `vn_session_${currentUser.uid}_${currentCharacterId}_${isStoryMode ? 'story' : 'free'}`;
-        localStorage.removeItem(sessionKey);
+        const storageKey = `vn_session_${currentUser.uid}_${currentCharacterId}`;
+        localStorage.removeItem(storageKey);
         
         currentSessionId = generateUUID();
-        localStorage.setItem(sessionKey, currentSessionId);
+        localStorage.setItem(storageKey, currentSessionId);
 
         currentEmotion = 'IDLE';
         updateSprite('IDLE');
-        document.getElementById('dialogue-text').innerText = "*Memori direset.*";
         
-        // Reload State
-        setTimeout(() => { loadCharacterAndState(); }, 1000);
+        document.getElementById('dialogue-text').innerText = "*Memori telah direset.*";
+        setTimeout(() => { loadCharacterAndState(); }, 1500);
 
     } catch (e) {
-        showNotification("Gagal", e.message);
+        console.error(e);
+        // UPDATE: Pakai notifikasi cantik
+        showNotification("Gagal", "Error menghapus: " + e.message);
+        document.getElementById('dialogue-text').innerText = "Gagal reset.";
     }
 }
 
-// --- 7. INITIALIZATION (INIT VN YANG SEBELUMNYA HILANG) ---
+// --- 6. INITIALIZATION ---
 
 async function initVN() {
     const params = new URLSearchParams(window.location.search);
     const idFromUrl = params.get('id');
-    const modeFromUrl = params.get('mode'); // 'free' atau 'story'
-
     if (!idFromUrl) {
+        // UPDATE: Pakai notifikasi cantik (tapi perlu delay redirect biar kebaca)
         showNotification("Error", "ID Karakter tidak valid!");
-        setTimeout(() => { window.location.href = '../index.html'; }, 2000);
+        setTimeout(() => { window.location.href = 'lobby.html'; }, 2000);
         return;
     }
     currentCharacterId = idFromUrl;
 
-    // 1. SET MODE
-    isStoryMode = (modeFromUrl === 'story');
-
     loadSettings();
 
-    // 2. SETUP SESSION KEY (Beda mode, beda sesi)
-    const sessionKey = `vn_session_${currentUser.uid}_${currentCharacterId}_${isStoryMode ? 'story' : 'free'}`;
-    let savedSession = localStorage.getItem(sessionKey);
+    const storageKey = `vn_session_${currentUser.uid}_${currentCharacterId}`;
+    let savedSession = localStorage.getItem(storageKey);
 
-    // 3. RESTORE SESSION
     if (!savedSession) {
-        console.log("Sesi lokal kosong. Generate baru...");
-        currentSessionId = generateUUID();
-        localStorage.setItem(sessionKey, currentSessionId);
-    } else {
+        console.log("Sesi lokal kosong. Memeriksa server...");
+        try {
+            const token = await currentUser.getIdToken();
+            const res = await fetch(`/.netlify/functions/get-sessions?characterId=${currentCharacterId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (res.ok) {
+                const sessions = await res.json();
+                if (sessions && sessions.length > 0) {
+                    sessions.sort((a, b) => {
+                        const dateA = new Date(a.updatedAt._seconds ? a.updatedAt._seconds * 1000 : a.updatedAt);
+                        const dateB = new Date(b.updatedAt._seconds ? b.updatedAt._seconds * 1000 : b.updatedAt);
+                        return dateB - dateA; 
+                    });
+
+                    savedSession = sessions[0].id;
+                    console.log("Sesi dipulihkan dari server:", savedSession);
+                    localStorage.setItem(storageKey, savedSession);
+                }
+            }
+        } catch (e) {
+            console.warn("Gagal cek sesi server:", e);
+        }
+    }
+
+    if (savedSession) {
         currentSessionId = savedSession;
+    } else {
+        currentSessionId = generateUUID();
+        localStorage.setItem(storageKey, currentSessionId);
     }
 
     loadCharacterAndState();
 }
 
-// --- 8. EVENT LISTENERS ---
 document.addEventListener('DOMContentLoaded', () => {
-    // Tombol-tombol standar
     const btnSend = document.getElementById('btn-send');
     const input = document.getElementById('user-input');
-    const btnBack = document.getElementById('btn-back');
     
-    if(btnBack) btnBack.addEventListener('click', () => window.location.href = '../index.html');
-    if(btnSend) btnSend.addEventListener('click', () => sendMessage());
-    if(input) input.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
+    const btnBack = document.getElementById('btn-back');
+    if (btnBack) {
+        btnBack.addEventListener('click', () => {
+            window.location.href = '../index.html';
+        });
+    }
 
-    // Tombol Settings
-    document.getElementById('btn-settings').addEventListener('click', () => {
-        loadSettings(); document.getElementById('settings-overlay').classList.remove('hidden');
-    });
-    document.getElementById('btn-save-settings').addEventListener('click', saveSettings);
-    document.getElementById('btn-close-settings').addEventListener('click', () => {
-        document.getElementById('settings-overlay').classList.add('hidden');
-    });
+    const btnLog = document.getElementById('btn-log');
+    if (btnLog) btnLog.addEventListener('click', openLog);
+    
+    const btnCloseLog = document.getElementById('close-log');
+    if (btnCloseLog) btnCloseLog.addEventListener('click', closeLog);
 
-    // Tombol Log (Ini yang bikin error kalau fungsinya gak ada)
-    document.getElementById('btn-log').addEventListener('click', openLog);
-    document.getElementById('close-log').addEventListener('click', closeLog);
-    document.getElementById('btn-delete-history').addEventListener('click', deleteHistory);
+    const btnDeleteHistory = document.getElementById('btn-delete-history');
+    if (btnDeleteHistory) btnDeleteHistory.addEventListener('click', deleteHistory);
 
-    // Alert Listener
+    const btnSettings = document.getElementById('btn-settings');
+    const overlaySettings = document.getElementById('settings-overlay');
+    const btnSaveSettings = document.getElementById('btn-save-settings');
+    const btnCloseSettings = document.getElementById('btn-close-settings');
+
+    if (btnSettings) {
+        btnSettings.addEventListener('click', () => {
+            loadSettings(); 
+            overlaySettings.classList.remove('hidden');
+        });
+    }
+    if (btnSaveSettings) btnSaveSettings.addEventListener('click', saveSettings);
+    if (btnCloseSettings) {
+        btnCloseSettings.addEventListener('click', () => {
+            overlaySettings.classList.add('hidden');
+        });
+    }
+    
+    // --- EVENT LISTENER BARU UNTUK NOTIFIKASI ---
     const btnAlertOk = document.getElementById('btn-alert-ok');
     const alertModal = document.getElementById('custom-alert-modal');
     if(btnAlertOk && alertModal) {
@@ -738,13 +690,38 @@ document.addEventListener('DOMContentLoaded', () => {
             alertModal.classList.add('hidden');
             alertModal.style.display = 'none';
         });
-    }
-
-    // Init Auth
-    if (typeof firebase !== 'undefined') {
-        firebase.auth().onAuthStateChanged((user) => {
-            if (user) { currentUser = user; initVN(); }
-            else { window.location.href = '../login.html'; }
+        // Opsional: Tutup jika klik area gelap
+        alertModal.addEventListener('click', (e) => {
+            if(e.target === alertModal) {
+                alertModal.classList.add('hidden');
+                alertModal.style.display = 'none';
+            }
         });
     }
+    // --------------------------------------------
+
+    if (btnSend) btnSend.addEventListener('click', sendMessage);
+    if (input) {
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+    }
+
+    const checkAuth = () => {
+        const user = firebase.auth().currentUser;
+        if (user) {
+            currentUser = user;
+            initVN();
+        } else {
+            firebase.auth().onAuthStateChanged((u) => {
+                if (u) {
+                    currentUser = u;
+                    initVN();
+                } else {
+                    window.location.href = '../login.html';
+                }
+            });
+        }
+    };
+    checkAuth();
 });

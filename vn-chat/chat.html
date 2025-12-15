@@ -113,7 +113,42 @@
     <div class="confetti c2"></div>
     <div class="confetti c3"></div>
     <div class="confetti c4"></div>
-</div>
+    </div>
+
+    <div id="mode-selection-modal" class="overlay hidden" style="display: none;">
+        <div class="modal-box" style="text-align: center; max-width: 400px;">
+            <h3 style="color: #023047; margin-top: 0;">Pilih Mode Chat</h3>
+            <p style="color: #555; font-size: 0.9rem; margin-bottom: 20px;">
+                Mau ngobrol santai atau mainkan cerita?
+            </p>
+
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button id="btn-mode-free" class="mode-btn" style="
+                    background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+                    border: none; padding: 15px; border-radius: 12px;
+                    text-align: left; cursor: pointer; transition: transform 0.2s;
+                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                ">
+                    <strong style="display:block; color:#333; font-size:1.1rem;">☕ Free Talk</strong>
+                    <small style="color:#555;">Ngobrol bebas tanpa skenario. Curhat sepuasnya.</small>
+                </button>
+
+                <button id="btn-mode-story" class="mode-btn" style="
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    border: none; padding: 15px; border-radius: 12px;
+                    text-align: left; cursor: pointer; transition: transform 0.2s;
+                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                ">
+                    <strong style="display:block; color:#fff; font-size:1.1rem;">🎮 Story Mode</strong>
+                    <small style="color:#e0e0e0;">Ikuti alur cerita, tentukan pilihanmu, capai endingnya!</small>
+                </button>
+            </div>
+
+            <button id="btn-cancel-mode" style="margin-top: 20px; background: transparent; border: none; color: #888; cursor: pointer;">
+                Batal
+            </button>
+        </div>
+    </div>
 
     <script src="chat.js"></script>
 </body>
