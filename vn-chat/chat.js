@@ -22,26 +22,12 @@ const sprites = {
 };
 
 // --- SETUP UI PILIHAN (REVISI: COMPACT & POSISI DI ATAS CHAT AREA) ---
+// --- SETUP UI PILIHAN (REVISI: CLEAN CODE & CSS CLASS) ---
 const existingContainer = document.getElementById('choices-container');
 if (existingContainer) existingContainer.remove(); 
 
 const choicesContainer = document.createElement('div');
 choicesContainer.id = 'choices-container';
-choicesContainer.style.cssText = `
-    position: fixed; 
-    bottom: 130px; /* Posisi di atas area chat */
-    left: 50%; 
-    transform: translateX(-50%); 
-    width: 95%; 
-    max-width: 380px; /* Lebar dibatasi agar rapi */
-    display: none; 
-    flex-direction: column; 
-    gap: 8px; /* Jarak antar tombol rapat */
-    z-index: 2000;
-    padding: 10px;
-    background: transparent; 
-    animation: slideUp 0.4s ease;
-`;
 document.body.appendChild(choicesContainer);
 
 // Style Animasi
@@ -334,6 +320,7 @@ async function loadCharacterAndState() {
 // --- 4. MAIN CHAT LOGIC ---
 
 async function sendMessage(manualText = null) {
+    
     const input = document.getElementById('user-input');
     const text = manualText || input.value.trim();
     if (!text) return;
@@ -381,6 +368,10 @@ async function sendMessage(manualText = null) {
         }
 
         const data = await res.json();
+        // Tambahkan ini buat ngintip jawaban mentah dari AI
+        console.log("Jawaban AI Mentah:", data.reply); 
+
+        const { emotion, cleanText } = parseReply(data.reply);
         
         // --- HANDLE RESPONSE ---
         if (isStoryMode || data.mode === 'story') {
@@ -443,56 +434,33 @@ function handleStoryResponse(jsonRaw) {
     }
 }
 
-// --- FUNGSI TAMPILAN PILIHAN (REVISI: COMPACT) ---
+// --- FUNGSI TAMPILAN PILIHAN (VERSI CLEAN) ---
+// --- FUNGSI TAMPILAN PILIHAN (Clean & Class-based) ---
 function showChoices(choices) {
     choicesContainer.innerHTML = '';
+    choicesContainer.style.display = 'flex'; // Aktifkan container
     
-    choices.forEach(choice => {
+    choices.forEach((choice, index) => {
         const btn = document.createElement('button');
+        
+        // Masukkan teks
         btn.textContent = choice.text;
         
-        // Warna Button Transparan & Elegan
-        let borderColor = 'rgba(255, 255, 255, 0.4)';
-        let bg = 'rgba(0, 0, 0, 0.6)'; // Hitam transparan (Default)
-        
-        if (choice.type === 'good') { bg = 'rgba(39, 174, 96, 0.7)'; borderColor = '#2ecc71'; } // Hijau
-        if (choice.type === 'bad') { bg = 'rgba(192, 57, 43, 0.7)'; borderColor = '#e74c3c'; } // Merah
-        
-        btn.style.cssText = `
-            background: ${bg}; 
-            border: 1px solid ${borderColor}; 
-            color: white; 
-            padding: 10px 15px; /* Lebih ramping */
-            border-radius: 25px;
-            font-weight: 500; 
-            font-size: 0.95rem; /* Font pas, gak kegedean */
-            cursor: pointer;
-            text-align: center;
-            transition: all 0.2s ease;
-            font-family: 'Nunito', sans-serif;
-            width: 100%;
-            backdrop-filter: blur(2px);
-        `;
-        
-        // Efek Hover
-        btn.onmouseover = () => {
-            btn.style.background = 'rgba(255, 255, 255, 0.2)';
-            btn.style.transform = 'scale(1.02)';
-        };
-        btn.onmouseout = () => {
-            btn.style.background = bg;
-            btn.style.transform = 'scale(1)';
-        };
+        // Tambahkan class CSS
+        btn.classList.add('choice-btn');
+        if (choice.type === 'good') btn.classList.add('type-good');
+        if (choice.type === 'bad') btn.classList.add('type-bad');
+
+        // Staggered Animation (Muncul berurutan biar keren)
+        btn.style.animationDelay = `${index * 0.1}s`;
 
         btn.onclick = () => {
-            choicesContainer.style.display = 'none';
-            sendMessage(choice.text); 
+            choicesContainer.style.display = 'none'; // Sembunyikan
+            sendMessage(choice.text); // Kirim jawaban
         };
         
         choicesContainer.appendChild(btn);
     });
-    
-    choicesContainer.style.display = 'flex';
 }
 
 // --- 5. LEVELING & SAVE ---
@@ -711,10 +679,41 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnSend = document.getElementById('btn-send');
     const input = document.getElementById('user-input');
     const btnBack = document.getElementById('btn-back');
+    const btnMenu = document.getElementById('btn-menu-trigger');
+    const menuDropdown = document.getElementById('vn-system-menu');
     
-    if(btnBack) btnBack.addEventListener('click', () => window.location.href = '../index.html');
+    if(btnBack) btnBack.addEventListener('click', () => window.location.href = 'lobby.html');
     if(btnSend) btnSend.addEventListener('click', () => sendMessage());
     if(input) input.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
+
+    // 1. Toggle Menu (Buka/Tutup)
+    if (btnMenu && menuDropdown) {
+        btnMenu.addEventListener('click', (e) => {
+            e.stopPropagation(); // Biar gak langsung ketutup sama event klik body
+            menuDropdown.classList.toggle('hidden');
+            btnMenu.classList.toggle('active');
+        });
+    }
+
+    // 2. Klik di luar menu -> Tutup Menu
+    document.addEventListener('click', (e) => {
+        if (menuDropdown && !menuDropdown.classList.contains('hidden')) {
+            // Jika yang diklik BUKAN bagian dari menu atau tombol trigger
+            if (!menuDropdown.contains(e.target) && e.target !== btnMenu) {
+                menuDropdown.classList.add('hidden');
+                btnMenu.classList.remove('active');
+            }
+        }
+    });
+
+    // 3. Saat salah satu item menu diklik -> Tutup Menu juga (Opsional, biar rapi)
+    const menuItems = document.querySelectorAll('.menu-item');
+    menuItems.forEach(item => {
+        item.addEventListener('click', () => {
+            if(menuDropdown) menuDropdown.classList.add('hidden');
+            if(btnMenu) btnMenu.classList.remove('active');
+        });
+    });
 
     // Tombol Settings
     document.getElementById('btn-settings').addEventListener('click', () => {

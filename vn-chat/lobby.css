@@ -289,3 +289,123 @@ html {
 }
 .btn-cancel:hover { color: #636e72; }
 
+/* --- TOMBOL NAVIGASI BARU --- */
+
+/* --- TOMBOL NAVIGASI MELAYANG (SERAGAM DENGAN CHAT) --- */
+
+.floating-back-btn {
+    position: fixed;
+    top: 20px;
+    left: 20px; /* Posisi di Pojok Kiri Atas */
+    width: 45px;
+    height: 45px;
+    
+    /* Gaya Glassmorphism */
+    background: rgba(0, 0, 0, 0.4); 
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%; /* Bulat Sempurna */
+    
+    color: white;
+    font-size: 1.2rem;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 100;
+    
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.floating-back-btn:hover {
+    background: rgba(255, 107, 107, 0.8); /* Warna Merah/Pink (Tema Lobby) */
+    color: white;
+    transform: scale(1.15) rotate(-10deg);
+    box-shadow: 0 6px 15px rgba(255, 107, 107, 0.5);
+    border-color: #fff;
+}
+
+/* Responsif Mobile */
+@media (max-width: 600px) {
+    .floating-back-btn {
+        top: 15px;
+        left: 15px;
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
+    }
+}
+
+/* 2. Tombol Ganti Mode (Bentuk Pill) */
+.change-mode-pill {
+    margin-top: 15px;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    color: #fff;
+    padding: 8px 20px;
+    border-radius: 50px; /* Bentuk pil lonjong */
+    font-family: inherit;
+    font-weight: bold;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    backdrop-filter: blur(4px);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.change-mode-pill:hover {
+    background: white;
+    color: var(--dark-bg);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+/* --- TOMBOL NAVIGASI GAYA PILL (SERAGAM DENGAN CHAT & PROFILE) --- */
+
+.pill-back-btn {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 100;
+
+    /* Style Visual (Sama persis dengan Chat/Profile) */
+    background: rgba(0, 0, 0, 0.25); /* Sedikit lebih gelap agar kontras di Lobby */
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 30px;
+    
+    font-family: inherit;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    backdrop-filter: blur(5px);
+    transition: all 0.3s ease;
+    
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.pill-back-btn:hover {
+    background: var(--primary-color); /* Merah/Pink sesuai tema Lobby */
+    border-color: rgba(255, 255, 255, 0.8);
+    transform: translateX(-5px);
+    box-shadow: 0 6px 12px rgba(255, 107, 107, 0.4);
+}
+
+/* Responsif Mobile */
+@media (max-width: 600px) {
+    .pill-back-btn {
+        top: 15px;
+        left: 15px;
+        padding: 8px 16px;
+        font-size: 0.85rem;
+    }
+}
+

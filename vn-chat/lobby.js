@@ -28,15 +28,33 @@ function getAuthTokenSafe() {
 
 // --- 2. INISIALISASI ---
 document.addEventListener('DOMContentLoaded', () => {
-    // Cek Firebase
+    // 1. Setup Tombol Navigasi Baru
+    const btnTopBack = document.getElementById('btn-top-back');
+    const btnChangeMode = document.getElementById('btn-change-mode');
+
+    // Klik tombol pojok kanan atas -> Ke Menu Utama
+    if (btnTopBack) {
+        btnTopBack.addEventListener('click', () => {
+            window.location.href = '../index.html';
+        });
+    }
+
+    // Klik tombol Ganti Mode -> Buka Modal lagi
+    if (btnChangeMode) {
+        btnChangeMode.addEventListener('click', () => {
+            showModeSelectionModal(true); // Parameter true artinya "ganti mode"
+        });
+    }
+
+    // 2. Cek Firebase (Standard)
     if (typeof firebase !== 'undefined') {
         firebase.auth().onAuthStateChanged((user) => {
             if (!user) {
                 window.location.href = '../login.html';
             } else {
-                // 1. Tampilkan Modal Pilihan Mode LANGSUNG
-                showModeSelectionModal();
-                // 2. Muat data karakter di background
+                // Tampilkan modal hanya jika belum ada mode terpilih (opsional)
+                // Tapi logika Tuan sebelumnya "Show First", jadi kita panggil:
+                showModeSelectionModal(); 
                 fetchAllCharacters();
             }
         });
@@ -44,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // --- 3. LOGIKA MODAL ---
-function showModeSelectionModal() {
+function showModeSelectionModal(isSwitching = false) {
     const modal = document.getElementById('mode-selection-modal');
     const btnFree = document.getElementById('btn-mode-free');
     const btnStory = document.getElementById('btn-mode-story');
@@ -54,32 +72,41 @@ function showModeSelectionModal() {
 
     if (!modal) return;
 
-    // Munculkan Modal
     modal.classList.remove('hidden');
     modal.style.display = 'flex';
 
     // --- KLIK FREE MODE ---
     btnFree.onclick = () => {
-        modal.style.display = 'none'; // Tutup modal
+        modal.style.display = 'none';
         if(headerTitle) headerTitle.textContent = "Mode Santai (Free Talk)";
         if(headerDesc) headerDesc.textContent = "Pilih teman untuk ngobrol bebas.";
-        renderCharacters('free'); // Tampilkan karakter Free Mode
+        renderCharacters('free');
     };
 
     // --- KLIK STORY MODE ---
     btnStory.onclick = () => {
-        modal.style.display = 'none'; // Tutup modal
+        modal.style.display = 'none';
         if(headerTitle) headerTitle.textContent = "Mode Cerita (Story)";
         if(headerDesc) headerDesc.textContent = "Pilih skenario petualanganmu.";
-        renderCharacters('story'); // Tampilkan karakter Story Mode
+        renderCharacters('story');
     };
 
-    // --- KLIK BATAL (Kembali ke Home Utama) ---
+    // --- KLIK BATAL ---
     if (btnCancel) {
-        btnCancel.textContent = "Kembali ke Menu Utama"; // Ubah teks biar jelas
-        btnCancel.onclick = () => {
-            window.location.href = '../index.html';
-        };
+        if (isSwitching) {
+            // Jika user cuma mau ganti mode tapi gak jadi -> Tutup aja modalnya
+            btnCancel.textContent = "Tutup";
+            btnCancel.onclick = () => {
+                modal.classList.add('hidden');
+                modal.style.display = 'none';
+            };
+        } else {
+            // Jika user baru masuk halaman -> Kembali ke Index
+            btnCancel.textContent = "Kembali ke Menu Utama";
+            btnCancel.onclick = () => {
+                window.location.href = '../index.html';
+            };
+        }
     }
 }
 

@@ -150,20 +150,21 @@ body, html {
 }
 
 .text-content {
-    min-height: 60px;
-    /* Tambahan Bri: Batasi tinggi teks dan beri scroll jika kepanjangan */
+    /* 1. Kurangi tinggi minimal biar gak kopong kalau teks dikit */
+    min-height: 40px;      
+    
     max-height: 150px; 
-    overflow-y: auto; /* Munculkan scrollbar jika teks panjang */
+    overflow-y: auto;
     
     font-size: 16px;
     line-height: 1.5;
-    margin-bottom: 15px;
-    margin-top: 10px;
+    margin-bottom: 10px; /* Kurangi margin bawah dikit */
+    margin-top: 5px;     /* Kurangi margin atas dikit */
     
-    /* Tambahan Bri: Beri bantalan kosong di bawah supaya teks tidak tertutup tombol choice */
-    padding-bottom: 50px; 
+    /* 2. PENTING: Kurangi padding bawah drastis */
+    /* Karena tombol pilihan sudah pindah ke samping/atas, space ini gak perlu besar-besar */
+    padding-bottom: 10px;  
     
-    /* Opsional: Biar scrollbar-nya cantik */
     scrollbar-width: thin; 
     scrollbar-color: #8ecae6 rgba(0,0,0,0.1);
 }
@@ -218,7 +219,7 @@ body, html {
     width: 100%; height: 100%;
     background: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(3px); 
-    z-index: 2000;
+    z-index: 20001;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -449,3 +450,395 @@ body, html {
 .c4 { left: 30%; background: lime; animation-delay: 1.5s; }
 @keyframes fall { 0% { top: -10%; transform: rotate(0deg); } 100% { top: 110%; transform: rotate(360deg); } }
 
+/* --- PILIHAN JAWABAN (SIDEBAR STYLE) --- */
+
+#choices-container {
+    position: fixed;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 5px; /* Jarak antar tombol lebih rapat */
+    pointer-events: none;
+}
+
+/* TAMPILAN DESKTOP/LAPTOP: Di Samping Kanan */
+@media (min-width: 601px) {
+    #choices-container {
+        right: 5%;        /* Geser ke kanan (5% dari pinggir layar) */
+        top: 50%;         /* Tengah secara vertikal */
+        transform: translateY(-50%); 
+        width: 250px;     /* Lebar fix yang ramping (sebelumnya 400px) */
+        align-items: flex-end; /* Rata kanan agar estetik */
+    }
+}
+
+/* TAMPILAN HP: Di Tengah (Compact) */
+@media (max-width: 600px) {
+    #choices-container {
+        top: 35%; /* Posisi di atas kepala/dada karakter */
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 85%;
+        max-width: 300px;
+    }
+}
+
+/* --- TOMBOL PILIHAN (COMPACT & MODERN) --- */
+.choice-btn {
+    pointer-events: auto;
+    width: 100%;
+    
+    /* Warna: Hitam transparan + Blur (Glassmorphism) */
+    background: rgba(0, 0, 0, 0.75); 
+    backdrop-filter: blur(5px);
+    
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-right: 4px solid rgba(142, 202, 230, 0.8); /* Aksen di kanan */
+    
+    color: #fff;
+    padding: 10px 15px;      /* Padding lebih kecil */
+    font-size: 0.85rem;      /* Font lebih kecil (sebelumnya 1rem) */
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    line-height: 1.4;
+    
+    border-radius: 8px 0 0 8px; /* Sudut tumpul di kiri, lancip di kanan */
+    text-align: right;       /* Teks rata kanan (keren untuk sidebar) */
+    cursor: pointer;
+    transition: all 0.2s ease;
+    
+    /* Animasi Masuk */
+    opacity: 0;
+    transform: translateX(20px); /* Muncul dari kanan */
+    animation: slideInRight 0.4s forwards;
+}
+
+/* Hover Effect */
+.choice-btn:hover {
+    background: rgba(142, 202, 230, 0.9); /* Biru terang saat disorot */
+    color: #000;
+    border-right-color: #fff;
+    padding-right: 25px; /* Efek geser sedikit saat di-hover */
+}
+
+/* Type Colors */
+.choice-btn.type-good { border-right-color: #2ecc71; }
+.choice-btn.type-bad { border-right-color: #e74c3c; }
+
+/* Mobile Adjustment untuk Teks */
+/* TAMPILAN HP: Di Bawah (Thumb Friendly & Face Safe) */
+/* TAMPILAN HP: Floating Right Stack (Di atas Chatbox, Sebelah Kanan) */
+@media (max-width: 600px) {
+    #choices-container {
+        /* Reset posisi center sebelumnya */
+        top: auto;
+        left: auto;
+        transform: none;
+        
+        /* POSISI KUNCI: */
+        bottom: 190px;  /* Geser naik supaya tidak kena Chatbox (estimasi tinggi chatbox ~150px) */
+        right: 15px;    /* Tempel ke kanan layar */
+        
+        width: 60%;     /* Jangan terlalu lebar, biar karakter tetap kelihatan */
+        max-width: 220px;
+        
+        align-items: flex-end; /* Tombol rata kanan */
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .choice-btn {
+        text-align: right; /* Teks rata kanan */
+        padding: 8px 12px; /* Lebih ramping */
+        font-size: 0.85rem; /* Font pas untuk HP */
+        
+        /* Styling Modern Asimetris */
+        border-radius: 15px 4px 15px 15px; /* Ujung kanan atas lancip, sisanya bulat */
+        border-right: 3px solid rgba(142, 202, 230, 0.8); /* Aksen tebal di kanan */
+        border-left: none;
+        border-top: 1px solid rgba(255,255,255,0.2);
+        border-bottom: 1px solid rgba(255,255,255,0.2);
+
+        /* Background lebih pekat biar teks jelas */
+        background: rgba(0, 0, 0, 0.8); 
+        backdrop-filter: blur(4px);
+        
+        /* Animasi masuk dari kanan */
+        transform: translateX(30px);
+        opacity: 0;
+        animation: slideInRightMobile 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+    
+    /* Warna Tipe Jawaban */
+    .choice-btn.type-good { border-right-color: #2ecc71; }
+    .choice-btn.type-bad { border-right-color: #e74c3c; }
+}
+
+@keyframes slideInRightMobile {
+    to { opacity: 1; transform: translateX(0); }
+}
+
+/* Animasi khusus HP: Muncul dari bawah */
+@keyframes slideUpFade {
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+}
+
+@keyframes slideInRight {
+    to { opacity: 1; transform: translateX(0); }
+}
+@keyframes fadeInData {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.floating-back-btn {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    width: 45px;
+    height: 45px;
+    
+    /* Gaya Glassmorphism */
+    background: rgba(0, 0, 0, 0.4); 
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%; /* Bulat sempurna */
+    
+    color: white;
+    font-size: 1.2rem;
+    font-weight: bold;
+    cursor: pointer;
+    
+    z-index: 100; /* Di atas karakter, tapi di bawah Modal Overlay */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.floating-back-btn:hover {
+    background: rgba(142, 202, 230, 0.8); /* Warna tema biru ChatSyok */
+    color: #023047;
+    transform: scale(1.15) rotate(-10deg); /* Efek membesar & miring sedikit */
+    box-shadow: 0 6px 15px rgba(142, 202, 230, 0.5);
+    border-color: #fff;
+}
+
+/* Responsif untuk HP: Sedikit lebih kecil biar gak menuhin layar */
+@media (max-width: 600px) {
+    .floating-back-btn {
+        top: 15px;
+        left: 15px;
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
+    }
+}
+
+/* --- SYSTEM MENU (VN STYLE) --- */
+
+/* 1. Tombol Menu Melayang (Pojok Kanan Atas) */
+.floating-menu-btn {
+    position: fixed;
+    top: 20px;
+    right: 20px; /* Simetris dengan tombol Back di kiri */
+    width: 45px;
+    height: 45px;
+    
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+    z-index: 2100; /* Di atas segalanya */
+    transition: all 0.3s ease;
+    
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.floating-menu-btn:hover, 
+.floating-menu-btn.active { /* Class active saat menu terbuka */
+    background: white;
+    color: #333;
+    transform: rotate(90deg); /* Animasi putar dikit biar keren */
+}
+
+/* 2. Dropdown Box */
+.vn-menu-dropdown {
+    position: fixed;
+    top: 75px; /* Tepat di bawah tombol menu */
+    right: 20px;
+    
+    background: rgba(255, 255, 255, 0.95); 
+    backdrop-filter: blur(10px);
+    border: 1px solid #e0e0e0; /* Border abu-abu tipis */
+    border-radius: 12px;
+    
+    width: 180px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    
+    z-index: 2099;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.15); /* Shadow lebih soft */    
+    /* Animasi Muncul */
+    transform-origin: top right;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    opacity: 1;
+    transform: scale(1);
+}
+
+.vn-menu-dropdown.hidden {
+    display: none; /* Logic hidden tetap pakai display none biar aman */
+    /* Bisa juga pakai opacity: 0; pointer-events: none; kalau mau animasi fade out */
+}
+
+/* 3. Item Menu */
+.menu-item {
+    background: transparent;
+    border: none;
+    color: #333; /* Teks Hitam/Gelap */
+    padding: 10px 15px;
+    text-align: left;
+    font-size: 0.95rem;
+    font-family: inherit;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 500;
+}
+
+.menu-item span { font-size: 1.1rem; }
+
+/* Hover Effect (Abu-abu muda) */
+.menu-item:hover {
+    background: #f0f0f0; 
+    color: #000;
+}
+
+/* Tombol Reset (Tetap Merah) */
+.menu-item.danger { color: #d32f2f; }
+.menu-item.danger:hover { background: #ffebee; }
+
+/* Garis Pembatas (Abu-abu tipis) */
+.menu-divider {
+    height: 1px;
+    background: #e0e0e0;
+    margin: 2px 0;
+}
+
+/* Responsif Mobile */
+@media (max-width: 600px) {
+    .vn-menu-dropdown { top: 65px; right: 15px; }
+}
+
+/* Responsif Mobile (Sesuaikan ukuran jika perlu) */
+@media (max-width: 600px) {
+    .floating-menu-btn { top: 15px; right: 15px; width: 40px; height: 40px; }
+    .vn-menu-dropdown { top: 65px; right: 15px; }
+}
+
+/* --- TOMBOL KEMBALI GAYA PROFIL (PILL SHAPE) --- */
+
+.pill-back-btn {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 100; /* Di atas karakter */
+
+    /* Style Visual (Diambil dari Profile.css) */
+    background: rgba(255, 255, 255, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    color: white;
+    padding: 10px 20px; /* Padding lebar biar lonjong */
+    border-radius: 30px; /* Sudut membulat */
+    
+    font-family: inherit;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    backdrop-filter: blur(5px); /* Efek kaca */
+    transition: all 0.3s ease;
+    
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.pill-back-btn:hover {
+    background: rgba(255, 255, 255, 0.5);
+    transform: translateX(-5px); /* Efek geser ke kiri sedikit */
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+}
+
+/* Responsif Mobile: Sedikit lebih kecil tapi tetap Pill */
+@media (max-width: 600px) {
+    .pill-back-btn {
+        top: 15px;
+        left: 15px;
+        padding: 8px 16px;
+        font-size: 0.85rem;
+    }
+}
+
+/* --- TOMBOL MENU GAYA PILL (KANAN) --- */
+
+.pill-menu-btn {
+    position: fixed;
+    top: 20px;
+    right: 20px; /* Posisi Kanan */
+    z-index: 2100; /* Paling atas agar tidak tertutup */
+
+    /* Visual Style (Sama persis dengan tombol Back) */
+    background: rgba(255, 255, 255, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    color: white;
+    padding: 10px 20px; /* Padding lebar biar lonjong */
+    border-radius: 30px; /* Sudut membulat */
+    
+    font-family: inherit;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    backdrop-filter: blur(5px);
+    transition: all 0.3s ease;
+    
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+/* Efek Hover & Active (Saat menu terbuka) */
+.pill-menu-btn:hover,
+.pill-menu-btn.active {
+    background: rgba(255, 255, 255, 0.6); /* Jadi lebih terang */
+    color: #333; /* Teks jadi gelap biar kontras */
+    transform: translateY(2px); /* Efek terpencet sedikit */
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+}
+
+/* Responsif Mobile */
+@media (max-width: 600px) {
+    .pill-menu-btn {
+        top: 15px;
+        right: 15px;
+        padding: 8px 16px;
+        font-size: 0.85rem;
+    }
+}

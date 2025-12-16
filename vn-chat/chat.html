@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Visual Novel Chat</title>
     <link rel="stylesheet" href="style.css">
+    
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="../js/firebase-config.js"></script>
@@ -13,22 +14,33 @@
 
     <div class="vn-background"></div>
 
+    <button id="btn-back" class="pill-back-btn" title="Kembali ke Lobby">
+        <span style="font-size: 1rem; margin-right: 5px;">&#8592;</span> Kembali
+    </button>
+
+    <button id="btn-menu-trigger" class="pill-menu-btn" title="Menu Sistem">
+        <span style="font-size: 1rem; margin-right: 5px;">☰</span> Menu
+    </button>
+
+    <div id="vn-system-menu" class="vn-menu-dropdown hidden">
+        <button id="btn-log" class="menu-item">
+            <span>📜</span> Riwayat
+        </button>
+        <button id="btn-settings" class="menu-item">
+            <span>⚙️</span> Atur
+        </button>
+        <div class="menu-divider"></div>
+        <button id="btn-delete-history" class="menu-item danger">
+            <span>🗑️</span> Reset Memori
+        </button>
+    </div>
+
     <div class="vn-character-container">
         <img id="char-sprite" src="" alt="Character Sprite">
     </div>
 
-    <div class="vn-ui-layer">
+    <div class="vn-ui-layer" style="justify-content: flex-end;">
         
-        <div class="top-buttons">
-            <button id="btn-back" class="icon-btn" title="Kembali ke Lobi">↩️ Kembali</button>
-
-            <div class="right-tools">
-                <button id="btn-log" class="icon-btn" title="Lihat Riwayat">📜 Riwayat</button>
-                <button id="btn-settings" class="icon-btn" title="Pengaturan User">⚙️ Atur</button>
-                <button id="btn-delete-history" class="icon-btn danger" title="Hapus Memori">🗑️ Reset</button>
-            </div>
-        </div>
-
         <div class="dialogue-box">
             <div class="name-tag" id="char-name">Loading...</div>
             <div class="text-content" id="dialogue-text">Menghubungkan ke server...</div>
@@ -38,6 +50,7 @@
                 <button id="btn-send">➤</button>
             </div>
         </div>
+
     </div>
 
     <div id="log-overlay" class="overlay hidden">
@@ -99,20 +112,20 @@
     </div>
 
     <div id="level-up-overlay" class="level-up-overlay hidden">
-    <div class="level-up-box">
-        <div class="level-stars">⭐⭐⭐</div>
-        <h1 class="level-title">LEVEL UP!</h1>
-        <div class="level-number-container">
-            <span class="level-label">LEVEL</span>
-            <span id="new-level-display">2</span>
+        <div class="level-up-box">
+            <div class="level-stars">⭐⭐⭐</div>
+            <h1 class="level-title">LEVEL UP!</h1>
+            <div class="level-number-container">
+                <span class="level-label">LEVEL</span>
+                <span id="new-level-display">2</span>
+            </div>
+            <p class="level-msg">Hebat! Kamu semakin sepuh!</p>
+            <button id="btn-close-level" class="level-btn">Lanjut Cerita ▶️</button>
         </div>
-        <p class="level-msg">Hebat! Kamu semakin sepuh!</p>
-        <button id="btn-close-level" class="level-btn">Lanjut Cerita ▶️</button>
-    </div>
-    <div class="confetti c1"></div>
-    <div class="confetti c2"></div>
-    <div class="confetti c3"></div>
-    <div class="confetti c4"></div>
+        <div class="confetti c1"></div>
+        <div class="confetti c2"></div>
+        <div class="confetti c3"></div>
+        <div class="confetti c4"></div>
     </div>
 
     <div id="mode-selection-modal" class="overlay hidden" style="display: none;">

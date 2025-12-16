@@ -1,5 +1,5 @@
 // File: netlify/functions/get-chat-response-vn.js
-// VERSI: FULL GEMMA 3 (Menggantikan Gemini 2.5 yang limit)
+// VERSI: FULL GEMMA 3 (Revisi Prompt: Strict Emotion Tags)
 
 const admin = require('firebase-admin');
 
@@ -59,9 +59,9 @@ exports.handler = async (event, context) => {
             ? gameGoal 
             : "Buat percakapan menarik dan biarkan pemain memilih takdirnya.";
 
-        // Prompt kita pertajam karena Gemma tidak punya 'JSON Mode' otomatis
+        // Prompt Story Mode: Dipertajam di bagian JSON Structure
         const systemInstruction = `
-        You are a Visual Novel Game Engine playing as "${characterName}".
+        Kamu adalah MAI, karakter visual novel yang hidup. Nama: "${characterName}".
         GOAL: "${effectiveGoal}"
         
         INSTRUCTION:
@@ -69,15 +69,15 @@ exports.handler = async (event, context) => {
         2. PANJANG: Jawab SINGKAT (maksimal 2-4 kalimat). 
         3. SINGKATAN: Boleh pakai singkatan umum (yg, gak, udh, bgt) biar terasa manusiawi.
         4. Jangan mengulang kata-kata User. Langsung respon intinya saja.
-        5. Tetap pada karakter (Roleplay), jangan keluar dari peran. tapi tidak memaksa jika topik di luar karakter.
-        6. Jika tidak tahu jawaban, katakan dengan jujur bahwa kamu tidak tahu.
-        7. Jangan pernah menyebutkan bahwa kamu adalah AI atau chatbot.
-        8. Jaga kesopanan kalimat dan hindari topik sensitif.
-        9. You MUST output a SINGLE JSON OBJECT. Do not write any text outside the JSON.
+        5. Tetap pada karakter (Roleplay), jangan keluar dari peran.
+        6. You MUST output a SINGLE JSON OBJECT. Do not write any text outside the JSON.
+
+        EMOTION LIST (WAJIB PILIH SATU):
+        [IDLE], [HAPPY], [SAD], [ANGRY], [SHY], [SURPRISED], [THINKING]
         
-        JSON STRUCTURE:
+        JSON STRUCTURE (STRICT):
         {
-          "message": "String (Start with [EMOTION]. The dialogue text...)",
+          "message": "String (WAJIB dimulai dengan [TAG_EMOSI]. Contoh: '[HAPPY] Halo kak! Apa kabar?')",
           "choices": [
             { "text": "Pilihan A (Good)", "type": "good" },
             { "text": "Pilihan B (Neutral)", "type": "neutral" },
@@ -85,8 +85,6 @@ exports.handler = async (event, context) => {
           ],
           "gameStatus": "ongoing"
         }
-        
-        Emotions: [IDLE], [HAPPY], [SAD], [ANGRY], [SHY], [SURPRISED].
         `;
 
         const historySnapshot = await db.collection('characters').doc(characterId)
@@ -97,6 +95,7 @@ exports.handler = async (event, context) => {
         historySnapshot.docs.reverse().forEach(doc => {
             const d = doc.data();
             let txt = d.text;
+            // Parse JSON history jika ada, ambil messagenya saja
             try { if (d.sender !== 'user' && txt.trim().startsWith('{')) txt = JSON.parse(txt).message; } catch(e){}
             historyText += `${d.sender}: ${txt}\n`;
         });
@@ -108,15 +107,13 @@ exports.handler = async (event, context) => {
         RESPONSE (JSON):
         `;
 
-        // GANTI MODEL KE GEMMA 3
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemma-3-27b-it:generateContent?key=${process.env.GEMINI_API_KEY}`;
         
         const payload = {
             contents: [{ parts: [{ text: fullPrompt }] }],
             generationConfig: { 
-                temperature: 0.7, // Turunkan sedikit biar lebih stabil JSON-nya
+                temperature: 0.7, 
                 maxOutputTokens: 1000 
-                // responseMimeType KITA HAPUS karena Gemma belum support
             }
         };
 
@@ -125,10 +122,8 @@ exports.handler = async (event, context) => {
         const data = await apiRes.json();
         let reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
 
-        // Bersihkan Markdown ```json ... ``` (Gemma suka nambahin ini)
         reply = reply.replace(/```json/gi, '').replace(/```/g, '').trim();
 
-        // Validasi Manual
         try { JSON.parse(reply); } 
         catch (e) { 
             console.warn("Gemma output not valid JSON:", reply);
@@ -142,7 +137,7 @@ exports.handler = async (event, context) => {
     }
 
     // ========================================================================
-    // ☕ JALUR 2: FREE MODE (GEMMA 3)
+    // ☕ JALUR 2: FREE MODE (GEMMA 3) - REVISI BESAR DI SINI
     // ========================================================================
     else {
         let timeString = userLocalTime || new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
@@ -164,29 +159,58 @@ exports.handler = async (event, context) => {
             const d = doc.data();
             if (d.text === userMessage && d.sender === 'user') return; 
             let txt = d.text;
-            try { if (txt.startsWith('{')) txt = JSON.parse(txt).message; } catch(e){}
+            // Clean up JSON format if any, but KEEP THE EMOTION TAG inside string if possible
+            try { 
+                if (txt.startsWith('{')) {
+                    const parsed = JSON.parse(txt);
+                    txt = parsed.message; // Ambil teks yg masih ada [HAPPY]-nya
+                }
+            } catch(e){}
+            
             historyContext += `${d.sender === 'user' ? 'User' : characterName}: "${txt}"\n`;
         });
 
+        // PROMPT FREE MODE YANG SUDAH DIPERKUAT
         const systemInstruction = `
         Role: "${characterName}". Profile: "${characterProfile}".
         Context: Waktu: ${timeString}. User: "${userName}".
         
-        ATURAN:
+        ATURAN UTAMA:
         1. Gunakan BAHASA INDONESIA (Gaul/Sehari-hari).
-        2. Mulai dengan Tag [EMOTION].
-        3. Jawab singkat & natural.
+        2. Jawab singkat & natural (max 2-3 kalimat).
         
-        History:
+        ATURAN EMOSI (WAJIB & STRICT):
+        Setiap kalimat balasanmu HARUS diawali dengan salah satu TAG EMOSI berikut:
+        - [IDLE] (Biasa)
+        - [HAPPY] (Senang/Tertawa)
+        - [SAD] (Sedih/Kecewa)
+        - [ANGRY] (Marah/Kesal)
+        - [SURPRISED] (Kaget)
+        - [SHY] (Malu)
+        - [THINKING] (Bingung)
+
+        JANGAN PERNAH MENJAWAB TANPA TAG INI.
+        
+        CONTOH YANG BENAR:
+        User: Halo Mai!
+        Mai: [HAPPY] Halo juga! Senang ketemu kamu.
+        
+        User: Aku sedih nih.
+        Mai: [SAD] Yah, kenapa? Sini cerita sama aku.
+        
+        User: Hantu!!
+        Mai: [SURPRISED] Hah?! Mana?! Aku takut!
+
+        History Percakapan:
         ${historyContext}
         
-        Baru: "${finalUserMsg}"
-        Respon:
+        Pesan Baru: "${finalUserMsg}"
+        Respon Kamu (Ingat Tag Emosi):
         `;
 
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemma-3-27b-it:generateContent?key=${process.env.GEMINI_API_KEY}`;
         const payload = {
-            contents: [{ parts: [{ text: systemInstruction }] }], // Gemma kadang lebih suka instruksi di prompt
+            contents: [{ parts: [{ text: systemInstruction }] }],
             generationConfig: { temperature: 0.85, maxOutputTokens: 500 }
         };
         
@@ -195,6 +219,11 @@ exports.handler = async (event, context) => {
         const apiRes = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         const data = await apiRes.json();
         let reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "...";
+
+        // Fallback: Jika AI bandel ga kasih tag, kita paksa kasih [IDLE] biar frontend ga bingung
+        if (!reply.startsWith('[')) {
+            reply = `[IDLE] ${reply}`;
+        }
 
         return { statusCode: 200, body: JSON.stringify({ reply, mode: 'free' }) };
     }

@@ -11,17 +11,27 @@
 
     <div class="lobby-background"></div>
 
+    <button id="btn-top-back" class="pill-back-btn" title="Kembali ke Menu Utama">
+        <span style="font-size: 1.2rem; margin-right: 5px;">&#8592;</span> Kembali
+    </button>
+
     <div class="lobby-container">
         <header class="lobby-header">
             <h1>Pilih Teman Ngobrol</h1>
             <p>Siapa yang ingin kamu ajak bicara hari ini?</p>
+            
+            <button id="btn-change-mode" class="change-mode-pill">
+                🔄 Ganti Mode
+            </button>
         </header>
 
         <div class="character-grid" id="character-grid">
             <p style="text-align: center; color: white;">Memuat karakter...</p>
         </div>
 
-        <button onclick="window.location.href='../index.html'" class="btn-home">🏠 Kembali ke Menu Utama</button>
+        <button onclick="window.location.href='../index.html'" class="btn-home" style="opacity:0.6; font-size:0.9rem;">
+            🏠 Menu Utama
+        </button>
     </div>
 
     <div id="mode-selection-modal" class="overlay hidden">
@@ -50,10 +60,10 @@
             <button id="btn-cancel-mode" class="btn-cancel">Batal</button>
         </div>
     </div>
+
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="../js/firebase-config.js"></script>
-    
     <script src="lobby.js"></script>
 </body>
 </html>
