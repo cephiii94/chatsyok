@@ -155,3 +155,155 @@ input[type="radio"] {
     display: block;
     margin: 5px auto; /* Tengahkan tombol */
 }
+/* --- TAB NAVIGATION STYLES (LIGHT MODE) --- */
+.tabs-header {
+    display: flex;
+    background: #f1f3f5; /* Abu-abu sangat muda */
+    border-radius: 12px 12px 0 0;
+    overflow: hidden;
+    margin-bottom: 0;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 15px;
+    background: transparent;
+    border: none;
+    color: #666; /* Teks abu-abu gelap */
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-bottom: 3px solid transparent;
+}
+
+.tab-btn:hover {
+    background: #e9ecef;
+    color: #333;
+}
+
+.tab-btn.active {
+    background: #ffffff; /* Putih aktif */
+    color: #007bff; /* Biru standar (atau ganti warna tema Tuan) */
+    border-bottom: 3px solid #007bff;
+    box-shadow: 0 -2px 5px rgba(0,0,0,0.05); /* Sedikit bayangan biar pop-up */
+}
+
+.tab-content {
+    display: none;
+    background: #ffffff; /* Putih bersih */
+    padding: 25px;
+    border-radius: 0 0 12px 12px;
+    border: 1px solid #dee2e6;
+    border-top: none; /* Biar nyatu sama header */
+    animation: fadeIn 0.3s ease;
+    color: #333; /* Teks hitam */
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* Fix Input Field di dalam Tab agar terlihat jelas di background putih */
+.tab-content input, 
+.tab-content textarea {
+    background: #ffffff !important;
+    color: #333 !important;
+    border: 1px solid #ced4da !important;
+}
+
+.tab-content input:focus, 
+.tab-content textarea:focus {
+    border-color: #80bdff !important;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25) !important;
+}
+
+/* Modifikasi container form biar nyatu sama tab */
+.form-container {
+    background: transparent !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+}
+
+.hidden-control { display: none; }
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- MODERN FILE UPLOAD STYLES --- */
+
+/* 1. Sembunyikan Input Asli (Wajib) */
+input[type="file"] {
+    display: none;
+}
+
+/* 2. Gaya Tombol Standar (Untuk Avatar Utama) */
+.custom-file-btn {
+    display: inline-block;
+    background: #ffffff;
+    color: #333;
+    border: 1px solid #ced4da;
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.custom-file-btn:hover {
+    background: #f8f9fa;
+    border-color: #007bff;
+    color: #007bff;
+    transform: translateY(-1px);
+}
+
+.custom-file-btn i {
+    margin-right: 5px; /* Jika pakai FontAwesome */
+}
+
+/* 3. Gaya Kotak Dashed (Untuk Sprite Grid) */
+.sprite-upload-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    border: 2px dashed #dee2e6; /* Garis putus-putus modern */
+    border-radius: 12px;
+    padding: 20px 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    height: 100%;
+    min-height: 100px;
+    text-align: center;
+}
+
+.sprite-upload-box:hover {
+    border-color: #007bff;
+    background: #f1f8ff;
+}
+
+.sprite-upload-box .icon {
+    font-size: 24px;
+    margin-bottom: 5px;
+    opacity: 0.7;
+}
+
+.sprite-upload-box span {
+    font-size: 0.8rem;
+    color: #666;
+    font-weight: 500;
+    word-break: break-word; /* Biar nama file panjang turun ke bawah */
+}
+
+/* Indikator kalau file sudah dipilih (Lewat JS nanti) */
+.sprite-upload-box.has-file {
+    border-style: solid;
+    border-color: #28a745; /* Hijau */
+    background: #e6fffa;
+}

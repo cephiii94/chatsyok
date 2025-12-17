@@ -14,7 +14,7 @@
         
         <header class="mobile-header">
             <button id="hamburger-btn"><span></span><span></span><span></span></button>
-            <h1>Edit MAI</h1>
+            <h1>Edit Karakter</h1>
         </header>
         
         <aside class="lobby-sidebar" id="lobby-sidebar">
@@ -22,117 +22,154 @@
             <nav class="lobby-sidebar-nav">
                 <a href="index.html">Home</a>
                 <a href="create-mai.html">Buat Bot</a>
-                <a href="#">Komunitas</a>
+                <a href="#" class="active">Edit Bot</a>
             </nav>
         </aside>
 
         <main class="lobby-main">
             <header class="lobby-header">
-                <h2>Edit Karakter</h2>
-                <p>Ubah detail kepribadian dan tampilan MAI.</p>
+                <h2>Edit Model AI (MAI)</h2>
+                <p>Perbarui kepribadian, visual, atau alur cerita karakter Anda.</p>
             </header>
 
             <form id="edit-mai-form" class="form-container">
-                <input type="hidden" id="mai-id">
-
-                <div class="form-group avatar-group">
-                    <label>Avatar Utama / Idle</label>
-                    <div class="avatar-upload">
-                        <img src="" alt="Preview" id="avatar-preview" class="image-preview">
-                        <input type="file" id="mai-image" accept="image/*">
-                        <small>Klik untuk ganti gambar (Biarkan kosong jika tidak ingin ubah)</small>
-                    </div>
+                
+                <div class="tabs-header">
+                    <button type="button" class="tab-btn active" onclick="switchTab('tab-identitas')">1. Identitas</button>
+                    <button type="button" class="tab-btn" onclick="switchTab('tab-visual')">2. Visual (VN)</button>
+                    <button type="button" class="tab-btn" onclick="switchTab('tab-skenario')">3. Skenario (Story)</button>
                 </div>
 
-                <div class="form-row">
-                    <div class="form-group" style="flex-grow: 1;">
-                        <label for="mai-name">Nama MAI</label>
-                        <input type="text" id="mai-name" required>
-                    </div>
-                    <div class="form-group" style="flex-grow: 2;">
-                        <label for="mai-greeting">Pesan Sapaan</label>
-                        <input type="text" id="mai-greeting" required>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="mai-tagline">Deskripsi Singkat</label>
-                    <textarea id="mai-tagline" rows="2" maxlength="150"></textarea>
-                </div>
-
-                <div class="form-group">
-                    <label for="mai-description">Instruksi Kepribadian</label>
-                    <textarea id="mai-description" rows="10" required></textarea>
-                </div>
-
-                <div class="form-group">
-                    <label for="mai-tags">Kategori (Pisahkan dengan koma)</label>
-                    <input type="text" id="mai-tags">
-                </div>
-
-                <div class="form-group">
-                    <label>Visibilitas</label>
-                    <div class="radio-group">
-                        <label><input type="radio" name="visibility" value="public"> Publik</label>
-                        <label><input type="radio" name="visibility" value="private"> Privat</label>
-                    </div>
-                </div>
-
-                <div id="vn-section-container" class="form-group" style="display: none; background: #f0f8ff; padding: 20px; border-radius: 12px; border: 1px dashed #90caf9;">
+                <div id="tab-identitas" class="tab-content active">
                     
-                    <label class="checkbox-container" style="font-weight:700; color:#1e3a5a; margin-bottom:10px; display:block;">
-                        <input type="checkbox" id="mai-is-vn">
-                        Aktifkan Mode Visual Novel?
-                    </label>
-
-                    <div id="vn-goal-container" style="margin-top: 15px; margin-bottom: 20px; display: none;">
-                        <label for="mai-game-goal" style="font-weight: 600; color: #d32f2f; display:block; margin-bottom:5px;">🎯 Tujuan Cerita / Game Goal</label>
-                        <textarea id="mai-game-goal" rows="3" placeholder="Contoh: User harus berhasil mengajak karakter kencan... (Wajib diisi untuk Story Mode)" style="width: 100%; padding: 10px; border: 2px solid #ffccbc; border-radius: 8px; font-family: inherit;"></textarea>
+                    <div class="form-group avatar-group">
+                        <label style="font-weight:600; color:#333; margin-bottom:10px; display:block;">Avatar Utama</label>
+                        <div class="avatar-upload" style="display:flex; flex-direction:column; align-items:center; gap:15px;">
+                            <img src="https://via.placeholder.com/150" alt="Preview" id="avatar-preview" class="image-preview" style="width:120px; height:120px; border-radius:50%; object-fit:cover; border:3px solid #dee2e6;">
+                            
+                            <div>
+                                <input type="file" id="mai-image" accept="image/*" onchange="updateFileName(this, 'label-main-avatar')">
+                                <label for="mai-image" id="label-main-avatar" class="custom-file-btn">
+                                    📁 Ganti Foto Profil
+                                </label>
+                            </div>
+                            <small style="color:#888;">Biarkan kosong jika tidak ingin mengubah foto.</small>
+                        </div>
                     </div>
-                    <p style="font-size: 0.85rem; color: #555; margin-bottom: 15px;">
-                        Upload variasi ekspresi. (Biarkan kosong jika tidak ingin ubah)
-                    </p>
 
-                    <div id="vn-sprites-container" style="display: none; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 15px;">
-                        
-                        <div style="text-align: center;">
-                            <label style="font-size:0.8rem;">Senang (Happy)</label>
-                            <img src="" id="preview-happy" style="width:50px; height:50px; object-fit:cover; display:block; margin:0 auto 5px; background:#ddd; border-radius:4px;">
-                            <input type="file" id="sprite-happy" accept="image/*" style="font-size:0.75rem; width:100%;">
+                    <div class="form-row">
+                        <div class="form-group" style="flex-grow: 1;">
+                            <label>Nama MAI</label>
+                            <input type="text" id="mai-name" required>
                         </div>
-                        
-                        <div style="text-align: center;">
-                            <label style="font-size:0.8rem;">Sedih (Sad)</label>
-                            <img src="" id="preview-sad" style="width:50px; height:50px; object-fit:cover; display:block; margin:0 auto 5px; background:#ddd; border-radius:4px;">
-                            <input type="file" id="sprite-sad" accept="image/*" style="font-size:0.75rem; width:100%;">
+                        <div class="form-group" style="flex-grow: 2;">
+                            <label>Pesan Sapaan</label>
+                            <input type="text" id="mai-greeting" required>
                         </div>
-                        
-                        <div style="text-align: center;">
-                            <label style="font-size:0.8rem;">Marah (Angry)</label>
-                            <img src="" id="preview-angry" style="width:50px; height:50px; object-fit:cover; display:block; margin:0 auto 5px; background:#ddd; border-radius:4px;">
-                            <input type="file" id="sprite-angry" accept="image/*" style="font-size:0.75rem; width:100%;">
-                        </div>
-                        
-                        <div style="text-align: center;">
-                            <label style="font-size:0.8rem;">Malu (Shy)</label>
-                            <img src="" id="preview-shy" style="width:50px; height:50px; object-fit:cover; display:block; margin:0 auto 5px; background:#ddd; border-radius:4px;">
-                            <input type="file" id="sprite-shy" accept="image/*" style="font-size:0.75rem; width:100%;">
-                        </div>
-                        
-                        <div style="text-align: center;">
-                            <label style="font-size:0.8rem;">Kaget (Surprised)</label>
-                            <img src="" id="preview-surprised" style="width:50px; height:50px; object-fit:cover; display:block; margin:0 auto 5px; background:#ddd; border-radius:4px;">
-                            <input type="file" id="sprite-surprised" accept="image/*" style="font-size:0.75rem; width:100%;">
-                        </div>
+                    </div>
 
+                    <div class="form-group">
+                        <label>Deskripsi Singkat (Tagline)</label>
+                        <textarea id="mai-tagline" rows="2" maxlength="150"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Instruksi Kepribadian (Prompt)</label>
+                        <textarea id="mai-description" rows="8" required></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Kategori</label>
+                        <input type="text" id="mai-tags">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Visibilitas</label>
+                        <div class="radio-group">
+                            <label><input type="radio" name="visibility" value="public" id="vis-public"> Publik</label>
+                            <label><input type="radio" name="visibility" value="private" id="vis-private"> Privat</label>
+                        </div>
+                    </div>
+
+                    <input type="hidden" id="char-id">
+                    <input type="hidden" id="char-mode" value="free">
+                    <input type="checkbox" id="mai-is-vn" class="hidden-control">
+                    
+                    <div style="text-align:right; margin-top:20px;">
+                        <button type="button" class="btn-next" onclick="switchTab('tab-visual')" style="background:#333; color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer;">Lanjut ke Visual ▶</button>
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <button type="submit" class="submit-btn" id="submit-btn">Simpan Perubahan</button>
-                    <button type="button" id="delete-btn" style="background:#ff5252; margin-top:10px; width:100%; color:white; border:none; padding:12px; border-radius:8px; font-weight:600; cursor:pointer;">Hapus Karakter</button>
-                    <div id="form-status" style="margin-top: 10px;"></div>
+                <div id="tab-visual" class="tab-content">
+                    <h3 style="color:#00e5ff; margin-bottom:10px;">Ekspresi Wajah (Sprite)</h3>
+                    <p style="color:#666; font-size:0.9rem; margin-bottom:20px;">Klik untuk mengganti gambar ekspresi.</p>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px;">
+                        <div style="text-align: center;">
+                            <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:8px; color:#555;">😄 Senang</label>
+                            <input type="file" id="sprite-happy" accept="image/*" onchange="updateFileName(this, 'label-happy')">
+                            <label for="sprite-happy" id="label-happy" class="sprite-upload-box">
+                                <div class="icon">📤</div><span>Ganti</span>
+                            </label>
+                        </div>
+                        <div style="text-align: center;">
+                            <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:8px; color:#555;">😢 Sedih</label>
+                            <input type="file" id="sprite-sad" accept="image/*" onchange="updateFileName(this, 'label-sad')">
+                            <label for="sprite-sad" id="label-sad" class="sprite-upload-box">
+                                <div class="icon">📤</div><span>Ganti</span>
+                            </label>
+                        </div>
+                        <div style="text-align: center;">
+                            <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:8px; color:#555;">😡 Marah</label>
+                            <input type="file" id="sprite-angry" accept="image/*" onchange="updateFileName(this, 'label-angry')">
+                            <label for="sprite-angry" id="label-angry" class="sprite-upload-box">
+                                <div class="icon">📤</div><span>Ganti</span>
+                            </label>
+                        </div>
+                        <div style="text-align: center;">
+                            <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:8px; color:#555;">😳 Malu</label>
+                            <input type="file" id="sprite-shy" accept="image/*" onchange="updateFileName(this, 'label-shy')">
+                            <label for="sprite-shy" id="label-shy" class="sprite-upload-box">
+                                <div class="icon">📤</div><span>Ganti</span>
+                            </label>
+                        </div>
+                        <div style="text-align: center;">
+                            <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:8px; color:#555;">😱 Kaget</label>
+                            <input type="file" id="sprite-surprised" accept="image/*" onchange="updateFileName(this, 'label-surprised')">
+                            <label for="sprite-surprised" id="label-surprised" class="sprite-upload-box">
+                                <div class="icon">📤</div><span>Ganti</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div style="text-align:right; margin-top:30px;">
+                        <button type="button" onclick="switchTab('tab-skenario')" style="background:#333; color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer;">Lanjut ke Skenario ▶</button>
+                    </div>
                 </div>
+
+                <div id="tab-skenario" class="tab-content">
+                    <h3 style="color:#00e5ff; margin-bottom:10px;">Editor Skenario</h3>
+                    <p style="color:#666; font-size:0.9rem;">Ubah alur cerita di sini.</p>
+                    
+                    <div class="form-group" style="margin-top:15px;">
+                        <label>Tujuan Akhir (Game Goal)</label>
+                        <textarea id="mai-game-goal" rows="2" style="background:white; color:#333; border:1px solid #ccc;"></textarea>
+                    </div>
+
+                    <div id="chapters-container" style="margin-top:20px;">
+                        </div>
+
+                    <button type="button" onclick="addChapterInput()" style="width:100%; padding:10px; background:#333; color:white; border:1px dashed #666; margin-top:10px; cursor:pointer;">
+                        + Tambah Chapter Baru
+                    </button>
+                </div>
+
+                <div class="form-group" style="margin-top: 30px; border-top: 1px solid #333; padding-top: 20px;">
+                    <button type="submit" class="submit-btn" id="submit-btn" style="width:100%; padding:15px; font-size:1.1rem; font-weight:bold;">💾 Simpan Perubahan</button>
+                    <button type="button" onclick="window.location.href='index.html'" style="width:100%; padding:10px; margin-top:10px; background:transparent; color:#666; border:none; cursor:pointer;">Batal</button>
+                    <div id="form-status" style="margin-top: 10px; text-align:center;"></div>
+                </div>
+
             </form>
         </main>
     </div>
@@ -142,8 +179,6 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
     <script src="/js/firebase-config.js"></script>
-    <script src="/js/auth-guard.js"></script> 
     <script src="/js/lobby.js"></script>
-    <script src="/js/edit-mai.js"></script>
-</body>
+    <script src="/js/edit-mai.js"></script> </body>
 </html>

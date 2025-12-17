@@ -1,5 +1,9 @@
 // File: js/create-mai.js
-// Versi: Multi-Upload + Admin Check + UI Toggle (Auto-Hide Sprites & Goal)
+// VERSI: FINAL HYBRID (Tabs + Light Mode + Modern Uploads)
+
+// ==========================================
+// 1. HELPER FUNCTIONS (Firebase & Upload)
+// ==========================================
 
 function getAuthTokenSafe() {
     return new Promise((resolve, reject) => {
@@ -45,153 +49,275 @@ async function uploadSingleImage(file, token) {
     return data.secure_url;
 }
 
+// ==========================================
+// 2. GLOBAL UI FUNCTIONS (Attached to Window)
+// ==========================================
+
+// A. Logika Pindah Tab
+window.switchTab = function(tabName) {
+    // 1. Reset active state
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+
+    // 2. Activate target
+    const targetTab = document.getElementById(tabName);
+    if(targetTab) targetTab.classList.add('active');
+
+    // 3. Highlight button
+    const buttons = document.querySelectorAll('.tab-btn');
+    buttons.forEach(btn => {
+        if(btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(tabName)) {
+            btn.classList.add('active');
+        }
+    });
+
+    // 4. Auto-Check VN Mode
+    const vnCheck = document.getElementById('mai-is-vn');
+    if (tabName === 'tab-visual' || tabName === 'tab-skenario') {
+        if(vnCheck) vnCheck.checked = true;
+    }
+};
+
+// B. Update UI Saat File Dipilih (MODERN UPLOAD BUTTON)
+window.updateFileName = function(input, labelId) {
+    const label = document.getElementById(labelId);
+    if (!label) return;
+
+    if (input.files && input.files[0]) {
+        // Ambil nama file, potong jika kepanjangan
+        let fileName = input.files[0].name;
+        if (fileName.length > 15) fileName = fileName.substring(0, 12) + "...";
+        
+        // Update Teks Label
+        if (label.classList.contains('sprite-upload-box')) {
+            // Style Kotak (Visual Tab)
+            label.classList.add('has-file');
+            label.innerHTML = `<div class="icon">✅</div><span>${fileName}</span>`;
+            label.style.borderColor = "#28a745";
+            label.style.background = "#e6fffa";
+        } else {
+            // Style Tombol (Identitas Tab)
+            label.innerHTML = `✅ ${fileName}`;
+            label.style.borderColor = "#28a745";
+            label.style.color = "#28a745";
+            label.style.background = "#e6fffa";
+        }
+    } else {
+        // Reset jika cancel
+        if (label.classList.contains('sprite-upload-box')) {
+            label.classList.remove('has-file');
+            label.innerHTML = `<div class="icon">📤</div><span>Upload</span>`;
+            label.style.borderColor = "#dee2e6";
+            label.style.background = "#ffffff";
+        } else {
+            label.innerHTML = `📁 Pilih Foto Profil`;
+            label.style.borderColor = "#ced4da";
+            label.style.color = "#333";
+            label.style.background = "#ffffff";
+        }
+    }
+};
+
+// C. Tambah Input Chapter (LIGHT MODE FIXED)
+window.addChapterInput = function() {
+    const container = document.getElementById('chapters-container');
+    const index = container.children.length; 
+    
+    // Perhatikan: Background #f8f9fa (Putih Abu), Text #333 (Hitam)
+    const html = `
+    <div class="chapter-item" id="chapter-${index}" style="background:#f8f9fa; padding:15px; margin-bottom:15px; border-left: 4px solid #007bff; border: 1px solid #eee; border-radius: 6px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <strong style="color:#333;">Chapter ${index + 1}</strong>
+            ${index > 0 ? `<button type="button" onclick="removeChapter(${index})" style="color:#dc3545; background:none; border:none; cursor:pointer; font-size:0.9rem; font-weight:bold;">Hapus 🗑️</button>` : ''}
+        </div>
+
+        <div style="margin-bottom:10px;">
+            <label style="color:#555; font-size:0.85rem; font-weight:500;">Judul Chapter</label>
+            <input type="text" placeholder="Cth: Pertemuan Pertama" class="input-field story-title" style="width:100%; padding:8px; border:1px solid #ced4da; border-radius:4px; margin-top:5px; background:white; color:#333;">
+        </div>
+        
+        <div style="margin-bottom:10px;">
+            <label style="color:#555; font-size:0.85rem; font-weight:500;">Situasi / Context (PENTING)</label>
+            <textarea placeholder="Jelaskan situasi awal. Cth: Hujan deras di stasiun tua, User sedang berteduh sendirian..." class="input-field story-context" rows="3" style="width:100%; padding:8px; border:1px solid #ced4da; border-radius:4px; margin-top:5px; background:white; color:#333;"></textarea>
+        </div>
+        
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+            <div>
+                <label style="color:#555; font-size:0.85rem; font-weight:500;">Goal AI</label>
+                <input type="text" placeholder="Cth: Buat user penasaran" class="input-field story-goal" style="width:100%; padding:8px; border:1px solid #ced4da; border-radius:4px; margin-top:5px; background:white; color:#333;">
+            </div>
+            <div>
+                <label style="color:#555; font-size:0.85rem; font-weight:500;">Trigger Lanjut</label>
+                <input type="text" placeholder="Cth: User bertanya nama" class="input-field story-end" style="width:100%; padding:8px; border:1px solid #ced4da; border-radius:4px; margin-top:5px; background:white; color:#333;">
+            </div>
+        </div>
+    </div>
+    `;
+    
+    container.insertAdjacentHTML('beforeend', html);
+};
+
+// D. Hapus Chapter
+window.removeChapter = function(index) {
+    const item = document.getElementById(`chapter-${index}`);
+    if (item) item.remove();
+};
+
+// E. Ambil Data Story
+function getStoryChapters() {
+    const items = document.querySelectorAll('.chapter-item');
+    let chapters = [];
+
+    items.forEach((item, idx) => {
+        const title = item.querySelector('.story-title').value.trim();
+        const context = item.querySelector('.story-context').value.trim();
+        const goal = item.querySelector('.story-goal').value.trim();
+        const endCondition = item.querySelector('.story-end').value.trim();
+
+        if(title || context) {
+            chapters.push({
+                id: idx,
+                title: title || `Chapter ${idx+1}`,
+                context: context || "Context tidak didefinisikan.",
+                goal: goal || "Bertahan hidup.",
+                endCondition: endCondition || "Percakapan selesai."
+            });
+        }
+    });
+    return chapters;
+}
+
+
+// ==========================================
+// 3. MAIN LOGIC (DOM Content Loaded)
+// ==========================================
+
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('create-mai-form');
     const mainImageInput = document.getElementById('mai-image');
     const avatarPreview = document.getElementById('avatar-preview');
     const submitButton = document.getElementById('submit-btn');
     const formStatus = document.getElementById('form-status');
-    
-    // Elemen VN
-    const vnCheckbox = document.getElementById('mai-is-vn');
-    const vnSpritesContainer = document.getElementById('vn-sprites-container');
-    const vnGoalContainer = document.getElementById('vn-goal-container'); // [BRI UPDATE]
+    const vnCheckbox = document.getElementById('mai-is-vn'); // Hidden checkbox
 
-    // --- LOGIKA UI: TOGGLE SPRITES & GOAL ---
-    const toggleVnSprites = () => {
-        if (vnCheckbox) {
-            if (vnCheckbox.checked) {
-                // Munculkan Sprites & Goal
-                if (vnSpritesContainer) vnSpritesContainer.style.display = 'grid';
-                if (vnGoalContainer) vnGoalContainer.style.display = 'block'; // [BRI UPDATE]
-            } else {
-                // Sembunyikan Sprites & Goal
-                if (vnSpritesContainer) vnSpritesContainer.style.display = 'none';
-                if (vnGoalContainer) vnGoalContainer.style.display = 'none'; // [BRI UPDATE]
-            }
-        }
-    };
-    
-    // Jalankan sekali saat loading agar sinkron
-    if(vnCheckbox) {
-        vnCheckbox.addEventListener('change', toggleVnSprites);
-        toggleVnSprites(); 
-    }
-
-    // --- CEK STATUS LOGIN & ADMIN ---
+    // 1. Auth Check
     const auth = firebase.auth();
     auth.onAuthStateChanged(async (user) => {
-        if (!user) {
-            console.log('User tidak login, mengalihkan...');
-            window.location.href = 'login.html';
-        } else {
-            try {
-                const tokenResult = await user.getIdTokenResult();
-                // Hanya tampilkan Container VN jika user adalah ADMIN
-                if (tokenResult.claims.admin) {
-                    const vnContainer = document.getElementById('vn-section-container');
-                    if (vnContainer) vnContainer.style.display = 'block';
+        if (!user) window.location.href = 'login.html';
+    });
+
+    // 2. Preview Avatar Utama (Fallback jika onchange di HTML gagal)
+    if (mainImageInput) {
+        mainImageInput.addEventListener('change', () => {
+            const file = mainImageInput.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => { 
+                    if(avatarPreview) avatarPreview.src = e.target.result; 
                 }
-            } catch (e) {
-                console.error("Gagal cek claim admin:", e);
+                reader.readAsDataURL(file);
             }
-        }
-    });
+        });
+    }
 
-    // --- Preview Gambar Utama ---
-    mainImageInput.addEventListener('change', () => {
-        const file = mainImageInput.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (e) => { avatarPreview.src = e.target.result; }
-            reader.readAsDataURL(file);
-        }
-    });
-
-    // --- LOGIKA SUBMIT ---
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        let token;
-        try {
-            token = await getAuthTokenSafe();
-        } catch (error) {
-            formStatus.textContent = 'Sesi habis. Silakan login kembali.';
-            formStatus.className = 'error';
-            return;
-        }
-
-        submitButton.disabled = true;
-        submitButton.textContent = 'Memproses...';
-        formStatus.textContent = 'Mulai meng-upload...';
-        formStatus.className = '';
-
-        try {
-            // 1. Upload Avatar Utama
-            const mainFile = mainImageInput.files[0];
-            if (!mainFile) throw new Error("Avatar utama wajib diisi!");
+    // 3. HANDLE SUBMIT
+    if (form) {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
             
-            formStatus.textContent = 'Meng-upload avatar utama...';
-            const mainImageUrl = await uploadSingleImage(mainFile, token);
+            let token;
+            try {
+                token = await getAuthTokenSafe();
+            } catch (error) {
+                formStatus.textContent = 'Sesi habis. Silakan login kembali.';
+                formStatus.className = 'error';
+                return;
+            }
 
-            // 2. Upload Sprite Ekspresi (Hanya jika VN dicentang)
-            const sprites = {};
-            const emotions = ['happy', 'sad', 'angry', 'shy', 'surprised'];
-            
-            sprites['idle'] = mainImageUrl; 
+            // Loading UI
+            submitButton.disabled = true;
+            submitButton.innerHTML = '⏳ Sedang Memproses...';
+            formStatus.textContent = 'Mengupload data...';
+            formStatus.className = '';
 
-            if (vnCheckbox.checked) {
-                for (const emo of emotions) {
-                    const input = document.getElementById(`sprite-${emo}`);
-                    if (input && input.files[0]) {
-                        formStatus.textContent = `Meng-upload ekspresi: ${emo}...`;
-                        const url = await uploadSingleImage(input.files[0], token);
-                        sprites[emo] = url;
+            try {
+                // A. Upload Avatar Utama
+                const mainFile = mainImageInput.files[0];
+                if (!mainFile) throw new Error("Avatar utama wajib diisi!");
+                const mainImageUrl = await uploadSingleImage(mainFile, token);
+
+                // B. Upload Sprites
+                const sprites = {};
+                const emotions = ['happy', 'sad', 'angry', 'shy', 'surprised'];
+                sprites['idle'] = mainImageUrl; 
+
+                const isVnActive = vnCheckbox ? vnCheckbox.checked : false;
+
+                if (isVnActive) {
+                    for (const emo of emotions) {
+                        const input = document.getElementById(`sprite-${emo}`);
+                        if (input && input.files[0]) {
+                            formStatus.textContent = `Upload ekspresi: ${emo}...`;
+                            const url = await uploadSingleImage(input.files[0], token);
+                            sprites[emo] = url;
+                        }
                     }
                 }
-            }
 
-            // 3. Simpan Data
-            formStatus.textContent = 'Menyimpan data karakter...';
-            const maiData = {
-                name: document.getElementById('mai-name').value,
-                greeting: document.getElementById('mai-greeting').value,
-                tagline: document.getElementById('mai-tagline').value,
-                description: document.getElementById('mai-description').value,
-                tags: document.getElementById('mai-tags').value.split(',').map(t => t.trim()).filter(t => t),
-                visibility: document.querySelector('input[name="visibility"]:checked').value,
-                isVnAvailable: vnCheckbox.checked,
+                // C. Mode & Story
+                const storyChapters = getStoryChapters();
+                let finalMode = 'free';
+
+                if (storyChapters.length > 0) {
+                    finalMode = 'story';
+                } else if (isVnActive) {
+                    finalMode = 'free'; 
+                }
+
+                // D. Payload
+                const maiData = {
+                    name: document.getElementById('mai-name').value,
+                    greeting: document.getElementById('mai-greeting').value,
+                    tagline: document.getElementById('mai-tagline').value,
+                    description: document.getElementById('mai-description').value,
+                    tags: document.getElementById('mai-tags').value.split(',').map(t => t.trim()).filter(t => t),
+                    visibility: document.querySelector('input[name="visibility"]:checked').value,
+                    
+                    isVnAvailable: isVnActive || (storyChapters.length > 0),
+                    mode: finalMode,
+                    gameGoal: document.getElementById('mai-game-goal') ? document.getElementById('mai-game-goal').value : '',
+                    storyChapters: storyChapters,
+                    
+                    image: mainImageUrl,
+                    sprites: sprites 
+                };
+
+                // E. Kirim Backend
+                formStatus.textContent = 'Menyimpan ke database...';
+                const saveRes = await fetch('/.netlify/functions/save-mai', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(maiData)
+                });
+
+                if (!saveRes.ok) throw new Error("Gagal menyimpan data.");
+
+                sessionStorage.removeItem('mai_chars_user');
+                formStatus.textContent = '✅ Berhasil! Mengalihkan...';
+                formStatus.className = 'success';
                 
-                // [BRI UPDATE: Kirim Goal ke Backend]
-                gameGoal: document.getElementById('mai-game-goal') ? document.getElementById('mai-game-goal').value : '',
+                setTimeout(() => { window.location.href = 'index.html'; }, 1500);
 
-                image: mainImageUrl,
-                sprites: sprites 
-            };
-
-            const saveRes = await fetch('/.netlify/functions/save-mai', {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(maiData)
-            });
-
-            if (!saveRes.ok) throw new Error("Gagal menyimpan ke database.");
-
-            sessionStorage.removeItem('mai_chars_user');
-            formStatus.textContent = 'Berhasil! Mengalihkan...';
-            formStatus.className = 'success';
-            
-            setTimeout(() => { window.location.href = 'index.html'; }, 1500);
-
-        } catch (error) {
-            console.error(error);
-            formStatus.textContent = `Error: ${error.message}`;
-            formStatus.className = 'error';
-            submitButton.disabled = false;
-            submitButton.textContent = 'Buat MAI';
-        }
-    });
+            } catch (error) {
+                console.error(error);
+                formStatus.textContent = `❌ Error: ${error.message}`;
+                formStatus.className = 'error';
+                submitButton.disabled = false;
+                submitButton.textContent = '✨ Buat Karakter Sekarang';
+            }
+        });
+    }
 });

@@ -1,9 +1,9 @@
 // File: netlify/functions/get-chat-response-vn.js
-// VERSI: FULL GEMMA 3 (Revisi Prompt: Strict Emotion Tags)
+// VERSI: DYNAMIC DB STORY (Membaca Skenario dari Database)
 
 const admin = require('firebase-admin');
 
-// 1. SETUP FIREBASE
+// --- 1. SETUP FIREBASE ---
 if (!admin.apps.length) {
   try {
     const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
@@ -12,6 +12,7 @@ if (!admin.apps.length) {
 }
 const db = admin.firestore();
 
+// --- 2. HELPER FUNCTIONS ---
 async function getUserIdFromToken(event) {
   const authHeader = event.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) throw new Error('No Token');
@@ -20,7 +21,6 @@ async function getUserIdFromToken(event) {
   return decodedToken.uid;
 }
 
-// Helper Download
 async function urlToGenerativePart(fileUrl) {
     try {
         const response = await fetch(fileUrl, { headers: { 'User-Agent': 'Bot/1.0' } });
@@ -35,6 +35,200 @@ async function urlToGenerativePart(fileUrl) {
     } catch (e) { return null; }
 }
 
+// ==========================================
+// 🏛️ KAMAR A: STORY MODE HANDLER (DATABASE VERSION)
+// ==========================================
+async function handleStoryMode(params) {
+    const { db, userId, sessionId, characterId, userMessage, userName } = params;
+
+    // 1. AMBIL DATA KARAKTER & CERITA DARI DB
+    const charDoc = await db.collection('characters').doc(characterId).get();
+    if (!charDoc.exists) throw new Error("Karakter tidak ditemukan.");
+    
+    const charData = charDoc.data();
+    
+    // Ambil array story dari database.
+    const STORY_LINE = charData.storyChapters || []; 
+    
+    // Fallback jika cerita belum ditulis
+    if (STORY_LINE.length === 0) {
+        return { 
+            reply: JSON.stringify({ 
+                message: "[SAD] (Maaf, Author belum menulis skenario untuk karakter ini...)", 
+                choices: [], 
+                gameStatus: "finished" 
+            }), 
+            mode: 'story' 
+        };
+    }
+
+    // 2. Tentukan Chapter (Logic: Hitung jumlah chat / 4)
+    // (Nanti bisa Tuan upgrade pakai field 'currentChapter' di database session)
+    const historySnapshot = await db.collection('characters').doc(characterId)
+        .collection('chats').doc(userId).collection('sessions').doc(sessionId)
+        .collection('messages').orderBy('timestamp', 'asc').get();
+
+    const totalTurns = historySnapshot.size;
+    const turnsPerChapter = 5; // Ganti chapter setiap 5 balon chat
+    
+    let currentChapterIndex = Math.floor(totalTurns / turnsPerChapter);
+    
+    // Cegah index melebihi jumlah chapter
+    if (currentChapterIndex >= STORY_LINE.length) {
+        currentChapterIndex = STORY_LINE.length - 1; 
+    }
+
+    const currentScene = STORY_LINE[currentChapterIndex];
+    const isEnding = (currentChapterIndex === STORY_LINE.length - 1);
+
+    // 3. Siapkan History Text
+    let historyText = "";
+    historySnapshot.docs.forEach(doc => {
+        const d = doc.data();
+        let txt = d.text;
+        // Parse JSON history jika ada, ambil messagenya saja
+        try { if (d.sender !== 'user' && txt.trim().startsWith('{')) txt = JSON.parse(txt).message; } catch(e){}
+        historyText += `${d.sender}: ${txt}\n`;
+    });
+
+// 4. Prompt Engineering (VN Style - Lebih Hidup & Dramatis)
+    const systemInstruction = `
+    Kamu adalah Karakter Visual Novel bernama "${charData.name}".
+    
+    [STATUS CERITA SAAT INI]
+    BABAK: ${currentScene.title || 'Unknown'}
+    SITUASI: ${currentScene.context || '-'}
+    TUJUAN KAMU: ${currentScene.goal || '-'}
+    SYARAT LANJUT: ${currentScene.endCondition || '-'}
+    
+    [GAYA BICARA & VISUAL NOVEL STYLE]
+    1. JANGAN SELALU SINGKAT. Sesuaikan panjang respon dengan situasi.
+       - Jika sedang tegang/marah: Kalimat pendek, tegas.
+       - Jika sedang menjelaskan/sedih: Kalimat agak panjang, puitis, deskriptif.
+    2. Sertakan AKSI VISUAL di dalam tanda bintang *...*. 
+       Contoh: *menghela nafas panjang sambil melihat hujan* atau *tersenyum malu-malu*.
+    3. (Opsional) Sertakan SUARA HATI dalam tanda kurung (...) jika kamu menyembunyikan perasaan.
+       Contoh: "Aku baik-baik saja..." (Padahal aku sangat takut).
+    4. Gunakan Bahasa Indonesia yang luwes, tidak kaku, bisa sedikit gaul/formal sesuai peran.
+    5. Fokus pada EMOSI. Buat User merasakan suasana (immersive).
+
+    [ATURAN TEKNIS]
+    Output WAJIB format JSON tunggal. Jangan ada teks lain di luar JSON.
+
+    JSON FORMAT:
+    {
+      "message": "Dialog kamu (bisa gabungan *aksi* dan teks)",
+      "choices": [
+        { "text": "Respon User A", "type": "neutral" },
+        { "text": "Respon User B", "type": "neutral" }
+      ],
+      "gameStatus": "${isEnding ? 'finished' : 'ongoing'}"
+    }
+    
+    EMOTION LIST (Pilih satu untuk sprite): [IDLE], [HAPPY], [SAD], [ANGRY], [SHY], [SURPRISED], [THINKING]
+    `;
+
+    const fullPrompt = `
+    ${systemInstruction}
+    HISTORY:\n${historyText}
+    USER INPUT: "${userMessage}"
+    RESPONSE (JSON):
+    `;
+
+    // 5. Call Gemma API
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemma-3-27b-it:generateContent?key=${process.env.GEMINI_API_KEY}`;
+    const payload = {
+        contents: [{ parts: [{ text: fullPrompt }] }],
+        generationConfig: { temperature: 0.7, maxOutputTokens: 1000 }
+    };
+
+    const apiRes = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const data = await apiRes.json();
+    let reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+    
+    // Bersihkan Markdown JSON
+    reply = reply.replace(/```json/gi, '').replace(/```/g, '').trim();
+
+    try { 
+        const parsed = JSON.parse(reply);
+        if (isEnding) parsed.gameStatus = 'finished';
+        reply = JSON.stringify(parsed);
+    } catch (e) {
+        reply = JSON.stringify({ 
+            message: "[IDLE] (AI Error: JSON Invalid)", 
+            choices: [{text: "Lanjut", type: "neutral"}], 
+            gameStatus: "ongoing" 
+        });
+    }
+
+    return { reply, mode: 'story' };
+}
+
+// ==========================================
+// 🎡 KAMAR B: FREE MODE HANDLER
+// ==========================================
+async function handleFreeMode(params) {
+    const { db, characterId, sessionId, userId, userMessage, characterName, characterProfile, userName, userLocalTime } = params;
+
+    // 1. Handle Image
+    const isFile = userMessage.startsWith('http');
+    let filePart = null;
+    let finalUserMsg = userMessage;
+    if (isFile) {
+        filePart = await urlToGenerativePart(userMessage);
+        finalUserMsg = filePart ? "[SYSTEM: User kirim gambar]" : "[SYSTEM: File error]";
+    }
+
+    // 2. Get History
+    const historySnapshot = await db.collection('characters').doc(characterId)
+        .collection('chats').doc(userId).collection('sessions').doc(sessionId)
+        .collection('messages').orderBy('timestamp', 'desc').limit(10).get();
+
+    let historyContext = "";
+    historySnapshot.docs.reverse().forEach(doc => {
+        const d = doc.data();
+        if (d.text === userMessage && d.sender === 'user') return; 
+        let txt = d.text;
+        try { if (txt.startsWith('{')) txt = JSON.parse(txt).message; } catch(e){}
+        historyContext += `${d.sender === 'user' ? 'User' : characterName}: "${txt}"\n`;
+    });
+
+    // 3. Prompt Free Mode
+    const systemInstruction = `
+    Role: "${characterName}". Profile: "${characterProfile}".
+    User: "${userName}". Waktu: ${userLocalTime || 'Sekarang'}.
+    
+    ATURAN:
+    1. Bahasa Indonesia Gaul/Natural.
+    2. Pendek (2-3 kalimat).
+    3. WAJIB awali dengan TAG EMOSI: [IDLE], [HAPPY], [SAD], [ANGRY], [SURPRISED], [SHY], [THINKING].
+    
+    History:
+    ${historyContext}
+    
+    Pesan Baru: "${finalUserMsg}"
+    Respon:
+    `;
+
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemma-3-27b-it:generateContent?key=${process.env.GEMINI_API_KEY}`;
+    const payload = {
+        contents: [{ parts: [{ text: systemInstruction }] }],
+        generationConfig: { temperature: 0.85, maxOutputTokens: 500 }
+    };
+    if (filePart) payload.contents[0].parts.unshift(filePart);
+
+    const apiRes = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const data = await apiRes.json();
+    let reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "[IDLE] ...";
+
+    if (!reply.startsWith('[')) reply = `[IDLE] ${reply}`;
+
+    return { reply, mode: 'free' };
+}
+
+// ==========================================
+// 🛎️ MAIN HANDLER (RESEPSIONIS)
+// ==========================================
 exports.handler = async (event, context) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
 
@@ -42,205 +236,29 @@ exports.handler = async (event, context) => {
     const userId = await getUserIdFromToken(event);
     const body = JSON.parse(event.body);
     
-    const { 
-        userMessage, characterProfile, characterId, 
-        userPersona, userName, sessionId, userLocalTime,
-        mode = 'free', gameGoal 
-    } = body;
-    
-    const characterName = body.characterName || 'Character';
+    // Bungkus semua data
+    const params = { db, userId, ...body };
 
-    // ========================================================================
-    // 🎭 JALUR 1: STORY MODE (PAKAI GEMMA 3)
-    // ========================================================================
-    if (mode === 'story') {
-        
-        const effectiveGoal = (gameGoal && gameGoal.trim().length > 0) 
-            ? gameGoal 
-            : "Buat percakapan menarik dan biarkan pemain memilih takdirnya.";
+    console.log(`[REQUEST] Mode: ${body.mode}, Character: ${body.characterName}`);
 
-        // Prompt Story Mode: Dipertajam di bagian JSON Structure
-        const systemInstruction = `
-        Kamu adalah MAI, karakter visual novel yang hidup. Nama: "${characterName}".
-        GOAL: "${effectiveGoal}"
-        
-        INSTRUCTION:
-        1. GAYA BICARA: Santai tapi sopan, natural, seperti chat di WhatsApp. Jangan kaku/baku.
-        2. PANJANG: Jawab SINGKAT (maksimal 2-4 kalimat). 
-        3. SINGKATAN: Boleh pakai singkatan umum (yg, gak, udh, bgt) biar terasa manusiawi.
-        4. Jangan mengulang kata-kata User. Langsung respon intinya saja.
-        5. Tetap pada karakter (Roleplay), jangan keluar dari peran.
-        6. You MUST output a SINGLE JSON OBJECT. Do not write any text outside the JSON.
-
-        EMOTION LIST (WAJIB PILIH SATU):
-        [IDLE], [HAPPY], [SAD], [ANGRY], [SHY], [SURPRISED], [THINKING]
-        
-        JSON STRUCTURE (STRICT):
-        {
-          "message": "String (WAJIB dimulai dengan [TAG_EMOSI]. Contoh: '[HAPPY] Halo kak! Apa kabar?')",
-          "choices": [
-            { "text": "Pilihan A (Good)", "type": "good" },
-            { "text": "Pilihan B (Neutral)", "type": "neutral" },
-            { "text": "Pilihan C (Bad)", "type": "bad" }
-          ],
-          "gameStatus": "ongoing"
-        }
-        `;
-
-        const historySnapshot = await db.collection('characters').doc(characterId)
-            .collection('chats').doc(userId).collection('sessions').doc(sessionId)
-            .collection('messages').orderBy('timestamp', 'desc').limit(6).get();
-        
-        let historyText = "";
-        historySnapshot.docs.reverse().forEach(doc => {
-            const d = doc.data();
-            let txt = d.text;
-            // Parse JSON history jika ada, ambil messagenya saja
-            try { if (d.sender !== 'user' && txt.trim().startsWith('{')) txt = JSON.parse(txt).message; } catch(e){}
-            historyText += `${d.sender}: ${txt}\n`;
-        });
-
-        const fullPrompt = `
-        ${systemInstruction}
-        CONTEXT: User: ${userName}. History:\n${historyText}
-        INPUT: "${userMessage}"
-        RESPONSE (JSON):
-        `;
-
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemma-3-27b-it:generateContent?key=${process.env.GEMINI_API_KEY}`;
-        
-        const payload = {
-            contents: [{ parts: [{ text: fullPrompt }] }],
-            generationConfig: { 
-                temperature: 0.7, 
-                maxOutputTokens: 1000 
-            }
-        };
-
-        const apiRes = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-        if(!apiRes.ok) throw new Error(await apiRes.text());
-        const data = await apiRes.json();
-        let reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
-
-        reply = reply.replace(/```json/gi, '').replace(/```/g, '').trim();
-
-        try { JSON.parse(reply); } 
-        catch (e) { 
-            console.warn("Gemma output not valid JSON:", reply);
-            reply = JSON.stringify({ 
-                message: reply || "[SHY] (Maaf, aku melamun...)", 
-                choices: [{text:"Lanjut",type:"neutral"}] 
-            }); 
-        }
-
-        return { statusCode: 200, body: JSON.stringify({ reply, mode: 'story' }) };
-    }
-
-    // ========================================================================
-    // ☕ JALUR 2: FREE MODE (GEMMA 3) - REVISI BESAR DI SINI
-    // ========================================================================
-    else {
-        let timeString = userLocalTime || new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
-        
-        const isFile = userMessage.startsWith('http');
-        let filePart = null;
-        let finalUserMsg = userMessage;
-        if (isFile) {
-            filePart = await urlToGenerativePart(userMessage);
-            finalUserMsg = filePart ? "[SYSTEM: User kirim gambar]" : "[SYSTEM: File error]";
-        }
-
-        const historySnapshot = await db.collection('characters').doc(characterId)
-            .collection('chats').doc(userId).collection('sessions').doc(sessionId)
-            .collection('messages').orderBy('timestamp', 'desc').limit(10).get();
-
-        let historyContext = "";
-        historySnapshot.docs.reverse().forEach(doc => {
-            const d = doc.data();
-            if (d.text === userMessage && d.sender === 'user') return; 
-            let txt = d.text;
-            // Clean up JSON format if any, but KEEP THE EMOTION TAG inside string if possible
-            try { 
-                if (txt.startsWith('{')) {
-                    const parsed = JSON.parse(txt);
-                    txt = parsed.message; // Ambil teks yg masih ada [HAPPY]-nya
-                }
-            } catch(e){}
-            
-            historyContext += `${d.sender === 'user' ? 'User' : characterName}: "${txt}"\n`;
-        });
-
-        // PROMPT FREE MODE YANG SUDAH DIPERKUAT
-        const systemInstruction = `
-        Role: "${characterName}". Profile: "${characterProfile}".
-        Context: Waktu: ${timeString}. User: "${userName}".
-        
-        ATURAN UTAMA:
-        1. Gunakan BAHASA INDONESIA (Gaul/Sehari-hari).
-        2. Jawab singkat & natural (max 2-3 kalimat).
-        
-        ATURAN EMOSI (WAJIB & STRICT):
-        Setiap kalimat balasanmu HARUS diawali dengan salah satu TAG EMOSI berikut:
-        - [IDLE] (Biasa)
-        - [HAPPY] (Senang/Tertawa)
-        - [SAD] (Sedih/Kecewa)
-        - [ANGRY] (Marah/Kesal)
-        - [SURPRISED] (Kaget)
-        - [SHY] (Malu)
-        - [THINKING] (Bingung)
-
-        JANGAN PERNAH MENJAWAB TANPA TAG INI.
-        
-        CONTOH YANG BENAR:
-        User: Halo Mai!
-        Mai: [HAPPY] Halo juga! Senang ketemu kamu.
-        
-        User: Aku sedih nih.
-        Mai: [SAD] Yah, kenapa? Sini cerita sama aku.
-        
-        User: Hantu!!
-        Mai: [SURPRISED] Hah?! Mana?! Aku takut!
-
-        History Percakapan:
-        ${historyContext}
-        
-        Pesan Baru: "${finalUserMsg}"
-        Respon Kamu (Ingat Tag Emosi):
-        `;
-
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemma-3-27b-it:generateContent?key=${process.env.GEMINI_API_KEY}`;
-        const payload = {
-            contents: [{ parts: [{ text: systemInstruction }] }],
-            generationConfig: { temperature: 0.85, maxOutputTokens: 500 }
-        };
-        
-        if (filePart) payload.contents[0].parts.unshift(filePart);
-
-        const apiRes = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-        const data = await apiRes.json();
-        let reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "...";
-
-        // Fallback: Jika AI bandel ga kasih tag, kita paksa kasih [IDLE] biar frontend ga bingung
-        if (!reply.startsWith('[')) {
-            reply = `[IDLE] ${reply}`;
-        }
-
-        return { statusCode: 200, body: JSON.stringify({ reply, mode: 'free' }) };
+    // --- SWITCHING LOGIC ---
+    if (body.mode === 'story') {
+        const result = await handleStoryMode(params);
+        return { statusCode: 200, body: JSON.stringify(result) };
+    } else {
+        const result = await handleFreeMode(params);
+        return { statusCode: 200, body: JSON.stringify(result) };
     }
 
   } catch (error) {
     console.error("Handler Error:", error);
-    const isStoryRequest = (event.body && JSON.parse(event.body).mode === 'story');
+    const isStory = (event.body && JSON.parse(event.body).mode === 'story');
+    const msg = `[SAD] (Maaf, sistem error: ${error.message})`;
     
-    // Pesan Error yang ramah
-    const msg = error.message.includes("429") 
-        ? "[SAD] (Aduh, aku pusing... istirahat sebentar ya.)" 
-        : `[SAD] (Server Error: ${error.message})`;
-
-    const safeReply = isStoryRequest 
-        ? JSON.stringify({ message: msg, choices: [{text:"Coba Lagi",type:"neutral"}] })
+    const safeReply = isStory 
+        ? JSON.stringify({ message: msg, choices: [{text:"Retry",type:"neutral"}], gameStatus: "ongoing" })
         : msg;
 
-    return { statusCode: 200, body: JSON.stringify({ reply: safeReply, mode: isStoryRequest ? 'story' : 'free' }) };
+    return { statusCode: 200, body: JSON.stringify({ reply: safeReply, mode: isStory ? 'story' : 'free' }) };
   }
 };

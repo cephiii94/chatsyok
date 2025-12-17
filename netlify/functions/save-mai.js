@@ -1,81 +1,48 @@
 // File: netlify/functions/save-mai.js
+// VERSI: FIXED (Menyimpan Story Chapters & Mode)
 
 const admin = require('firebase-admin');
 
-// Inisialisasi Firebase Admin
 if (!admin.apps.length) {
   try {
     const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount)
-    });
-  } catch (e) {
-    console.error("Gagal inisialisasi Firebase Admin:", e);
-  }
+    admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+  } catch (e) { console.error("Firebase Init Error:", e); }
 }
 
 const db = admin.firestore();
 
-// Fungsi helper untuk verifikasi token
 async function getUserIdFromToken(event) {
   const authHeader = event.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    throw new Error('Header Otorisasi tidak ditemukan atau tidak valid.');
-  }
+  if (!authHeader || !authHeader.startsWith('Bearer ')) throw new Error('No Token');
   const token = authHeader.split('Bearer ')[1];
-  
-  try {
-    const decodedToken = await admin.auth().verifyIdToken(token);
-    return decodedToken.uid; 
-  } catch (error) {
-    console.error("Verifikasi token gagal:", error);
-    throw new Error('Token tidak valid atau kedaluwarsa.');
-  }
+  const decodedToken = await admin.auth().verifyIdToken(token);
+  return decodedToken.uid; 
 }
 
 exports.handler = async (event, context) => {
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Method Not Allowed' };
-  }
-
-  let userId;
-  try {
-    userId = await getUserIdFromToken(event);
-  } catch (error) {
-    return { statusCode: 401, body: JSON.stringify({ error: error.message }) };
-  }
+  if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
 
   try {
+    const userId = await getUserIdFromToken(event);
     const data = JSON.parse(event.body);
 
-    // Validasi data wajib
-    if (!data.name || !data.description || !data.image || !data.greeting) {
-      return { 
-        statusCode: 400, 
-        body: JSON.stringify({ error: 'Data wajib (nama, deskripsi, gambar, sapaan) tidak lengkap.' })
-      };
+    if (!data.name || !data.description || !data.image) {
+      return { statusCode: 400, body: JSON.stringify({ error: 'Data wajib tidak lengkap.' }) };
     }
 
-    // --- Logika untuk ID Baru ---
-    // (Mencari ID terbesar untuk auto-increment sederhana)
+    // Auto-ID Sederhana
     const charactersRef = db.collection('characters');
     const snapshot = await charactersRef.get();
-    
     let maxId = 0;
     snapshot.docs.forEach(doc => {
         const idNum = parseInt(doc.id, 10);
-        if (!isNaN(idNum) && idNum > maxId) {
-            maxId = idNum;
-        }
+        if (!isNaN(idNum) && idNum > maxId) maxId = idNum;
     });
-    
-    if (maxId < 4) { 
-        maxId = 4;
-    }
-    
+    if (maxId < 4) maxId = 4;
     const newId = (maxId + 1).toString();
 
-    // Siapkan data MAI untuk disimpan
+    // [BRI FIXED] Pastikan field storyChapters & mode masuk ke sini!
     const newMaiData = {
       name: data.name,
       description: data.description, 
@@ -86,29 +53,23 @@ exports.handler = async (event, context) => {
       visibility: data.visibility || 'public',
       creatorId: userId,
       
-      // ▼▼▼ TAMBAHAN: Simpan status VN ▼▼▼
+      // --- DATA VISUAL NOVEL ---
       isVnAvailable: data.isVnAvailable === true,
-      
-      // [BRI UPDATE: Simpan goal ke database]
-      gameGoal: data.gameGoal || '', 
-      // ▲▲▲ AKHIR TAMBAHAN ▲▲▲
-      
+      mode: data.mode || 'free',              // PENTING: simpan mode (story/free)
+      gameGoal: data.gameGoal || '',          // PENTING: simpan goal
+      storyChapters: data.storyChapters || [], // PENTING: simpan array chapter
+      sprites: data.sprites || {},            // PENTING: simpan sprite
+      // -------------------------
+
       createdAt: admin.firestore.FieldValue.serverTimestamp()
     };
 
-    // Simpan dokumen
     await charactersRef.doc(newId).set(newMaiData);
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ success: true, id: newId })
-    };
+    return { statusCode: 200, body: JSON.stringify({ success: true, id: newId }) };
 
   } catch (error) {
-    console.error("Error saving new MAI:", error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: error.message || "Gagal menyimpan MAI baru ke database." })
-    };
+    console.error("Save Error:", error);
+    return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
   }
 };
