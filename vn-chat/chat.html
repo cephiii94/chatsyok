@@ -39,26 +39,16 @@
         <img id="char-sprite" src="" alt="Character Sprite">
     </div>
 
-    <div class="vn-ui-layer">
+    <div class="vn-ui-layer" style="justify-content: flex-end;">
         
         <div class="dialogue-box">
             <div class="name-tag" id="char-name">Loading...</div>
             <div class="text-content" id="dialogue-text">Menghubungkan ke server...</div>
-        </div>
-
-        <div class="bottom-ui-wrapper">
             
-            <div id="choices-container" class="choices-container"></div>
-
             <div class="input-area">
-                <button id="attach-btn" class="icon-btn" title="Kirim Gambar" style="margin-right:5px;">📎</button>
-                
-                <textarea id="user-input" placeholder="Ketik pesan..." rows="1" oninput="autoResize(this)"></textarea>
-                
+                <input type="text" id="user-input" placeholder="Ketik pesan..." autocomplete="off">
                 <button id="btn-send">➤</button>
-                <input type="file" id="image-upload" accept="image/*" style="display: none;">
             </div>
-
         </div>
 
     </div>
@@ -76,14 +66,21 @@
     <div id="settings-overlay" class="overlay hidden">
         <div class="modal-box">
             <h3 style="margin-top:0; color:#5a8aa8;">Pengaturan User</h3>
+            
             <div class="form-group" style="margin-bottom:15px;">
                 <label style="display:block; font-weight:bold; margin-bottom:5px;">Nama Panggilan:</label>
-                <input type="text" id="setting-username" placeholder="Contoh: Tuan Cecep" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:6px;">
+                <input type="text" id="setting-username" placeholder="Contoh: Tuan Cecep" 
+                       style="width:100%; padding:8px; border:1px solid #ddd; border-radius:6px;">
             </div>
+
             <div class="form-group" style="margin-bottom:15px;">
                 <label style="display:block; font-weight:bold; margin-bottom:5px;">Peran / Persona Kamu:</label>
-                <textarea id="setting-persona" rows="3" placeholder="Contoh: Saya adalah atasan kamu..." style="width:100%; padding:8px; border:1px solid #ddd; border-radius:6px; font-family:inherit;"></textarea>
+                <textarea id="setting-persona" rows="3" 
+                          placeholder="Contoh: Saya adalah atasan kamu yang tegas tapi baik hati."
+                          style="width:100%; padding:8px; border:1px solid #ddd; border-radius:6px; font-family:inherit;"></textarea>
+                <small style="color:#666;">Jelaskan siapa kamu bagi karakter ini.</small>
             </div>
+
             <div style="text-align:right; gap:10px; display:flex; justify-content:flex-end;">
                 <button id="btn-close-settings" style="background:#ccc; border:none; padding:8px 16px; border-radius:6px; cursor:pointer;">Batal</button>
                 <button id="btn-save-settings" style="background:#8ecae6; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; color:#fff; font-weight:bold;">Simpan</button>
@@ -105,8 +102,12 @@
     <div id="custom-alert-modal" class="overlay hidden">
         <div class="modal-box" style="text-align: center;">
             <h3 id="alert-title" style="color: #023047; margin-top: 0;">Notifikasi</h3>
-            <p id="alert-msg" style="color: #333; font-size: 16px; margin: 20px 0;">Pesan notifikasi...</p>
-            <button id="btn-alert-ok" class="vn-btn-primary">OK, Mengerti</button>
+            <p id="alert-msg" style="color: #333; font-size: 16px; margin: 20px 0;">
+                Pesan notifikasi...
+            </p>
+            <button id="btn-alert-ok" class="vn-btn-primary">
+                OK, Mengerti
+            </button>
         </div>
     </div>
 
@@ -121,34 +122,47 @@
             <p class="level-msg">Hebat! Kamu semakin sepuh!</p>
             <button id="btn-close-level" class="level-btn">Lanjut Cerita ▶️</button>
         </div>
-        <div class="confetti c1"></div><div class="confetti c2"></div><div class="confetti c3"></div><div class="confetti c4"></div>
+        <div class="confetti c1"></div>
+        <div class="confetti c2"></div>
+        <div class="confetti c3"></div>
+        <div class="confetti c4"></div>
     </div>
 
     <div id="mode-selection-modal" class="overlay hidden" style="display: none;">
         <div class="modal-box" style="text-align: center; max-width: 400px;">
             <h3 style="color: #023047; margin-top: 0;">Pilih Mode Chat</h3>
-            <p style="color: #555; font-size: 0.9rem; margin-bottom: 20px;">Mau ngobrol santai atau mainkan cerita?</p>
+            <p style="color: #555; font-size: 0.9rem; margin-bottom: 20px;">
+                Mau ngobrol santai atau mainkan cerita?
+            </p>
+
             <div style="display: flex; flex-direction: column; gap: 10px;">
-                <button id="btn-mode-free" class="mode-btn" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); border: none; padding: 15px; border-radius: 12px; text-align: left; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <button id="btn-mode-free" class="mode-btn" style="
+                    background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+                    border: none; padding: 15px; border-radius: 12px;
+                    text-align: left; cursor: pointer; transition: transform 0.2s;
+                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                ">
                     <strong style="display:block; color:#333; font-size:1.1rem;">☕ Free Talk</strong>
-                    <small style="color:#555;">Ngobrol bebas tanpa skenario.</small>
+                    <small style="color:#555;">Ngobrol bebas tanpa skenario. Curhat sepuasnya.</small>
                 </button>
-                <button id="btn-mode-story" class="mode-btn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; padding: 15px; border-radius: 12px; text-align: left; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+
+                <button id="btn-mode-story" class="mode-btn" style="
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    border: none; padding: 15px; border-radius: 12px;
+                    text-align: left; cursor: pointer; transition: transform 0.2s;
+                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                ">
                     <strong style="display:block; color:#fff; font-size:1.1rem;">🎮 Story Mode</strong>
-                    <small style="color:#e0e0e0;">Ikuti alur cerita & tentukan takdirmu!</small>
+                    <small style="color:#e0e0e0;">Ikuti alur cerita, tentukan pilihanmu, capai endingnya!</small>
                 </button>
             </div>
-            <button id="btn-cancel-mode" style="margin-top: 20px; background: transparent; border: none; color: #888; cursor: pointer;">Batal</button>
+
+            <button id="btn-cancel-mode" style="margin-top: 20px; background: transparent; border: none; color: #888; cursor: pointer;">
+                Batal
+            </button>
         </div>
     </div>
 
-    <script>
-        // Script Kecil untuk Auto Resize Textarea
-        function autoResize(textarea) {
-            textarea.style.height = 'auto'; 
-            textarea.style.height = textarea.scrollHeight + 'px';
-        }
-    </script>
     <script src="chat.js"></script>
 </body>
 </html>
