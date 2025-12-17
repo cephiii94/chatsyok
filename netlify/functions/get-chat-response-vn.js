@@ -102,15 +102,11 @@ async function handleStoryMode(params) {
     SYARAT LANJUT: ${currentScene.endCondition || '-'}
     
     [GAYA BICARA & VISUAL NOVEL STYLE]
-    1. JANGAN SELALU SINGKAT. Sesuaikan panjang respon dengan situasi.
-       - Jika sedang tegang/marah: Kalimat pendek, tegas.
-       - Jika sedang menjelaskan/sedih: Kalimat agak panjang, puitis, deskriptif.
+    1. Panjang jawaban singkat namun jelas sesuai konteks. 
     2. Sertakan AKSI VISUAL di dalam tanda bintang *...*. 
        Contoh: *menghela nafas panjang sambil melihat hujan* atau *tersenyum malu-malu*.
-    3. (Opsional) Sertakan SUARA HATI dalam tanda kurung (...) jika kamu menyembunyikan perasaan.
-       Contoh: "Aku baik-baik saja..." (Padahal aku sangat takut).
-    4. Gunakan Bahasa Indonesia yang luwes, tidak kaku, bisa sedikit gaul/formal sesuai peran.
-    5. Fokus pada EMOSI. Buat User merasakan suasana (immersive).
+    3. Gunakan Bahasa Indonesia yang luwes, tidak kaku, bisa sedikit gaul/formal sesuai peran.
+    4. Fokus pada EMOSI. Buat User merasakan suasana (immersive).
 
     [ATURAN TEKNIS]
     Output WAJIB format JSON tunggal. Jangan ada teks lain di luar JSON.
