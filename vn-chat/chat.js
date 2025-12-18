@@ -1,5 +1,6 @@
 // vn-chat/chat.js
-// VERSI: ULTIMATE FIXED (Full Feature + Compact UI + Restore All Functions)
+// VERSI: ULTIMATE FIXED (Full Feature + Auto Resume Story + Compact UI)
+//
 
 // --- 1. GLOBAL VARIABLES ---
 let currentCharacterId = "1";
@@ -21,8 +22,7 @@ const sprites = {
     'SURPRISED': '', 'SHY': '', 'THINKING': ''
 };
 
-// --- SETUP UI PILIHAN (REVISI: COMPACT & POSISI DI ATAS CHAT AREA) ---
-// --- SETUP UI PILIHAN (REVISI: CLEAN CODE & CSS CLASS) ---
+// --- SETUP UI PILIHAN ---
 const existingContainer = document.getElementById('choices-container');
 if (existingContainer) existingContainer.remove(); 
 
@@ -223,6 +223,7 @@ function saveSettings() {
     showNotification("Sukses", "Pengaturan user berhasil disimpan!");
 }
 
+// [MODIFIKASI] Update fungsi load untuk handle RESUME STORY
 async function loadCharacterAndState() {
     try {
         const res = await fetch(`/.netlify/functions/get-character?id=${currentCharacterId}`);
@@ -234,13 +235,13 @@ async function loadCharacterAndState() {
         currentCharacterName = char.name;
         document.getElementById('char-name').textContent = char.name;
 
-        // [LOGIKA UI BERDASARKAN MODE]
+        // UI Logic
         const inputArea = document.querySelector('.input-area');
         const userInput = document.getElementById('user-input');
 
         if (isStoryMode) {
             console.log("🎮 MODE: STORY");
-            if(inputArea) inputArea.style.display = 'none'; // Sembunyikan area input
+            if(inputArea) inputArea.style.display = 'none'; 
         } else {
             console.log("☕ MODE: FREE");
             if(inputArea) inputArea.style.display = 'flex';
@@ -262,7 +263,7 @@ async function loadCharacterAndState() {
             document.querySelector('.vn-background').style.backgroundImage = `url('${char.backgroundImage}')`;
         }
 
-        // Load History
+        // [MODIFIKASI] Logika Restore History & Auto Resume
         if (currentUser) {
             const token = await currentUser.getIdToken();
             const histRes = await fetch(`/.netlify/functions/get-history?id=${currentCharacterId}&sessionId=${currentSessionId}`, {
@@ -271,34 +272,50 @@ async function loadCharacterAndState() {
             const history = await histRes.json();
 
             if (history && history.length > 0) {
-                // Restore chat terakhir
                 const lastMsg = history[history.length - 1];
                 
+                // KASUS 1: Chat terakhir adalah BOT (Kita restore tampilannya)
                 if (lastMsg.sender !== 'user') {
                     let displayText = lastMsg.text;
                     let choicesToRestore = null;
 
-                    // Cek apakah ini format Story (JSON)
+                    // Cek & Parse JSON Story Mode
                     if(isStoryMode) {
                         try {
-                           if (displayText.startsWith('{')) {
-                               const parsed = JSON.parse(displayText);
+                           // Bersihkan markdown code block jika ada
+                           let cleanJson = displayText.replace(/```json/gi, '').replace(/```/g, '').trim();
+                           if (cleanJson.startsWith('{')) {
+                               const parsed = JSON.parse(cleanJson);
                                displayText = parsed.message;
                                choicesToRestore = parsed.choices;
                            }
-                        } catch(e){}
+                        } catch(e) { console.warn("Parse Error:", e); }
                     }
 
                     const { emotion, cleanText } = parseReply(displayText);
                     updateSprite(emotion);
-                    typewriter(cleanText);
+                    
+                    // Pakai textContent langsung (bypass typewriter biar cepat saat loading)
+                    document.getElementById('dialogue-text').textContent = cleanText;
                     
                     // Restore tombol pilihan jika ada
-                    if(choicesToRestore) setTimeout(() => showChoices(choicesToRestore), 500);
+                    if(choicesToRestore && choicesToRestore.length > 0) {
+                        showChoices(choicesToRestore);
+                    } else if (!isStoryMode) {
+                        enableInput(true);
+                    }
 
-                } else {
-                    updateSprite('IDLE');
-                    typewriter(`(Kamu): ${lastMsg.text}`);
+                } 
+                // KASUS 2: Chat terakhir adalah USER (Bot belum jawab/error sebelumnya)
+                else {
+                    // Tampilkan pesan user agar tidak bingung
+                    document.getElementById('dialogue-text').innerText = `(Kamu): ${lastMsg.text} \n\n(Melanjutkan cerita...)`;
+                    
+                    // AUTO-TRIGGER: Kirim ulang pesan user ke AI untuk minta jawaban
+                    console.log("🔄 Auto-resume: Memicu respons untuk pesan terakhir...");
+                    
+                    // Parameter 'true' di sini agar tidak save double ke DB
+                    await sendMessage("...", true);
                 }
             } else {
                 // HISTORY KOSONG (NEW GAME)
@@ -319,7 +336,8 @@ async function loadCharacterAndState() {
 
 // --- 4. MAIN CHAT LOGIC ---
 
-async function sendMessage(manualText = null) {
+// [MODIFIKASI] Tambah param isResume untuk mencegah double save saat auto-trigger
+async function sendMessage(manualText = null, isResume = false) {
     
     const input = document.getElementById('user-input');
     const text = manualText || input.value.trim();
@@ -330,8 +348,8 @@ async function sendMessage(manualText = null) {
     enableInput(false); 
     choicesContainer.style.display = 'none';
 
-    // Tampilkan "..." kecuali saat trigger [START STORY]
-    if (text !== "[START STORY]") {
+    // Jika sedang Resume, biarkan teks lama "(Melanjutkan cerita...)"
+    if (!isResume && text !== "[START STORY]") {
         document.getElementById('dialogue-text').innerText = "..."; 
     }
 
@@ -348,11 +366,11 @@ async function sendMessage(manualText = null) {
             sessionId: currentSessionId,
             userName: currentUserName,
             userPersona: currentUserPersona,
-            
-            // [MODE LOGIC]
             mode: isStoryMode ? 'story' : 'free',
-            gameGoal: currentCharacter ? (currentCharacter.gameGoal || '') : ''
-        };
+            gameGoal: (currentCharacter && currentCharacter.gameGoal) 
+                        ? currentCharacter.gameGoal 
+                        : 'Jawab respons user sesuai karakter dan alur cerita.'
+            };
 
         const res = await fetch('/.netlify/functions/get-chat-response-vn', {
             method: 'POST',
@@ -362,17 +380,14 @@ async function sendMessage(manualText = null) {
 
         if (!res.ok) throw new Error("Gagal respon server (" + res.status + ")");
 
-        // Simpan pesan user (kecuali pesan sistem)
-        if (text !== "[START STORY]") {
+        // [MODIFIKASI] Simpan pesan user (kecuali Resume atau Start Story)
+        if (!isResume && text !== "[START STORY]") {
             saveMessage('user', text); 
         }
 
         const data = await res.json();
-        // Tambahkan ini buat ngintip jawaban mentah dari AI
-        console.log("Jawaban AI Mentah:", data.reply); 
+        console.log("Jawaban AI:", data.reply); 
 
-        const { emotion, cleanText } = parseReply(data.reply);
-        
         // --- HANDLE RESPONSE ---
         if (isStoryMode || data.mode === 'story') {
             handleStoryResponse(data.reply);
@@ -387,7 +402,6 @@ async function sendMessage(manualText = null) {
     } catch (e) {
         console.error(e);
         document.getElementById('dialogue-text').innerText = "Error: " + e.message;
-        // Buka input lagi jika error (hanya di Free Mode)
         if (!isStoryMode) enableInput(true); 
     }
 }
@@ -434,28 +448,23 @@ function handleStoryResponse(jsonRaw) {
     }
 }
 
-// --- FUNGSI TAMPILAN PILIHAN (VERSI CLEAN) ---
-// --- FUNGSI TAMPILAN PILIHAN (Clean & Class-based) ---
+// --- FUNGSI TAMPILAN PILIHAN ---
 function showChoices(choices) {
     choicesContainer.innerHTML = '';
-    choicesContainer.style.display = 'flex'; // Aktifkan container
+    choicesContainer.style.display = 'flex'; 
     
     choices.forEach((choice, index) => {
         const btn = document.createElement('button');
-        
-        // Masukkan teks
         btn.textContent = choice.text;
         
-        // Tambahkan class CSS
         btn.classList.add('choice-btn');
         if (choice.type === 'good') btn.classList.add('type-good');
         if (choice.type === 'bad') btn.classList.add('type-bad');
 
-        // Staggered Animation (Muncul berurutan biar keren)
         btn.style.animationDelay = `${index * 0.1}s`;
 
         btn.onclick = () => {
-            choicesContainer.style.display = 'none'; // Sembunyikan
+            choicesContainer.style.display = 'none'; 
             sendMessage(choice.text); // Kirim jawaban
         };
         
@@ -545,7 +554,7 @@ function closeModalVN(modal) {
     setTimeout(() => modal.classList.add('hidden'), 300);
 }
 
-// --- 6. HISTORY & LOG UTILS (INI YANG SEBELUMNYA HILANG) ---
+// --- 6. HISTORY & LOG UTILS ---
 
 async function openLog() {
     const logOverlay = document.getElementById('log-overlay');
@@ -576,6 +585,7 @@ async function openLog() {
                 
                 let displayText = msg.text;
                 try {
+                     // Jika JSON Story, ambil pesannya saja buat log
                      if(displayText.trim().startsWith('{')) {
                         displayText = JSON.parse(displayText).message;
                      }
@@ -619,7 +629,7 @@ async function deleteHistory() {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
-        // Reset Session Key sesuai mode
+        // Reset Session Key
         const sessionKey = `vn_session_${currentUser.uid}_${currentCharacterId}_${isStoryMode ? 'story' : 'free'}`;
         localStorage.removeItem(sessionKey);
         
@@ -638,7 +648,7 @@ async function deleteHistory() {
     }
 }
 
-// --- 7. INITIALIZATION (INIT VN YANG SEBELUMNYA HILANG) ---
+// --- 7. INITIALIZATION ---
 
 async function initVN() {
     const params = new URLSearchParams(window.location.search);
@@ -675,7 +685,7 @@ async function initVN() {
 
 // --- 8. EVENT LISTENERS ---
 document.addEventListener('DOMContentLoaded', () => {
-    // Tombol-tombol standar
+    // Tombol standar
     const btnSend = document.getElementById('btn-send');
     const input = document.getElementById('user-input');
     const btnBack = document.getElementById('btn-back');
@@ -686,19 +696,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if(btnSend) btnSend.addEventListener('click', () => sendMessage());
     if(input) input.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
 
-    // 1. Toggle Menu (Buka/Tutup)
+    // Menu System
     if (btnMenu && menuDropdown) {
         btnMenu.addEventListener('click', (e) => {
-            e.stopPropagation(); // Biar gak langsung ketutup sama event klik body
+            e.stopPropagation(); 
             menuDropdown.classList.toggle('hidden');
             btnMenu.classList.toggle('active');
         });
     }
 
-    // 2. Klik di luar menu -> Tutup Menu
     document.addEventListener('click', (e) => {
         if (menuDropdown && !menuDropdown.classList.contains('hidden')) {
-            // Jika yang diklik BUKAN bagian dari menu atau tombol trigger
             if (!menuDropdown.contains(e.target) && e.target !== btnMenu) {
                 menuDropdown.classList.add('hidden');
                 btnMenu.classList.remove('active');
@@ -706,7 +714,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 3. Saat salah satu item menu diklik -> Tutup Menu juga (Opsional, biar rapi)
     const menuItems = document.querySelectorAll('.menu-item');
     menuItems.forEach(item => {
         item.addEventListener('click', () => {
@@ -715,7 +722,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Tombol Settings
+    // Settings
     document.getElementById('btn-settings').addEventListener('click', () => {
         loadSettings(); document.getElementById('settings-overlay').classList.remove('hidden');
     });
@@ -724,12 +731,12 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('settings-overlay').classList.add('hidden');
     });
 
-    // Tombol Log (Ini yang bikin error kalau fungsinya gak ada)
+    // Log & History
     document.getElementById('btn-log').addEventListener('click', openLog);
     document.getElementById('close-log').addEventListener('click', closeLog);
     document.getElementById('btn-delete-history').addEventListener('click', deleteHistory);
 
-    // Alert Listener
+    // Alert
     const btnAlertOk = document.getElementById('btn-alert-ok');
     const alertModal = document.getElementById('custom-alert-modal');
     if(btnAlertOk && alertModal) {
