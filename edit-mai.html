@@ -151,6 +151,32 @@
                     <h3 style="color:#00e5ff; margin-bottom:10px;">Editor Skenario</h3>
                     <p style="color:#666; font-size:0.9rem;">Ubah alur cerita di sini.</p>
                     
+                    <div class="asset-upload-box" style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px dashed #2196f3; margin-top: 15px;">
+                        <h4 style="margin-top: 0; color: #0d47a1; margin-bottom: 5px;">📤 Quick Asset Uploader</h4>
+                        <p style="font-size: 0.85rem; margin-bottom: 10px; color: #555; margin-top:0;">
+                            Upload Background/Sprite di sini untuk mendapatkan URL-nya.
+                        </p>
+                        
+                        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                            <input type="file" id="quick-asset-input" accept="image/*" style="display: none;">
+                            <label for="quick-asset-input" 
+                                   style="cursor: pointer; background: #fff; border: 1px solid #ccc; padding: 8px 15px; border-radius: 5px; font-size: 0.9rem; font-weight: bold; color: #555; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: all 0.2s;">
+                                📂 Pilih File / Upload
+                            </label>
+                            <span id="quick-upload-status" style="font-size: 0.8rem; font-weight: bold; color: #666;"></span>
+                        </div>
+    
+                        <div id="quick-upload-result" style="display: none; margin-top: 10px; display: flex; gap: 5px;">
+                            <input type="text" id="quick-asset-url" readonly 
+                                   placeholder="URL akan muncul di sini..."
+                                   style="flex: 1; padding: 8px; font-size: 0.9rem; background: #fff; border: 1px solid #ccc; border-radius: 4px; color: #333;">
+                            
+                            <button type="button" id="btn-copy-asset" 
+                                    style="background: #0d47a1; color: white; border: none; padding: 8px 15px; cursor: pointer; border-radius: 4px; font-weight: bold;">
+                                Copy
+                            </button>
+                        </div>
+                    </div>
                     <div class="form-group" style="margin-top:15px;">
                         <label>Tujuan Akhir (Game Goal)</label>
                         <textarea id="mai-game-goal" rows="2" style="background:white; color:#333; border:1px solid #ccc;"></textarea>

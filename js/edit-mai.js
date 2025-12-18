@@ -1,7 +1,8 @@
 // File: js/edit-mai.js
-// VERSI: FULL HYBRID EDIT (Populate + Update)
+// VERSI: FULL HYBRID EDIT (Populate + Update + Quick Uploader)
+//
 
-// Global variable untuk menyimpan data lama (terutama URL gambar)
+// Global variable
 let currentData = {};
 
 // ==========================================
@@ -49,7 +50,6 @@ async function uploadSingleImage(file, token) {
     return data.secure_url;
 }
 
-// LOGIKA UI (Sama seperti create-mai)
 window.switchTab = function(tabName) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -85,13 +85,10 @@ window.updateFileName = function(input, labelId) {
     }
 };
 
-// --- LOGIKA CHAPTER BUILDER (Versi Populate) ---
-// Kita tambahkan parameter opsional 'data' untuk mengisi nilai awal
 window.addChapterInput = function(data = null) {
     const container = document.getElementById('chapters-container');
     const index = container.children.length; 
     
-    // Default value kalau kosong
     const valTitle = data ? data.title : "";
     const valContext = data ? data.context : "";
     const valGoal = data ? data.goal : "";
@@ -171,6 +168,51 @@ document.addEventListener('DOMContentLoaded', async () => {
     const statusMsg = document.getElementById('form-status');
     const submitBtn = document.getElementById('submit-btn');
 
+    // [MODIFIKASI] QUICK ASSET UPLOADER LOGIC
+    const quickInput = document.getElementById('quick-asset-input');
+    const quickStatus = document.getElementById('quick-upload-status');
+    const quickResultBox = document.getElementById('quick-upload-result');
+    const quickUrlInput = document.getElementById('quick-asset-url');
+    const btnCopy = document.getElementById('btn-copy-asset');
+
+    if (quickInput) {
+        quickInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            quickStatus.textContent = "Mengupload...";
+            quickStatus.style.color = "#d35400";
+            if(quickUrlInput) quickUrlInput.value = "";
+            if(quickResultBox) quickResultBox.style.display = 'none';
+
+            try {
+                const token = await getAuthTokenSafe();
+                const url = await uploadSingleImage(file, token);
+
+                quickStatus.textContent = "✅ Selesai!";
+                quickStatus.style.color = "green";
+                
+                if(quickResultBox) quickResultBox.style.display = 'flex';
+                if(quickUrlInput) quickUrlInput.value = url;
+
+            } catch (err) {
+                console.error(err);
+                quickStatus.textContent = "❌ Error: " + err.message;
+                quickStatus.style.color = "red";
+            }
+        });
+
+        if (btnCopy && quickUrlInput) {
+            btnCopy.addEventListener('click', () => {
+                quickUrlInput.select();
+                document.execCommand('copy');
+                const originalText = btnCopy.textContent;
+                btnCopy.textContent = "Copied!";
+                setTimeout(() => btnCopy.textContent = originalText, 1500);
+            });
+        }
+    }
+
     // C. FETCH DATA KARAKTER LAMA
     try {
         statusMsg.textContent = "Mengambil data...";
@@ -178,7 +220,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const res = await fetch(`/.netlify/functions/get-character?id=${charId}`);
         if(!res.ok) throw new Error("Gagal mengambil data");
         
-        currentData = await res.json(); // Simpan di global var
+        currentData = await res.json(); 
         
         // --- POPULATE FORM ---
         document.getElementById('char-id').value = charId;
@@ -206,7 +248,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('mai-is-vn').checked = true;
         }
 
-        // Sprites: Tandai kotak jika sudah ada gambar (User interface feedback)
+        // Sprites: Tandai kotak jika sudah ada gambar
         if (currentData.sprites) {
             ['happy', 'sad', 'angry', 'shy', 'surprised'].forEach(emo => {
                 if (currentData.sprites[emo]) {
@@ -219,16 +261,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         }
 
-        // STORY CHAPTERS: Loop dan bangun UI
+        // STORY CHAPTERS
         const chaptersContainer = document.getElementById('chapters-container');
-        chaptersContainer.innerHTML = ""; // Bersihkan
+        chaptersContainer.innerHTML = ""; 
         
         if (currentData.storyChapters && currentData.storyChapters.length > 0) {
             currentData.storyChapters.forEach(chap => {
-                window.addChapterInput(chap); // Panggil fungsi dengan data
+                window.addChapterInput(chap); 
             });
-        } else {
-            // Kalau belum ada chapter, jangan tambah apa-apa (biar bersih)
         }
 
         statusMsg.textContent = "";
@@ -252,8 +292,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         statusMsg.textContent = "Mengupdate data...";
 
         try {
-            // 1. Upload Gambar (Hanya jika user memilih file baru)
-            // Kalau input kosong, pakai URL lama dari currentData
+            // 1. Upload Gambar
             
             // Avatar Utama
             let finalImageUrl = currentData.image;
@@ -267,7 +306,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const finalSprites = currentData.sprites || {};
             const emotions = ['happy', 'sad', 'angry', 'shy', 'surprised'];
             
-            // Default Idle = Avatar Utama
             finalSprites['idle'] = finalImageUrl;
 
             for (const emo of emotions) {
@@ -291,7 +329,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // 4. Susun Payload
             const updateData = {
-                id: charId, // PENTING: ID untuk update
+                id: charId, 
                 name: document.getElementById('mai-name').value,
                 greeting: document.getElementById('mai-greeting').value,
                 tagline: document.getElementById('mai-tagline').value,
@@ -308,7 +346,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 sprites: finalSprites
             };
 
-            // 5. Kirim ke Backend (Update)
+            // 5. Kirim ke Backend
             const res = await fetch('/.netlify/functions/update-mai', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -320,7 +358,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             statusMsg.textContent = "✅ Update Berhasil!";
             statusMsg.className = "success";
             
-            // Refresh cache & redirect
             sessionStorage.removeItem('mai_chars_user');
             setTimeout(() => { window.location.href = 'index.html'; }, 1000);
 

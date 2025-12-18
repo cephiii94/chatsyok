@@ -1,5 +1,6 @@
 // File: js/create-mai.js
-// VERSI: FINAL HYBRID (Tabs + Light Mode + Modern Uploads)
+// VERSI: FINAL HYBRID (Tabs + Light Mode + Modern Uploads + Quick Uploader)
+//
 
 // ==========================================
 // 1. HELPER FUNCTIONS (Firebase & Upload)
@@ -53,17 +54,13 @@ async function uploadSingleImage(file, token) {
 // 2. GLOBAL UI FUNCTIONS (Attached to Window)
 // ==========================================
 
-// A. Logika Pindah Tab
 window.switchTab = function(tabName) {
-    // 1. Reset active state
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
 
-    // 2. Activate target
     const targetTab = document.getElementById(tabName);
     if(targetTab) targetTab.classList.add('active');
 
-    // 3. Highlight button
     const buttons = document.querySelectorAll('.tab-btn');
     buttons.forEach(btn => {
         if(btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(tabName)) {
@@ -71,39 +68,32 @@ window.switchTab = function(tabName) {
         }
     });
 
-    // 4. Auto-Check VN Mode
     const vnCheck = document.getElementById('mai-is-vn');
     if (tabName === 'tab-visual' || tabName === 'tab-skenario') {
         if(vnCheck) vnCheck.checked = true;
     }
 };
 
-// B. Update UI Saat File Dipilih (MODERN UPLOAD BUTTON)
 window.updateFileName = function(input, labelId) {
     const label = document.getElementById(labelId);
     if (!label) return;
 
     if (input.files && input.files[0]) {
-        // Ambil nama file, potong jika kepanjangan
         let fileName = input.files[0].name;
         if (fileName.length > 15) fileName = fileName.substring(0, 12) + "...";
         
-        // Update Teks Label
         if (label.classList.contains('sprite-upload-box')) {
-            // Style Kotak (Visual Tab)
             label.classList.add('has-file');
             label.innerHTML = `<div class="icon">✅</div><span>${fileName}</span>`;
             label.style.borderColor = "#28a745";
             label.style.background = "#e6fffa";
         } else {
-            // Style Tombol (Identitas Tab)
             label.innerHTML = `✅ ${fileName}`;
             label.style.borderColor = "#28a745";
             label.style.color = "#28a745";
             label.style.background = "#e6fffa";
         }
     } else {
-        // Reset jika cancel
         if (label.classList.contains('sprite-upload-box')) {
             label.classList.remove('has-file');
             label.innerHTML = `<div class="icon">📤</div><span>Upload</span>`;
@@ -118,12 +108,10 @@ window.updateFileName = function(input, labelId) {
     }
 };
 
-// C. Tambah Input Chapter (LIGHT MODE FIXED)
 window.addChapterInput = function() {
     const container = document.getElementById('chapters-container');
     const index = container.children.length; 
     
-    // Perhatikan: Background #f8f9fa (Putih Abu), Text #333 (Hitam)
     const html = `
     <div class="chapter-item" id="chapter-${index}" style="background:#f8f9fa; padding:15px; margin-bottom:15px; border-left: 4px solid #007bff; border: 1px solid #eee; border-radius: 6px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
@@ -157,13 +145,11 @@ window.addChapterInput = function() {
     container.insertAdjacentHTML('beforeend', html);
 };
 
-// D. Hapus Chapter
 window.removeChapter = function(index) {
     const item = document.getElementById(`chapter-${index}`);
     if (item) item.remove();
 };
 
-// E. Ambil Data Story
 function getStoryChapters() {
     const items = document.querySelectorAll('.chapter-item');
     let chapters = [];
@@ -198,7 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const avatarPreview = document.getElementById('avatar-preview');
     const submitButton = document.getElementById('submit-btn');
     const formStatus = document.getElementById('form-status');
-    const vnCheckbox = document.getElementById('mai-is-vn'); // Hidden checkbox
+    const vnCheckbox = document.getElementById('mai-is-vn'); 
 
     // 1. Auth Check
     const auth = firebase.auth();
@@ -206,7 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!user) window.location.href = 'login.html';
     });
 
-    // 2. Preview Avatar Utama (Fallback jika onchange di HTML gagal)
+    // 2. Preview Avatar Utama
     if (mainImageInput) {
         mainImageInput.addEventListener('change', () => {
             const file = mainImageInput.files[0];
@@ -220,7 +206,55 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 3. HANDLE SUBMIT
+    // [MODIFIKASI] 3. QUICK ASSET UPLOADER LOGIC
+    const quickInput = document.getElementById('quick-asset-input');
+    const quickStatus = document.getElementById('quick-upload-status');
+    const quickResultBox = document.getElementById('quick-upload-result');
+    const quickUrlInput = document.getElementById('quick-asset-url');
+    const btnCopy = document.getElementById('btn-copy-asset');
+
+    if (quickInput) {
+        quickInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // UI Loading
+            quickStatus.textContent = "Mengupload...";
+            quickStatus.style.color = "#d35400";
+            if(quickUrlInput) quickUrlInput.value = "";
+            if(quickResultBox) quickResultBox.style.display = 'none';
+
+            try {
+                // Gunakan helper yang sudah ada
+                const token = await getAuthTokenSafe();
+                const url = await uploadSingleImage(file, token);
+
+                // Sukses
+                quickStatus.textContent = "✅ Selesai!";
+                quickStatus.style.color = "green";
+                
+                if(quickResultBox) quickResultBox.style.display = 'flex';
+                if(quickUrlInput) quickUrlInput.value = url;
+
+            } catch (err) {
+                console.error(err);
+                quickStatus.textContent = "❌ Error: " + err.message;
+                quickStatus.style.color = "red";
+            }
+        });
+
+        if (btnCopy && quickUrlInput) {
+            btnCopy.addEventListener('click', () => {
+                quickUrlInput.select();
+                document.execCommand('copy');
+                const originalText = btnCopy.textContent;
+                btnCopy.textContent = "Copied!";
+                setTimeout(() => btnCopy.textContent = originalText, 1500);
+            });
+        }
+    }
+
+    // 4. HANDLE SUBMIT
     if (form) {
         form.addEventListener('submit', async (e) => {
             e.preventDefault();

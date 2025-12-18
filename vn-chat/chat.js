@@ -3,6 +3,7 @@
 //
 
 // --- 1. GLOBAL VARIABLES ---
+let isVNStarted = false; // <--- TAMBAHKAN INI (GEMBOKNYA)
 let currentCharacterId = "1";
 let currentCharacterName = "MAI";
 let currentCharacterProfile = "MAI default.";
@@ -406,6 +407,8 @@ async function sendMessage(manualText = null, isResume = false) {
     }
 }
 
+//
+
 function handleStoryResponse(jsonRaw) {
     let data;
     try {
@@ -430,15 +433,54 @@ function handleStoryResponse(jsonRaw) {
         return;
     }
 
-    // 1. Teks & Emosi
-    const { emotion, cleanText } = parseReply(data.message);
-    updateSprite(emotion);
+    // --- FITUR BARU: DYNAMIC SCENE (Update Background & Sprite) ---
+    
+    // 1. Ganti Background jika ada key "bg" atau "background"
+    // Contoh JSON: { "message": "...", "bg": "https://link-gambar.com/taman.jpg" }
+    const newBg = data.bg || data.background;
+    if (newBg) {
+        const bgEl = document.querySelector('.vn-background');
+        // Preload image biar gak kedip
+        const img = new Image();
+        img.src = newBg;
+        img.onload = () => {
+            bgEl.style.transition = 'background-image 0.5s ease-in-out'; // Efek transisi halus
+            bgEl.style.backgroundImage = `url('${newBg}')`;
+        };
+    }
+
+    // 2. Ganti Sprite jika ada key "sprite" atau "image"
+    // Contoh JSON: { "message": "...", "sprite": "https://link-gambar.com/mai-marah.png" }
+    const newSprite = data.sprite || data.image;
+    if (newSprite) {
+        // Cek apakah ini URL gambar atau nama emosi (HAPPY, SAD, dll)
+        if (newSprite.startsWith('http')) {
+            // Kalau URL, langsung ganti gambarnya
+            const imgEl = document.getElementById('char-sprite');
+            imgEl.style.opacity = 0;
+            setTimeout(() => {
+                imgEl.src = newSprite;
+                imgEl.style.opacity = 1;
+            }, 200);
+        } else {
+            // Kalau cuma nama emosi (misal: "ANGRY"), panggil fungsi updateSprite biasa
+            updateSprite(newSprite);
+        }
+    } else {
+        // Jika tidak ada request sprite khusus, cek dari teks emosi [HAPPY]
+        const { emotion } = parseReply(data.message);
+        updateSprite(emotion);
+    }
+    // -----------------------------------------------------------
+
+    // 3. Tampilkan Teks (Bersihkan tag emosi dulu)
+    const { cleanText } = parseReply(data.message);
     typewriter(cleanText);
 
-    // 2. Simpan Full JSON ke History
+    // 4. Simpan Full JSON ke History
     saveMessage('bot', JSON.stringify(data));
 
-    // 3. Tampilkan Pilihan
+    // 5. Tampilkan Pilihan
     const delay = Math.min(cleanText.length * 20 + 500, 3000);
     
     if (data.choices && data.choices.length > 0) {
@@ -651,6 +693,10 @@ async function deleteHistory() {
 // --- 7. INITIALIZATION ---
 
 async function initVN() {
+    // [MODIFIKASI] Cek apakah VN sudah berjalan? Kalau sudah, berhenti.
+    if (isVNStarted) return; 
+    isVNStarted = true; // Kunci gemboknya!
+
     const params = new URLSearchParams(window.location.search);
     const idFromUrl = params.get('id');
     const modeFromUrl = params.get('mode'); // 'free' atau 'story'
