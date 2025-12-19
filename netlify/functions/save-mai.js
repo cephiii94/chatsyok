@@ -1,6 +1,4 @@
 // File: netlify/functions/save-mai.js
-// VERSI: FIXED (Menyimpan Story Chapters & Mode)
-
 const admin = require('firebase-admin');
 
 if (!admin.apps.length) {
@@ -9,15 +7,15 @@ if (!admin.apps.length) {
     admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
   } catch (e) { console.error("Firebase Init Error:", e); }
 }
-
 const db = admin.firestore();
 
+// Helper Auth
 async function getUserIdFromToken(event) {
   const authHeader = event.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) throw new Error('No Token');
   const token = authHeader.split('Bearer ')[1];
   const decodedToken = await admin.auth().verifyIdToken(token);
-  return decodedToken.uid; 
+  return decodedToken.uid;
 }
 
 exports.handler = async (event, context) => {
@@ -27,46 +25,45 @@ exports.handler = async (event, context) => {
     const userId = await getUserIdFromToken(event);
     const data = JSON.parse(event.body);
 
-    if (!data.name || !data.description || !data.image) {
-      return { statusCode: 400, body: JSON.stringify({ error: 'Data wajib tidak lengkap.' }) };
+    // Validasi Field Utama
+    if (!data.name || !data.description) {
+      return { statusCode: 400, body: JSON.stringify({ error: "Nama & Deskripsi wajib diisi." }) };
     }
 
-    // Auto-ID Sederhana
-    const charactersRef = db.collection('characters');
-    const snapshot = await charactersRef.get();
-    let maxId = 0;
-    snapshot.docs.forEach(doc => {
-        const idNum = parseInt(doc.id, 10);
-        if (!isNaN(idNum) && idNum > maxId) maxId = idNum;
-    });
-    if (maxId < 4) maxId = 4;
-    const newId = (maxId + 1).toString();
-
-    // [BRI FIXED] Pastikan field storyChapters & mode masuk ke sini!
-    const newMaiData = {
-      name: data.name,
-      description: data.description, 
-      tagline: data.tagline || '',   
-      greeting: data.greeting,
-      image: data.image,
-      tags: data.tags || [],
-      visibility: data.visibility || 'public',
+    // Siapkan Dokumen Baru
+    const newDocRef = db.collection('characters').doc();
+    
+    const newChar = {
+      id: newDocRef.id, // ID otomatis dari Firebase
       creatorId: userId,
       
-      // --- DATA VISUAL NOVEL ---
-      isVnAvailable: data.isVnAvailable === true,
-      mode: data.mode || 'free',              // PENTING: simpan mode (story/free)
-      gameGoal: data.gameGoal || '',          // PENTING: simpan goal
-      storyChapters: data.storyChapters || [], // PENTING: simpan array chapter
-      sprites: data.sprites || {},            // PENTING: simpan sprite
-      // -------------------------
+      name: data.name,
+      greeting: data.greeting,
+      tagline: data.tagline,
+      description: data.description,
+      tags: data.tags || [],
+      visibility: data.visibility || 'public',
+      
+      // Data Visual
+      image: data.image || null,
+      sprites: data.sprites || {}, // { happy: url, sad: url ... }
 
-      createdAt: admin.firestore.FieldValue.serverTimestamp()
+      // Data Game / Story
+      mode: data.mode || 'free', // 'free' atau 'story'
+      isVnAvailable: data.isVnAvailable || false,
+      gameGoal: data.gameGoal || "",
+      
+      // [BARU] Field Chapter Manager
+      chapters: data.chapters || [], 
+
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
     };
 
-    await charactersRef.doc(newId).set(newMaiData);
+    // Simpan ke Firestore
+    await newDocRef.set(newChar);
 
-    return { statusCode: 200, body: JSON.stringify({ success: true, id: newId }) };
+    return { statusCode: 200, body: JSON.stringify({ success: true, id: newDocRef.id }) };
 
   } catch (error) {
     console.error("Save Error:", error);

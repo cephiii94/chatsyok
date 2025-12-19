@@ -1,10 +1,7 @@
 // File: js/create-mai.js
-// VERSI: FINAL HYBRID (Tabs + Light Mode + Modern Uploads + Quick Uploader)
-//
+// VERSI: CHAPTER MANAGER (CREATE MODE)
 
-// ==========================================
-// 1. HELPER FUNCTIONS (Firebase & Upload)
-// ==========================================
+// --- 1. HELPER FUNCTIONS ---
 
 function getAuthTokenSafe() {
     return new Promise((resolve, reject) => {
@@ -39,10 +36,7 @@ async function uploadSingleImage(file, token) {
     const base64 = await readFileAsBase64(file);
     const res = await fetch('/.netlify/functions/upload-image', {
         method: 'POST',
-        headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ file: base64 })
     });
     if (!res.ok) throw new Error("Gagal upload gambar.");
@@ -50,308 +44,187 @@ async function uploadSingleImage(file, token) {
     return data.secure_url;
 }
 
-// ==========================================
-// 2. GLOBAL UI FUNCTIONS (Attached to Window)
-// ==========================================
-
+// Tab Switcher
 window.switchTab = function(tabName) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-
-    const targetTab = document.getElementById(tabName);
-    if(targetTab) targetTab.classList.add('active');
-
-    const buttons = document.querySelectorAll('.tab-btn');
-    buttons.forEach(btn => {
-        if(btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(tabName)) {
-            btn.classList.add('active');
-        }
-    });
-
-    const vnCheck = document.getElementById('mai-is-vn');
-    if (tabName === 'tab-visual' || tabName === 'tab-skenario') {
-        if(vnCheck) vnCheck.checked = true;
-    }
+    
+    document.getElementById(tabName).classList.add('active');
+    
+    // Cari tombol tab yang sesuai
+    const btns = document.querySelectorAll('.tab-btn');
+    if (tabName === 'tab-identitas') btns[0].classList.add('active');
+    if (tabName === 'tab-visual') btns[1].classList.add('active');
+    if (tabName === 'tab-skenario') btns[2].classList.add('active');
 };
 
+// UI File Name Update
 window.updateFileName = function(input, labelId) {
     const label = document.getElementById(labelId);
-    if (!label) return;
-
     if (input.files && input.files[0]) {
-        let fileName = input.files[0].name;
-        if (fileName.length > 15) fileName = fileName.substring(0, 12) + "...";
-        
-        if (label.classList.contains('sprite-upload-box')) {
-            label.classList.add('has-file');
-            label.innerHTML = `<div class="icon">✅</div><span>${fileName}</span>`;
-            label.style.borderColor = "#28a745";
-            label.style.background = "#e6fffa";
-        } else {
-            label.innerHTML = `✅ ${fileName}`;
-            label.style.borderColor = "#28a745";
-            label.style.color = "#28a745";
-            label.style.background = "#e6fffa";
-        }
-    } else {
-        if (label.classList.contains('sprite-upload-box')) {
-            label.classList.remove('has-file');
-            label.innerHTML = `<div class="icon">📤</div><span>Upload</span>`;
-            label.style.borderColor = "#dee2e6";
-            label.style.background = "#ffffff";
-        } else {
-            label.innerHTML = `📁 Pilih Foto Profil`;
-            label.style.borderColor = "#ced4da";
-            label.style.color = "#333";
-            label.style.background = "#ffffff";
-        }
+        label.innerText = "✅ " + input.files[0].name;
+        label.style.background = "#e6fffa";
+        label.style.borderColor = "#2ecc71";
     }
 };
+
+// --- 2. CHAPTER MANAGER LOGIC (SAMA DENGAN EDIT) ---
 
 window.addChapterInput = function() {
     const container = document.getElementById('chapters-container');
-    const index = container.children.length; 
+    const index = container.children.length + 1;
     
     const html = `
-    <div class="chapter-item" id="chapter-${index}" style="background:#f8f9fa; padding:15px; margin-bottom:15px; border-left: 4px solid #007bff; border: 1px solid #eee; border-radius: 6px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-            <strong style="color:#333;">Chapter ${index + 1}</strong>
-            ${index > 0 ? `<button type="button" onclick="removeChapter(${index})" style="color:#dc3545; background:none; border:none; cursor:pointer; font-size:0.9rem; font-weight:bold;">Hapus 🗑️</button>` : ''}
-        </div>
-
-        <div style="margin-bottom:10px;">
-            <label style="color:#555; font-size:0.85rem; font-weight:500;">Judul Chapter</label>
-            <input type="text" placeholder="Cth: Pertemuan Pertama" class="input-field story-title" style="width:100%; padding:8px; border:1px solid #ced4da; border-radius:4px; margin-top:5px; background:white; color:#333;">
+    <div class="chapter-item">
+        <div style="margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:5px;">
+            <strong>Chapter #${index}</strong>
+            <button type="button" onclick="this.closest('.chapter-item').remove()" style="float:right; color:red; border:none; background:none; cursor:pointer;">Hapus</button>
         </div>
         
-        <div style="margin-bottom:10px;">
-            <label style="color:#555; font-size:0.85rem; font-weight:500;">Situasi / Context (PENTING)</label>
-            <textarea placeholder="Jelaskan situasi awal. Cth: Hujan deras di stasiun tua, User sedang berteduh sendirian..." class="input-field story-context" rows="3" style="width:100%; padding:8px; border:1px solid #ced4da; border-radius:4px; margin-top:5px; background:white; color:#333;"></textarea>
-        </div>
-        
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+        <div style="display:grid; grid-template-columns: 1fr 2fr; gap:10px;">
             <div>
-                <label style="color:#555; font-size:0.85rem; font-weight:500;">Goal AI</label>
-                <input type="text" placeholder="Cth: Buat user penasaran" class="input-field story-goal" style="width:100%; padding:8px; border:1px solid #ced4da; border-radius:4px; margin-top:5px; background:white; color:#333;">
+                <label style="font-size:0.8rem; font-weight:bold; color:#555;">ID Unik</label>
+                <input type="text" class="chap-id" value="chap${index}" style="width:100%; padding:5px; border:1px solid #ccc;">
             </div>
             <div>
-                <label style="color:#555; font-size:0.85rem; font-weight:500;">Trigger Lanjut</label>
-                <input type="text" placeholder="Cth: User bertanya nama" class="input-field story-end" style="width:100%; padding:8px; border:1px solid #ced4da; border-radius:4px; margin-top:5px; background:white; color:#333;">
+                <label style="font-size:0.8rem; font-weight:bold; color:#555;">Judul</label>
+                <input type="text" class="chap-title" placeholder="Judul Bab" style="width:100%; padding:5px; border:1px solid #ccc;">
+            </div>
+        </div>
+
+        <div style="margin-top:10px;">
+            <label style="font-size:0.8rem; font-weight:bold; color:#555;">Deskripsi Singkat</label>
+            <textarea class="chap-desc" rows="2" style="width:100%; padding:5px; border:1px solid #ccc;"></textarea>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
+            <div>
+                <label style="font-size:0.8rem; font-weight:bold; color:#555;">Required ID</label>
+                <input type="text" class="chap-required" placeholder="Syarat ID sebelumnya" style="width:100%; padding:5px; border:1px solid #ccc;">
+            </div>
+            <div>
+                <label style="font-size:0.8rem; font-weight:bold; color:#2ecc71;">Game Goal</label>
+                <input type="text" class="chap-goal" placeholder="Misi..." style="width:100%; padding:5px; border:1px solid #2ecc71;">
             </div>
         </div>
     </div>
     `;
-    
     container.insertAdjacentHTML('beforeend', html);
 };
 
-window.removeChapter = function(index) {
-    const item = document.getElementById(`chapter-${index}`);
-    if (item) item.remove();
-};
-
-function getStoryChapters() {
+function getChaptersFromUI() {
     const items = document.querySelectorAll('.chapter-item');
     let chapters = [];
+    items.forEach((item) => {
+        const id = item.querySelector('.chap-id').value.trim();
+        const title = item.querySelector('.chap-title').value.trim();
+        const desc = item.querySelector('.chap-desc').value.trim();
+        let required = item.querySelector('.chap-required').value.trim();
+        const gameGoal = item.querySelector('.chap-goal').value.trim();
 
-    items.forEach((item, idx) => {
-        const title = item.querySelector('.story-title').value.trim();
-        const context = item.querySelector('.story-context').value.trim();
-        const goal = item.querySelector('.story-goal').value.trim();
-        const endCondition = item.querySelector('.story-end').value.trim();
+        if (required === "") required = null;
 
-        if(title || context) {
-            chapters.push({
-                id: idx,
-                title: title || `Chapter ${idx+1}`,
-                context: context || "Context tidak didefinisikan.",
-                goal: goal || "Bertahan hidup.",
-                endCondition: endCondition || "Percakapan selesai."
-            });
+        if(id && title) {
+            chapters.push({ id, title, desc, required, gameGoal });
         }
     });
     return chapters;
 }
 
-
-// ==========================================
-// 3. MAIN LOGIC (DOM Content Loaded)
-// ==========================================
+// --- 3. MAIN SUBMIT LOGIC ---
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Tambahkan 1 chapter kosong saat awal
+    addChapterInput();
+
     const form = document.getElementById('create-mai-form');
-    const mainImageInput = document.getElementById('mai-image');
-    const avatarPreview = document.getElementById('avatar-preview');
-    const submitButton = document.getElementById('submit-btn');
-    const formStatus = document.getElementById('form-status');
-    const vnCheckbox = document.getElementById('mai-is-vn'); 
+    const statusMsg = document.getElementById('form-status');
+    const submitBtn = document.getElementById('submit-btn');
 
-    // 1. Auth Check
-    const auth = firebase.auth();
-    auth.onAuthStateChanged(async (user) => {
-        if (!user) window.location.href = 'login.html';
-    });
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        let token;
+        try { token = await getAuthTokenSafe(); } 
+        catch (err) { statusMsg.textContent = "Silakan login dulu."; return; }
 
-    // 2. Preview Avatar Utama
-    if (mainImageInput) {
-        mainImageInput.addEventListener('change', () => {
-            const file = mainImageInput.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => { 
-                    if(avatarPreview) avatarPreview.src = e.target.result; 
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Sedang Membuat...";
+        statusMsg.textContent = "Mengupload data...";
+        statusMsg.style.color = "blue";
+
+        try {
+            // 1. Upload Avatar Utama
+            let imageUrl = null;
+            const mainFile = document.getElementById('mai-image').files[0];
+            if (mainFile) {
+                statusMsg.textContent = "Upload avatar utama...";
+                imageUrl = await uploadSingleImage(mainFile, token);
+            }
+
+            // 2. Upload Sprites
+            const sprites = {};
+            if(imageUrl) sprites['idle'] = imageUrl; // Default idle
+
+            const emotions = ['happy', 'sad', 'angry', 'shy', 'surprised'];
+            for (const emo of emotions) {
+                const input = document.getElementById(`sprite-${emo}`);
+                if (input && input.files[0]) {
+                    statusMsg.textContent = `Upload sprite: ${emo}...`;
+                    const url = await uploadSingleImage(input.files[0], token);
+                    sprites[emo] = url;
                 }
-                reader.readAsDataURL(file);
             }
-        });
-    }
 
-    // [MODIFIKASI] 3. QUICK ASSET UPLOADER LOGIC
-    const quickInput = document.getElementById('quick-asset-input');
-    const quickStatus = document.getElementById('quick-upload-status');
-    const quickResultBox = document.getElementById('quick-upload-result');
-    const quickUrlInput = document.getElementById('quick-asset-url');
-    const btnCopy = document.getElementById('btn-copy-asset');
+            // 3. Ambil Chapters
+            const chapters = getChaptersFromUI();
 
-    if (quickInput) {
-        quickInput.addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
+            // 4. Hitung Mode
+            const isVnChecked = document.getElementById('mai-is-vn').checked;
+            const finalMode = (chapters.length > 0) ? 'story' : 'free';
 
-            // UI Loading
-            quickStatus.textContent = "Mengupload...";
-            quickStatus.style.color = "#d35400";
-            if(quickUrlInput) quickUrlInput.value = "";
-            if(quickResultBox) quickResultBox.style.display = 'none';
-
-            try {
-                // Gunakan helper yang sudah ada
-                const token = await getAuthTokenSafe();
-                const url = await uploadSingleImage(file, token);
-
-                // Sukses
-                quickStatus.textContent = "✅ Selesai!";
-                quickStatus.style.color = "green";
+            // 5. Susun Data
+            const payload = {
+                name: document.getElementById('mai-name').value,
+                greeting: document.getElementById('mai-greeting').value,
+                tagline: document.getElementById('mai-tagline').value,
+                description: document.getElementById('mai-description').value,
+                tags: document.getElementById('mai-tags').value.split(',').map(t => t.trim()).filter(t=>t),
+                visibility: document.querySelector('input[name="visibility"]:checked').value,
                 
-                if(quickResultBox) quickResultBox.style.display = 'flex';
-                if(quickUrlInput) quickUrlInput.value = url;
+                image: imageUrl,
+                sprites: sprites,
 
-            } catch (err) {
-                console.error(err);
-                quickStatus.textContent = "❌ Error: " + err.message;
-                quickStatus.style.color = "red";
-            }
-        });
+                mode: finalMode,
+                isVnAvailable: isVnChecked || (chapters.length > 0),
+                gameGoal: document.getElementById('mai-game-goal').value,
+                
+                chapters: chapters // Kirim array chapter
+            };
 
-        if (btnCopy && quickUrlInput) {
-            btnCopy.addEventListener('click', () => {
-                quickUrlInput.select();
-                document.execCommand('copy');
-                const originalText = btnCopy.textContent;
-                btnCopy.textContent = "Copied!";
-                setTimeout(() => btnCopy.textContent = originalText, 1500);
+            // 6. Kirim ke Backend Save
+            const res = await fetch('/.netlify/functions/save-mai', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(payload)
             });
-        }
-    }
 
-    // 4. HANDLE SUBMIT
-    if (form) {
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
+            if (!res.ok) throw new Error("Gagal menyimpan.");
+
+            statusMsg.textContent = "🎉 Karakter Berhasil Dibuat!";
+            statusMsg.style.color = "green";
             
-            let token;
-            try {
-                token = await getAuthTokenSafe();
-            } catch (error) {
-                formStatus.textContent = 'Sesi habis. Silakan login kembali.';
-                formStatus.className = 'error';
-                return;
-            }
+            // Clear Cache
+            sessionStorage.removeItem('mai_chars_user');
+            
+            setTimeout(() => { window.location.href = 'index.html'; }, 1500);
 
-            // Loading UI
-            submitButton.disabled = true;
-            submitButton.innerHTML = '⏳ Sedang Memproses...';
-            formStatus.textContent = 'Mengupload data...';
-            formStatus.className = '';
-
-            try {
-                // A. Upload Avatar Utama
-                const mainFile = mainImageInput.files[0];
-                if (!mainFile) throw new Error("Avatar utama wajib diisi!");
-                const mainImageUrl = await uploadSingleImage(mainFile, token);
-
-                // B. Upload Sprites
-                const sprites = {};
-                const emotions = ['happy', 'sad', 'angry', 'shy', 'surprised'];
-                sprites['idle'] = mainImageUrl; 
-
-                const isVnActive = vnCheckbox ? vnCheckbox.checked : false;
-
-                if (isVnActive) {
-                    for (const emo of emotions) {
-                        const input = document.getElementById(`sprite-${emo}`);
-                        if (input && input.files[0]) {
-                            formStatus.textContent = `Upload ekspresi: ${emo}...`;
-                            const url = await uploadSingleImage(input.files[0], token);
-                            sprites[emo] = url;
-                        }
-                    }
-                }
-
-                // C. Mode & Story
-                const storyChapters = getStoryChapters();
-                let finalMode = 'free';
-
-                if (storyChapters.length > 0) {
-                    finalMode = 'story';
-                } else if (isVnActive) {
-                    finalMode = 'free'; 
-                }
-
-                // D. Payload
-                const maiData = {
-                    name: document.getElementById('mai-name').value,
-                    greeting: document.getElementById('mai-greeting').value,
-                    tagline: document.getElementById('mai-tagline').value,
-                    description: document.getElementById('mai-description').value,
-                    tags: document.getElementById('mai-tags').value.split(',').map(t => t.trim()).filter(t => t),
-                    visibility: document.querySelector('input[name="visibility"]:checked').value,
-                    
-                    isVnAvailable: isVnActive || (storyChapters.length > 0),
-                    mode: finalMode,
-                    gameGoal: document.getElementById('mai-game-goal') ? document.getElementById('mai-game-goal').value : '',
-                    storyChapters: storyChapters,
-                    
-                    image: mainImageUrl,
-                    sprites: sprites 
-                };
-
-                // E. Kirim Backend
-                formStatus.textContent = 'Menyimpan ke database...';
-                const saveRes = await fetch('/.netlify/functions/save-mai', {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify(maiData)
-                });
-
-                if (!saveRes.ok) throw new Error("Gagal menyimpan data.");
-
-                sessionStorage.removeItem('mai_chars_user');
-                formStatus.textContent = '✅ Berhasil! Mengalihkan...';
-                formStatus.className = 'success';
-                
-                setTimeout(() => { window.location.href = 'index.html'; }, 1500);
-
-            } catch (error) {
-                console.error(error);
-                formStatus.textContent = `❌ Error: ${error.message}`;
-                formStatus.className = 'error';
-                submitButton.disabled = false;
-                submitButton.textContent = '✨ Buat Karakter Sekarang';
-            }
-        });
-    }
+        } catch (err) {
+            console.error(err);
+            statusMsg.textContent = "Error: " + err.message;
+            statusMsg.style.color = "red";
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Coba Lagi";
+        }
+    });
 });

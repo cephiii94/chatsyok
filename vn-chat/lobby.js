@@ -107,8 +107,9 @@ function renderCharacters(mode) {
     const filteredChars = cachedCharacters.filter(char => {
         if (!char.isVnAvailable) return false;
         if (mode === 'story') {
-            // Syarat Story: Harus punya Game Goal DAN punya data Chapters
-            return char.gameGoal && char.chapters && char.chapters.length > 0;
+// Syarat Story: Cukup punya Game Goal saja (karena isVnAvailable sudah dicek di atas)
+            // Jadi kalau chapters kosong, dia tetap muncul (bisa kita kasih label "Coming Soon")
+            return char.gameGoal && char.gameGoal.trim().length > 0;
         }
         return true;
     });

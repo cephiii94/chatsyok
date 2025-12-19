@@ -1,8 +1,6 @@
 // File: js/edit-mai.js
-// VERSI: FULL HYBRID EDIT (Populate + Update + Quick Uploader)
-//
+// VERSI: FINAL FULL FEATURES (Chapter Manager, Quick Upload, Delete, 404 Check)
 
-// Global variable
 let currentData = {};
 
 // ==========================================
@@ -57,11 +55,11 @@ window.switchTab = function(tabName) {
     const targetTab = document.getElementById(tabName);
     if(targetTab) targetTab.classList.add('active');
 
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        if(btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(tabName)) {
-            btn.classList.add('active');
-        }
-    });
+    // Aktifkan tombol yang sesuai
+    const btns = document.querySelectorAll('.tab-btn');
+    if(tabName === 'tab-identitas') btns[0]?.classList.add('active');
+    if(tabName === 'tab-visual') btns[1]?.classList.add('active');
+    if(tabName === 'tab-skenario') btns[2]?.classList.add('active');
 };
 
 window.updateFileName = function(input, labelId) {
@@ -71,54 +69,67 @@ window.updateFileName = function(input, labelId) {
         let fileName = input.files[0].name;
         if (fileName.length > 15) fileName = fileName.substring(0, 12) + "...";
         
-        if (label.classList.contains('sprite-upload-box')) {
-            label.classList.add('has-file');
-            label.innerHTML = `<div class="icon">✅</div><span>${fileName}</span>`;
-            label.style.borderColor = "#28a745";
-            label.style.background = "#e6fffa";
-        } else {
-            label.innerHTML = `✅ ${fileName}`;
+        // Cek tipe label (Sprite box atau tombol biasa)
+        if (label.classList.contains('sprite-label')) {
+            label.innerText = "✅ " + fileName;
             label.style.borderColor = "#28a745";
             label.style.color = "#28a745";
+        } else {
+            label.innerText = "✅ " + fileName;
             label.style.background = "#e6fffa";
+            label.style.borderColor = "#28a745";
         }
     }
 };
 
+// ==========================================
+// [BARU] LOGIKA CHAPTER MANAGER UI
+// ==========================================
+
 window.addChapterInput = function(data = null) {
     const container = document.getElementById('chapters-container');
-    const index = container.children.length; 
+    const index = container.children.length + 1; 
     
-    const valTitle = data ? data.title : "";
-    const valContext = data ? data.context : "";
-    const valGoal = data ? data.goal : "";
-    const valEnd = data ? data.endCondition : "";
+    // Default Values
+    const valId = data ? data.id : `chap${index}`;
+    const valTitle = data ? data.title : `Bab ${index}: Judul Bab`;
+    const valDesc = data ? data.desc : "";       
+    const valRequired = data ? data.required : ""; 
+    const valGoal = data ? data.gameGoal : "";     
+
+    const btnRemove = `<button type="button" onclick="this.closest('.chapter-item').remove()" style="float:right; color:#ff6b6b; background:none; border:none; cursor:pointer; font-weight:bold;">🗑️ Hapus</button>`;
 
     const html = `
-    <div class="chapter-item" id="chapter-${index}" style="background:#f8f9fa; padding:15px; margin-bottom:15px; border-left: 4px solid #007bff; border: 1px solid #eee; border-radius: 6px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-            <strong style="color:#333;">Chapter ${index + 1}</strong>
-            ${index > 0 ? `<button type="button" onclick="removeChapter(${index})" style="color:#dc3545; background:none; border:none; cursor:pointer; font-size:0.9rem; font-weight:bold;">Hapus 🗑️</button>` : ''}
+    <div class="chapter-item">
+        <div style="margin-bottom:15px; border-bottom:1px solid #eee; padding-bottom:10px;">
+            <strong style="font-size:1.1rem; color:#333;">Chapter #${index}</strong>
+            ${btnRemove}
         </div>
 
-        <div style="margin-bottom:10px;">
-            <label style="color:#555; font-size:0.85rem; font-weight:500;">Judul Chapter</label>
-            <input type="text" value="${valTitle}" class="input-field story-title" style="width:100%; padding:8px; border:1px solid #ced4da; border-radius:4px; margin-top:5px; background:white; color:#333;">
-        </div>
-        
-        <div style="margin-bottom:10px;">
-            <label style="color:#555; font-size:0.85rem; font-weight:500;">Situasi / Context</label>
-            <textarea class="input-field story-context" rows="3" style="width:100%; padding:8px; border:1px solid #ced4da; border-radius:4px; margin-top:5px; background:white; color:#333;">${valContext}</textarea>
-        </div>
-        
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+        <div style="display:grid; grid-template-columns: 1fr 2fr; gap:15px; margin-bottom:15px;">
             <div>
-                <label style="color:#555; font-size:0.85rem; font-weight:500;">Goal AI</label>
-                <input type="text" value="${valGoal}" class="input-field story-goal" style="width:100%; padding:8px; border:1px solid #ced4da; border-radius:4px; margin-top:5px; background:white; color:#333;">
+                <label style="display:block; font-size:0.8rem; font-weight:bold; color:#555; margin-bottom:5px;">ID Unik (Wajib)</label>
+                <input type="text" value="${valId}" class="chap-id" placeholder="contoh: chap1" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; background:#f9f9f9;">
             </div>
             <div>
-                <label style="color:#555; font-size:0.85rem; font-weight:500;">Trigger Lanjut</label>
-                <input type="text" value="${valEnd}" class="input-field story-end" style="width:100%; padding:8px; border:1px solid #ced4da; border-radius:4px; margin-top:5px; background:white; color:#333;">
+                <label style="display:block; font-size:0.8rem; font-weight:bold; color:#555; margin-bottom:5px;">Judul Chapter</label>
+                <input type="text" value="${valTitle}" class="chap-title" placeholder="Judul yang tampil di kartu Lobby" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+            </div>
+        </div>
+        
+        <div style="margin-bottom:15px;">
+            <label style="display:block; font-size:0.8rem; font-weight:bold; color:#555; margin-bottom:5px;">Deskripsi Singkat (Sinopsis)</label>
+            <textarea class="chap-desc" rows="2" placeholder="Muncul di bawah judul di Lobby..." style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">${valDesc}</textarea>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+            <div>
+                <label style="display:block; font-size:0.8rem; font-weight:bold; color:#555; margin-bottom:5px;">Syarat Buka (Required ID)</label>
+                <input type="text" value="${valRequired || ''}" class="chap-required" placeholder="Kosongkan jika bab 1" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+            </div>
+             <div>
+                <label style="display:block; font-size:0.8rem; font-weight:bold; color:#2ecc71; margin-bottom:5px;">Game Goal (Misi)</label>
+                <input type="text" value="${valGoal || ''}" class="chap-goal" placeholder="Contoh: Buat dia tertawa" style="width:100%; padding:8px; border:1px solid #2ecc71; border-radius:4px;">
             </div>
         </div>
     </div>
@@ -127,21 +138,22 @@ window.addChapterInput = function(data = null) {
     container.insertAdjacentHTML('beforeend', html);
 };
 
-window.removeChapter = function(index) {
-    const item = document.getElementById(`chapter-${index}`);
-    if (item) item.remove();
-};
-
-function getStoryChaptersFromUI() {
+// Fungsi ambil data dari Form UI
+function getChaptersFromUI() {
     const items = document.querySelectorAll('.chapter-item');
     let chapters = [];
-    items.forEach((item, idx) => {
-        const title = item.querySelector('.story-title').value.trim();
-        const context = item.querySelector('.story-context').value.trim();
-        const goal = item.querySelector('.story-goal').value.trim();
-        const endCondition = item.querySelector('.story-end').value.trim();
-        if(title || context) {
-            chapters.push({ id: idx, title, context, goal, endCondition });
+    
+    items.forEach((item) => {
+        const id = item.querySelector('.chap-id').value.trim();
+        const title = item.querySelector('.chap-title').value.trim();
+        const desc = item.querySelector('.chap-desc').value.trim();
+        let required = item.querySelector('.chap-required').value.trim();
+        const gameGoal = item.querySelector('.chap-goal').value.trim();
+
+        if (required === "") required = null; 
+
+        if(id && title) {
+            chapters.push({ id, title, desc, required, gameGoal });
         }
     });
     return chapters;
@@ -149,7 +161,7 @@ function getStoryChaptersFromUI() {
 
 
 // ==========================================
-// 2. MAIN LOGIC (Fetch Data & Update)
+// 2. MAIN LOGIC (Fetch, Update, Delete)
 // ==========================================
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -163,12 +175,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    // B. Setup Elements
     const form = document.getElementById('edit-mai-form');
     const statusMsg = document.getElementById('form-status');
     const submitBtn = document.getElementById('submit-btn');
 
-    // [MODIFIKASI] QUICK ASSET UPLOADER LOGIC
+    // === QUICK ASSET UPLOADER LOGIC ===
     const quickInput = document.getElementById('quick-asset-input');
     const quickStatus = document.getElementById('quick-upload-status');
     const quickResultBox = document.getElementById('quick-upload-result');
@@ -179,50 +190,47 @@ document.addEventListener('DOMContentLoaded', async () => {
         quickInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
-
             quickStatus.textContent = "Mengupload...";
-            quickStatus.style.color = "#d35400";
-            if(quickUrlInput) quickUrlInput.value = "";
-            if(quickResultBox) quickResultBox.style.display = 'none';
-
             try {
                 const token = await getAuthTokenSafe();
                 const url = await uploadSingleImage(file, token);
-
                 quickStatus.textContent = "✅ Selesai!";
-                quickStatus.style.color = "green";
-                
                 if(quickResultBox) quickResultBox.style.display = 'flex';
                 if(quickUrlInput) quickUrlInput.value = url;
-
             } catch (err) {
+                quickStatus.textContent = "❌ Error";
                 console.error(err);
-                quickStatus.textContent = "❌ Error: " + err.message;
-                quickStatus.style.color = "red";
             }
         });
-
-        if (btnCopy && quickUrlInput) {
+        if (btnCopy) {
             btnCopy.addEventListener('click', () => {
                 quickUrlInput.select();
                 document.execCommand('copy');
-                const originalText = btnCopy.textContent;
+                const prev = btnCopy.textContent;
                 btnCopy.textContent = "Copied!";
-                setTimeout(() => btnCopy.textContent = originalText, 1500);
+                setTimeout(() => btnCopy.textContent = prev, 1500);
             });
         }
     }
+    // ==================================
 
     // C. FETCH DATA KARAKTER LAMA
     try {
         statusMsg.textContent = "Mengambil data...";
-        // Kita fetch langsung dari API get-character
         const res = await fetch(`/.netlify/functions/get-character?id=${charId}`);
+        
+        // [ANTI-HANTU] Cek jika data sudah dihapus
+        if (res.status === 404) {
+            alert("⚠️ Karakter tidak ditemukan atau sudah dihapus!");
+            window.location.href = 'index.html';
+            return;
+        }
+        
         if(!res.ok) throw new Error("Gagal mengambil data");
         
         currentData = await res.json(); 
         
-        // --- POPULATE FORM ---
+        // --- POPULATE IDENTITAS ---
         document.getElementById('char-id').value = charId;
         document.getElementById('mai-name').value = currentData.name || "";
         document.getElementById('mai-greeting').value = currentData.greeting || "";
@@ -231,44 +239,42 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('mai-tags').value = (currentData.tags || []).join(", ");
         document.getElementById('mai-game-goal').value = currentData.gameGoal || "";
 
-        // Visibility
         if (currentData.visibility === 'private') {
-            document.getElementById('vis-private').checked = true;
+            const rPrivate = document.querySelector('input[name="visibility"][value="private"]');
+            if(rPrivate) rPrivate.checked = true;
         } else {
-            document.getElementById('vis-public').checked = true;
+            const rPublic = document.querySelector('input[name="visibility"][value="public"]');
+            if(rPublic) rPublic.checked = true;
         }
 
-        // Avatar Preview
-        if(currentData.image) {
-            document.getElementById('avatar-preview').src = currentData.image;
-        }
+        if(currentData.image) document.getElementById('avatar-preview').src = currentData.image;
 
-        // Checkbox VN
-        if (currentData.isVnAvailable) {
-            document.getElementById('mai-is-vn').checked = true;
-        }
-
-        // Sprites: Tandai kotak jika sudah ada gambar
+        // Populate Sprites
         if (currentData.sprites) {
             ['happy', 'sad', 'angry', 'shy', 'surprised'].forEach(emo => {
                 if (currentData.sprites[emo]) {
-                    const label = document.getElementById(`label-${emo}`);
+                    const label = document.getElementById(`lbl-${emo}`); // Pastikan ID label sesuai HTML
                     if(label) {
-                        label.innerHTML = `<div class="icon">🖼️</div><span>(Tersimpan)</span>`;
-                        label.style.borderColor = "#007bff"; 
+                        label.innerHTML = "✅ Tersimpan";
+                        label.style.borderColor = "#007bff";
+                        label.style.color = "#007bff";
                     }
                 }
             });
         }
 
-        // STORY CHAPTERS
+        // --- POPULATE CHAPTERS ---
         const chaptersContainer = document.getElementById('chapters-container');
         chaptersContainer.innerHTML = ""; 
         
-        if (currentData.storyChapters && currentData.storyChapters.length > 0) {
-            currentData.storyChapters.forEach(chap => {
+        const existingChapters = currentData.chapters || currentData.storyChapters || [];
+        
+        if (existingChapters.length > 0) {
+            existingChapters.forEach(chap => {
                 window.addChapterInput(chap); 
             });
+        } else {
+            window.addChapterInput({ id: 'chap1', title: 'Bab 1: Permulaan' });
         }
 
         statusMsg.textContent = "";
@@ -279,7 +285,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
 
-    // D. HANDLE UPDATE (SUBMIT)
+    // D. HANDLE UPDATE (SIMPAN)
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         
@@ -292,21 +298,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         statusMsg.textContent = "Mengupdate data...";
 
         try {
-            // 1. Upload Gambar
-            
-            // Avatar Utama
+            // 1. Upload Avatar
             let finalImageUrl = currentData.image;
             const mainFile = document.getElementById('mai-image').files[0];
-            if (mainFile) {
-                statusMsg.textContent = "Upload avatar baru...";
-                finalImageUrl = await uploadSingleImage(mainFile, token);
-            }
+            if (mainFile) finalImageUrl = await uploadSingleImage(mainFile, token);
 
-            // Sprites
+            // 2. Upload Sprites
             const finalSprites = currentData.sprites || {};
             const emotions = ['happy', 'sad', 'angry', 'shy', 'surprised'];
-            
-            finalSprites['idle'] = finalImageUrl;
+            finalSprites['idle'] = finalImageUrl; 
 
             for (const emo of emotions) {
                 const input = document.getElementById(`sprite-${emo}`);
@@ -317,17 +317,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
 
-            // 2. Ambil Data Story Baru
-            const storyChapters = getStoryChaptersFromUI();
+            // 3. Ambil Data Chapters
+            const chapters = getChaptersFromUI();
             
-            // 3. Tentukan Mode
-            let finalMode = 'free';
-            const isVnChecked = document.getElementById('mai-is-vn').checked;
-            
-            if (storyChapters.length > 0) finalMode = 'story';
-            else if (isVnChecked) finalMode = 'free';
+            // 4. Hitung Mode
+            let finalMode = (chapters.length > 0) ? 'story' : 'free'; 
 
-            // 4. Susun Payload
+            // 5. Susun Payload
             const updateData = {
                 id: charId, 
                 name: document.getElementById('mai-name').value,
@@ -337,16 +333,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 tags: document.getElementById('mai-tags').value.split(',').map(t=>t.trim()).filter(t=>t),
                 visibility: document.querySelector('input[name="visibility"]:checked').value,
                 
-                gameGoal: document.getElementById('mai-game-goal').value,
+                gameGoal: document.getElementById('mai-game-goal').value, 
                 mode: finalMode,
-                isVnAvailable: isVnChecked || (storyChapters.length > 0),
-                storyChapters: storyChapters,
-
+                isVnAvailable: (chapters.length > 0),
+                
+                chapters: chapters, 
                 image: finalImageUrl,
                 sprites: finalSprites
             };
 
-            // 5. Kirim ke Backend
+            // 6. Kirim ke Backend
             const res = await fetch('/.netlify/functions/update-mai', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -358,7 +354,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             statusMsg.textContent = "✅ Update Berhasil!";
             statusMsg.className = "success";
             
+            // CLEAR CACHE
             sessionStorage.removeItem('mai_chars_user');
+            
             setTimeout(() => { window.location.href = 'index.html'; }, 1000);
 
         } catch (error) {
@@ -369,4 +367,42 @@ document.addEventListener('DOMContentLoaded', async () => {
             submitBtn.textContent = "💾 Simpan Perubahan";
         }
     });
+
+    // E. HANDLE DELETE (HAPUS KARAKTER)
+    const btnDelete = document.getElementById('btn-delete-char');
+    if (btnDelete) {
+        btnDelete.addEventListener('click', async () => {
+            const confirmName = prompt(`Ketik "HAPUS" untuk menghapus karakter ini permanen.`);
+            if (confirmName !== "HAPUS") {
+                alert("Batal menghapus.");
+                return;
+            }
+
+            btnDelete.disabled = true;
+            btnDelete.textContent = "Menghapus...";
+            
+            try {
+                const token = await getAuthTokenSafe();
+                const res = await fetch('/.netlify/functions/delete-mai', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ id: charId })
+                });
+
+                if (!res.ok) throw new Error("Gagal menghapus.");
+
+                // BERSIHKAN CACHE AGAR HANTU HILANG
+                sessionStorage.removeItem('mai_chars_user'); 
+                
+                alert("Karakter berhasil dihapus!");
+                window.location.href = 'index.html';
+
+            } catch (error) {
+                console.error(error);
+                alert("Gagal menghapus: " + error.message);
+                btnDelete.disabled = false;
+                btnDelete.textContent = "🗑️ Hapus Karakter Ini Permanen";
+            }
+        });
+    }
 });

@@ -4,9 +4,56 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Buat MAI Baru - ChatsYok!</title>
-    <link rel="stylesheet" href="/css/lobby.css">
-    <link rel="stylesheet" href="/css/create-mai.css">
+    
+    <link rel="stylesheet" href="css/lobby.css">
+    <link rel="stylesheet" href="css/create-mai.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Memastikan style Chapter sama dengan di Edit Page */
+        .chapter-item {
+            background: #fff;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 5px solid #667eea;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            color: #333;
+        }
+        
+        /* Grid untuk upload sprite agar rapi */
+        .sprites-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .sprite-upload-box {
+            border: 2px dashed #ddd;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.3s;
+            background: rgba(255,255,255,0.05);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100px;
+        }
+        
+        .sprite-upload-box:hover {
+            border-color: #00e5ff;
+            background: rgba(0, 229, 255, 0.1);
+        }
+        
+        .sprite-upload-box.has-file {
+            border-color: #2ecc71;
+            background: rgba(46, 204, 113, 0.1);
+        }
+    </style>
 </head>
 <body>
 
@@ -14,7 +61,7 @@
         
         <header class="mobile-header">
             <button id="hamburger-btn"><span></span><span></span><span></span></button>
-            <h1>Buat MAI</h1>
+            <h1>Buat Karakter</h1>
         </header>
         
         <aside class="lobby-sidebar" id="lobby-sidebar">
@@ -22,14 +69,14 @@
             <nav class="lobby-sidebar-nav">
                 <a href="index.html">Home</a>
                 <a href="create-mai.html" class="active">Buat Bot</a>
-                <a href="#">Komunitas</a>
+                <a href="#" style="opacity:0.5; pointer-events:none;">Edit Bot</a> 
             </nav>
         </aside>
 
         <main class="lobby-main">
             <header class="lobby-header">
-                <h2>Buat Model AI (MAI) Baru</h2>
-                <p>Desain karakter, visual, dan cerita dalam satu tempat.</p>
+                <h2>Ciptakan Model AI (MAI)</h2>
+                <p>Isi identitas, visual, dan skenario cerita karakter Anda.</p>
             </header>
 
             <form id="create-mai-form" class="form-container">
@@ -43,172 +90,164 @@
                 <div id="tab-identitas" class="tab-content active">
                     
                     <div class="form-group avatar-group">
-                        <label style="font-weight:600; color:#333; margin-bottom:10px; display:block;">Avatar Utama / Idle (Wajib)</label>
-                        
+                        <label style="font-weight:600; color:#eee; margin-bottom:10px; display:block;">Avatar Utama</label>
                         <div class="avatar-upload" style="display:flex; flex-direction:column; align-items:center; gap:15px;">
-                            <img src="https://via.placeholder.com/150" alt="Preview" id="avatar-preview" class="image-preview" style="width:120px; height:120px; border-radius:50%; object-fit:cover; border:3px solid #dee2e6;">
+                            <img src="https://via.placeholder.com/150" alt="Preview" id="avatar-preview" class="image-preview" style="width:120px; height:120px; border-radius:50%; object-fit:cover; border:3px solid #444;">
                             
                             <div>
-                                <input type="file" id="mai-image" accept="image/*" required onchange="updateFileName(this, 'label-main-avatar')">
-                                <label for="mai-image" id="label-main-avatar" class="custom-file-btn">
+                                <input type="file" id="mai-image" accept="image/*" onchange="updateFileName(this, 'label-main-avatar')" style="display: none;">
+                                <label for="mai-image" id="label-main-avatar" class="custom-file-btn" style="cursor:pointer; padding:8px 15px; background:#333; color:white; border-radius:5px; border:1px solid #555;">
                                     📁 Pilih Foto Profil
                                 </label>
                             </div>
-                            <small style="color:#888;">Format: JPG/PNG. Klik tombol di atas.</small>
                         </div>
                     </div>
 
-                    <div class="form-row">
+                    <div class="form-row" style="display:flex; gap:15px; margin-top:20px;">
                         <div class="form-group" style="flex-grow: 1;">
                             <label>Nama MAI</label>
-                            <input type="text" id="mai-name" placeholder="Mis. 'Koki Rengginang'" required>
+                            <input type="text" id="mai-name" required placeholder="Nama karakter...">
                         </div>
                         <div class="form-group" style="flex-grow: 2;">
                             <label>Pesan Sapaan</label>
-                            <input type="text" id="mai-greeting" placeholder="Sapaan awal..." required>
+                            <input type="text" id="mai-greeting" required placeholder="Hai! Apa kabar?">
                         </div>
                     </div>
 
                     <div class="form-group">
                         <label>Deskripsi Singkat (Tagline)</label>
-                        <textarea id="mai-tagline" rows="2" maxlength="150"></textarea>
+                        <textarea id="mai-tagline" rows="2" maxlength="150" placeholder="Muncul di kartu lobby..."></textarea>
                     </div>
 
                     <div class="form-group">
                         <label>Instruksi Kepribadian (Prompt)</label>
-                        <textarea id="mai-description" rows="8" placeholder="Jelaskan detail sifat dan cara bicara..." required></textarea>
+                        <textarea id="mai-description" rows="8" required placeholder="Jelaskan sifat, latar belakang, dan cara bicara..."></textarea>
                     </div>
 
                     <div class="form-group">
-                        <label>Kategori</label>
-                        <input type="text" id="mai-tags" placeholder="Mis. Lucu, Sejarah, Horror">
+                        <label>Kategori (Tags)</label>
+                        <input type="text" id="mai-tags" placeholder="Anime, Sekolah, Misteri (pisahkan koma)">
                     </div>
 
                     <div class="form-group">
                         <label>Visibilitas</label>
-                        <div class="radio-group">
+                        <div class="radio-group" style="display:flex; gap:15px; margin-top:5px;">
                             <label><input type="radio" name="visibility" value="public" checked> Publik</label>
                             <label><input type="radio" name="visibility" value="private"> Privat</label>
                         </div>
                     </div>
-
-                    <input type="hidden" id="char-mode" value="free">
-                    <input type="checkbox" id="mai-is-vn" class="hidden-control">
                     
                     <div style="text-align:right; margin-top:20px;">
-                        <button type="button" class="btn-next" onclick="switchTab('tab-visual')" style="background:#333; color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer;">Lanjut ke Visual ▶</button>
+                        <button type="button" class="btn-next" onclick="switchTab('tab-visual')" style="background:#333; color:white; padding:10px 20px; border:1px solid #555; border-radius:5px; cursor:pointer;">Lanjut ke Visual ▶</button>
                     </div>
                 </div>
 
                 <div id="tab-visual" class="tab-content">
                     <h3 style="color:#00e5ff; margin-bottom:10px;">Ekspresi Wajah (Sprite)</h3>
-                    <p style="color:#ccc; font-size:0.9rem; margin-bottom:20px;">Upload gambar untuk setiap emosi. Kosongkan jika ingin pakai avatar utama saja.</p>
+                    <p style="color:#aaa; font-size:0.9rem; margin-bottom:20px;">Upload variasi ekspresi untuk Story Mode.</p>
 
-                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px;">
-                        
+                    <div class="sprites-grid">
                         <div style="text-align: center;">
-                            <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:8px; color:#555;">😄 Senang</label>
-                            
-                            <input type="file" id="sprite-happy" accept="image/*" onchange="updateFileName(this, 'label-happy')">
+                            <input type="file" id="sprite-happy" accept="image/*" style="display:none;" onchange="updateFileName(this, 'label-happy')">
                             <label for="sprite-happy" id="label-happy" class="sprite-upload-box">
-                                <div class="icon">📤</div>
-                                <span>Upload</span>
+                                <div class="icon" style="font-size:1.5rem; margin-bottom:5px;">😄</div>
+                                <span style="font-size:0.85rem; color:#ccc;">Senang</span>
                             </label>
                         </div>
-
                         <div style="text-align: center;">
-                            <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:8px; color:#555;">😢 Sedih</label>
-                            
-                            <input type="file" id="sprite-sad" accept="image/*" onchange="updateFileName(this, 'label-sad')">
+                            <input type="file" id="sprite-sad" accept="image/*" style="display:none;" onchange="updateFileName(this, 'label-sad')">
                             <label for="sprite-sad" id="label-sad" class="sprite-upload-box">
-                                <div class="icon">📤</div>
-                                <span>Upload</span>
+                                <div class="icon" style="font-size:1.5rem; margin-bottom:5px;">😢</div>
+                                <span style="font-size:0.85rem; color:#ccc;">Sedih</span>
                             </label>
                         </div>
-
                         <div style="text-align: center;">
-                            <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:8px; color:#555;">😡 Marah</label>
-                            
-                            <input type="file" id="sprite-angry" accept="image/*" onchange="updateFileName(this, 'label-angry')">
+                            <input type="file" id="sprite-angry" accept="image/*" style="display:none;" onchange="updateFileName(this, 'label-angry')">
                             <label for="sprite-angry" id="label-angry" class="sprite-upload-box">
-                                <div class="icon">📤</div>
-                                <span>Upload</span>
+                                <div class="icon" style="font-size:1.5rem; margin-bottom:5px;">😡</div>
+                                <span style="font-size:0.85rem; color:#ccc;">Marah</span>
                             </label>
                         </div>
-
                         <div style="text-align: center;">
-                            <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:8px; color:#555;">😳 Malu</label>
-                            
-                            <input type="file" id="sprite-shy" accept="image/*" onchange="updateFileName(this, 'label-shy')">
+                            <input type="file" id="sprite-shy" accept="image/*" style="display:none;" onchange="updateFileName(this, 'label-shy')">
                             <label for="sprite-shy" id="label-shy" class="sprite-upload-box">
-                                <div class="icon">📤</div>
-                                <span>Upload</span>
+                                <div class="icon" style="font-size:1.5rem; margin-bottom:5px;">😳</div>
+                                <span style="font-size:0.85rem; color:#ccc;">Malu</span>
                             </label>
                         </div>
-
                         <div style="text-align: center;">
-                            <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:8px; color:#555;">😱 Kaget</label>
-                            
-                            <input type="file" id="sprite-surprised" accept="image/*" onchange="updateFileName(this, 'label-surprised')">
+                            <input type="file" id="sprite-surprised" accept="image/*" style="display:none;" onchange="updateFileName(this, 'label-surprised')">
                             <label for="sprite-surprised" id="label-surprised" class="sprite-upload-box">
-                                <div class="icon">📤</div>
-                                <span>Upload</span>
+                                <div class="icon" style="font-size:1.5rem; margin-bottom:5px;">😱</div>
+                                <span style="font-size:0.85rem; color:#ccc;">Kaget</span>
                             </label>
                         </div>
-
                     </div>
 
                     <div style="text-align:right; margin-top:30px;">
-                        <button type="button" onclick="switchTab('tab-skenario')" style="background:#333; color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer;">Lanjut ke Skenario ▶</button>
+                        <button type="button" onclick="switchTab('tab-skenario')" style="background:#333; color:white; padding:10px 20px; border:1px solid #555; border-radius:5px; cursor:pointer;">Lanjut ke Skenario ▶</button>
                     </div>
                 </div>
 
                 <div id="tab-skenario" class="tab-content">
-                    <h3 style="color:#00e5ff; margin-bottom:10px;">Penulis Skenario (Story Mode)</h3>
-                    <p style="color:#ccc; font-size:0.9rem;">Tentukan alur cerita. Jika bagian ini diisi, karakter otomatis menjadi <b>Story Mode</b>.</p>
+                    <h3 style="color:#00e5ff; margin-bottom:10px;">Editor Skenario</h3>
+                    <p style="color:#aaa; font-size:0.9rem;">Rancang alur cerita per bab di sini.</p>
                     
-                    <div class="asset-upload-box" style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px dashed #2196f3; margin-top: 15px;">
-                        <h4 style="margin-top: 0; color: #0d47a1; margin-bottom: 5px;">📤 Quick Asset Uploader</h4>
-                        <p style="font-size: 0.85rem; margin-bottom: 10px; color: #555; margin-top:0;">
-                            Upload Background/Sprite di sini untuk mendapatkan URL-nya.
+                    <div class="asset-upload-box" style="background: rgba(33, 150, 243, 0.1); padding: 15px; border-radius: 8px; margin-bottom: 25px; margin-top:15px; border: 1px dashed #2196f3;">
+                        <h4 style="margin-top: 0; color: #2196f3; margin-bottom: 5px; font-size:1rem;">📤 Quick Asset Uploader</h4>
+                        <p style="font-size: 0.85rem; margin-bottom: 10px; color: #aaa; margin-top:0;">
+                            Upload gambar BG/Sprite di sini untuk mendapatkan URL-nya.
                         </p>
                         
                         <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                             <input type="file" id="quick-asset-input" accept="image/*" style="display: none;">
                             <label for="quick-asset-input" 
-                                   style="cursor: pointer; background: #fff; border: 1px solid #ccc; padding: 8px 15px; border-radius: 5px; font-size: 0.9rem; font-weight: bold; color: #555; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: all 0.2s;">
-                                📂 Pilih File / Upload
+                                   style="cursor: pointer; background: #333; border: 1px solid #555; padding: 6px 12px; border-radius: 5px; font-size: 0.85rem; font-weight: bold; color: white; display: inline-flex; align-items: center; gap: 5px;">
+                                📂 Upload Gambar
                             </label>
-                            <span id="quick-upload-status" style="font-size: 0.8rem; font-weight: bold; color: #666;"></span>
+                            <span id="quick-upload-status" style="font-size: 0.8rem; font-weight: bold; color: #aaa;"></span>
                         </div>
     
                         <div id="quick-upload-result" style="display: none; margin-top: 10px; display: flex; gap: 5px;">
                             <input type="text" id="quick-asset-url" readonly 
                                    placeholder="URL akan muncul di sini..."
-                                   style="flex: 1; padding: 8px; font-size: 0.9rem; background: #fff; border: 1px solid #ccc; border-radius: 4px; color: #333;">
+                                   style="flex: 1; padding: 8px; font-size: 0.85rem; background: #222; border: 1px solid #444; border-radius: 4px; color: #eee;">
                             
                             <button type="button" id="btn-copy-asset" 
-                                    style="background: #0d47a1; color: white; border: none; padding: 8px 15px; cursor: pointer; border-radius: 4px; font-weight: bold;">
+                                    style="background: #2196f3; color: white; border: none; padding: 8px 12px; cursor: pointer; border-radius: 4px; font-weight: bold; font-size:0.85rem;">
                                 Copy
                             </button>
                         </div>
                     </div>
+
                     <div class="form-group" style="margin-top:15px;">
-                        <label>Tujuan Akhir (Game Goal)</label>
-                        <textarea id="mai-game-goal" rows="2" placeholder="Cth: User harus berhasil mengajak karakter kencan..." style="background:#1a1a1a; color:white; border:1px solid #444;"></textarea>
+                        <label style="color:#2ecc71;">Tujuan Akhir (Game Goal)</label>
+                        <textarea id="mai-game-goal" rows="2" placeholder="Contoh: Buat dia jatuh cinta padamu." style="width:100%;"></textarea>
                     </div>
 
                     <div id="chapters-container" style="margin-top:20px;">
                         </div>
 
-                    <button type="button" onclick="addChapterInput()" style="width:100%; padding:10px; background:#333; color:white; border:1px dashed #666; margin-top:10px; cursor:pointer;">
+                    <button type="button" onclick="addChapterInput()" style="width:100%; padding:12px; background:rgba(255,255,255,0.05); color:#ccc; border:2px dashed #555; border-radius:8px; margin-top:10px; cursor:pointer; font-weight:bold; transition:0.3s;">
                         + Tambah Chapter Baru
                     </button>
+                    
+                    <div style="margin-top: 30px; border-top: 1px solid #444; padding-top: 20px;">
+                        <label style="display:flex; align-items:center; gap:10px; cursor:pointer; color:#ccc;">
+                            <input type="checkbox" id="mai-is-vn"> 
+                            <span>Aktifkan Mode Visual Novel (Tanpa Chapter)</span>
+                        </label>
+                    </div>
                 </div>
 
                 <div class="form-group" style="margin-top: 30px; border-top: 1px solid #333; padding-top: 20px;">
-                    <button type="submit" class="submit-btn" id="submit-btn" style="width:100%; padding:15px; font-size:1.1rem; font-weight:bold;">✨ Buat Karakter Sekarang</button>
-                    <div id="form-status" style="margin-top: 10px; text-align:center;"></div>
+                    <button type="submit" class="submit-btn" id="submit-btn" style="width:100%; padding:15px; font-size:1.1rem; font-weight:bold; background: linear-gradient(45deg, #00e5ff, #2979ff); border:none; color:white; border-radius:8px; cursor:pointer; box-shadow: 0 4px 15px rgba(0, 229, 255, 0.4);">
+                        ✨ CIPTAKAN KARAKTER
+                    </button>
+                    
+                    <button type="button" onclick="window.location.href='index.html'" style="width:100%; padding:10px; margin-top:10px; background:transparent; color:#666; border:none; cursor:pointer;">Batal</button>
+                    
+                    <div id="form-status" style="margin-top: 15px; text-align:center; font-weight:bold; min-height:20px;"></div>
                 </div>
 
             </form>
@@ -219,9 +258,18 @@
 
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
-    <script src="/js/firebase-config.js"></script>
-    <script src="/js/auth-guard.js"></script> 
-    <script src="/js/lobby.js"></script>
-    <script src="/js/create-mai.js"></script>
+    <script src="js/firebase-config.js"></script>
+    
+    <script>
+        const hb = document.getElementById('hamburger-btn');
+        const sb = document.getElementById('lobby-sidebar');
+        const ov = document.getElementById('menu-overlay');
+        if(hb && sb && ov) {
+            hb.onclick = () => { sb.classList.add('open'); ov.classList.add('active'); };
+            ov.onclick = () => { sb.classList.remove('open'); ov.classList.remove('active'); };
+        }
+    </script>
+    
+    <script src="js/create-mai.js"></script> 
 </body>
 </html>

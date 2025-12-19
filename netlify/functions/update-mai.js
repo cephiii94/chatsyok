@@ -1,5 +1,4 @@
 // File: netlify/functions/update-mai.js
-
 const admin = require('firebase-admin');
 
 if (!admin.apps.length) {
@@ -28,16 +27,12 @@ exports.handler = async (event, context) => {
 
     if (!data.id) return { statusCode: 400, body: JSON.stringify({ error: "Character ID Missing" }) };
 
-    // 1. Cek Kepemilikan (Opsional: Pastikan yg edit adalah creator)
     const charRef = db.collection('characters').doc(data.id);
     const doc = await charRef.get();
     
     if (!doc.exists) return { statusCode: 404, body: JSON.stringify({ error: "Character not found" }) };
-    
-    // Jika mau strict owner check, uncomment baris bawah:
-    // if (doc.data().creatorId !== userId) return { statusCode: 403, body: "Unauthorized" };
 
-    // 2. Siapkan Data Update
+    // Siapkan Data Update (SEMUA FIELD LAMA TETAP DISIMPAN)
     const updatePayload = {
         name: data.name,
         description: data.description,
@@ -47,17 +42,20 @@ exports.handler = async (event, context) => {
         tags: data.tags,
         visibility: data.visibility,
         
-        // Data VN / Story Mode
+        // Data Config (Tetap Ada)
         mode: data.mode,
         isVnAvailable: data.isVnAvailable,
-        gameGoal: data.gameGoal,
-        storyChapters: data.storyChapters, // Array story baru
+        gameGoal: data.gameGoal, 
+        
+        // [BARU] Field 'chapters' untuk struktur Story Mode yang lebih detail
+        chapters: data.chapters, 
+        
+        // Visual (Tetap Ada)
         sprites: data.sprites,
-
+        
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
     };
 
-    // 3. Update Firestore
     await charRef.update(updatePayload);
 
     return { statusCode: 200, body: JSON.stringify({ success: true }) };
