@@ -1,3 +1,5 @@
+/* vn-chat/lobby.css */
+
 :root {
     --primary-color: #ff6b6b;
     --secondary-color: #4ecdc4;
@@ -7,15 +9,18 @@
     --text-color: #ffffff;
 }
 
+/* [EDIT 1] BODY & HTML */
+/* Kita kunci body agar tidak ikut scroll, biar background diam */
 body,
 html {
     margin: 0;
     padding: 0;
-    height: 100%;
+    height: 100vh; /* Ubah 100% jadi 100vh */
+    width: 100vw;
     font-family: 'Nunito', sans-serif;
     background-color: var(--dark-bg);
     color: var(--text-color);
-    overflow-x: hidden;
+    overflow: hidden; /* Matikan scroll di body utama */
 }
 
 .lobby-background {
@@ -29,15 +34,26 @@ html {
     opacity: 0.8;
 }
 
+/* [EDIT 2] LOBBY CONTAINER */
+/* Scroll dipindahkan ke sini agar tombol back tetap melayang */
 .lobby-container {
     max-width: 1200px;
     margin: 0 auto;
     padding: 2rem;
-    min-height: 100vh;
+    
+    height: 100vh;      /* Paksa tinggi layar penuh */
+    overflow-y: auto;   /* Izinkan scroll vertikal DI SINI */
+    overflow-x: hidden; /* Sembunyikan scroll horizontal */
+    
     display: flex;
     flex-direction: column;
     align-items: center;
+
+    scrollbar-width: none;  
+    -ms-overflow-style: none;
 }
+
+/* --- KODE DI BAWAH INI TIDAK ADA YANG DIHAPUS (SESUAI ORIGINAL) --- */
 
 .lobby-header {
     text-align: center;
@@ -173,7 +189,6 @@ html {
         opacity: 0;
         transform: translateY(-30px);
     }
-
     to {
         opacity: 1;
         transform: translateY(0);
@@ -185,14 +200,13 @@ html {
         opacity: 0;
         transform: translateY(30px);
     }
-
     to {
         opacity: 1;
         transform: translateY(0);
     }
 }
 
-/* --- GAYA POP-UP MODAL (Tambahkan di bagian bawah) --- */
+/* --- GAYA POP-UP MODAL --- */
 
 .overlay {
     position: fixed;
@@ -291,27 +305,21 @@ html {
 
 /* --- TOMBOL NAVIGASI BARU --- */
 
-/* --- TOMBOL NAVIGASI MELAYANG (SERAGAM DENGAN CHAT) --- */
-
 .floating-back-btn {
     position: fixed;
     top: 20px;
-    left: 20px; /* Posisi di Pojok Kiri Atas */
+    left: 20px;
     width: 45px;
     height: 45px;
-    
-    /* Gaya Glassmorphism */
     background: rgba(0, 0, 0, 0.4); 
     backdrop-filter: blur(5px);
     border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 50%; /* Bulat Sempurna */
-    
+    border-radius: 50%;
     color: white;
     font-size: 1.2rem;
     font-weight: bold;
     cursor: pointer;
     z-index: 100;
-    
     display: flex;
     justify-content: center;
     align-items: center;
@@ -320,32 +328,26 @@ html {
 }
 
 .floating-back-btn:hover {
-    background: rgba(255, 107, 107, 0.8); /* Warna Merah/Pink (Tema Lobby) */
+    background: rgba(255, 107, 107, 0.8);
     color: white;
     transform: scale(1.15) rotate(-10deg);
     box-shadow: 0 6px 15px rgba(255, 107, 107, 0.5);
     border-color: #fff;
 }
 
-/* Responsif Mobile */
 @media (max-width: 600px) {
     .floating-back-btn {
-        top: 15px;
-        left: 15px;
-        width: 40px;
-        height: 40px;
-        font-size: 1rem;
+        top: 15px; left: 15px; width: 40px; height: 40px; font-size: 1rem;
     }
 }
 
-/* 2. Tombol Ganti Mode (Bentuk Pill) */
 .change-mode-pill {
     margin-top: 15px;
     background: rgba(255, 255, 255, 0.15);
     border: 1px solid rgba(255, 255, 255, 0.4);
     color: #fff;
     padding: 8px 20px;
-    border-radius: 50px; /* Bentuk pil lonjong */
+    border-radius: 50px;
     font-family: inherit;
     font-weight: bold;
     font-size: 0.9rem;
@@ -364,28 +366,23 @@ html {
     box-shadow: 0 5px 15px rgba(0,0,0,0.2);
 }
 
-/* --- TOMBOL NAVIGASI GAYA PILL (SERAGAM DENGAN CHAT & PROFILE) --- */
-
+/* --- PILL BACK BTN (Biar seragam) --- */
 .pill-back-btn {
     position: fixed;
     top: 20px;
     left: 20px;
     z-index: 100;
-
-    /* Style Visual (Sama persis dengan Chat/Profile) */
-    background: rgba(0, 0, 0, 0.25); /* Sedikit lebih gelap agar kontras di Lobby */
+    background: rgba(0, 0, 0, 0.25);
     border: 1px solid rgba(255, 255, 255, 0.4);
     color: white;
     padding: 10px 20px;
     border-radius: 30px;
-    
     font-family: inherit;
     font-weight: 600;
     font-size: 0.95rem;
     cursor: pointer;
     backdrop-filter: blur(5px);
     transition: all 0.3s ease;
-    
     display: flex;
     align-items: center;
     gap: 5px;
@@ -393,19 +390,150 @@ html {
 }
 
 .pill-back-btn:hover {
-    background: var(--primary-color); /* Merah/Pink sesuai tema Lobby */
+    background: var(--primary-color);
     border-color: rgba(255, 255, 255, 0.8);
     transform: translateX(-5px);
     box-shadow: 0 6px 12px rgba(255, 107, 107, 0.4);
 }
 
-/* Responsif Mobile */
 @media (max-width: 600px) {
     .pill-back-btn {
-        top: 15px;
-        left: 15px;
-        padding: 8px 16px;
-        font-size: 0.85rem;
+        top: 15px; left: 15px; padding: 8px 16px; font-size: 0.85rem;
     }
 }
 
+/* --- STYLING BRIEFING MODAL (Tambahan Baru) --- */
+.briefing-box {
+    background: #1e1e2f;
+    width: 90%;
+    max-width: 800px;
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.briefing-content {
+    display: flex;
+    flex-wrap: wrap;
+    height: 100%;
+}
+
+.briefing-left {
+    flex: 1;
+    min-width: 300px;
+    background: #151525;
+    padding: 20px;
+    text-align: center;
+    border-right: 1px solid rgba(255,255,255,0.05);
+}
+
+.briefing-img-wrapper {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    margin: 0 auto 15px;
+    overflow: hidden;
+    border: 3px solid #667eea;
+    box-shadow: 0 0 15px rgba(102, 126, 234, 0.5);
+}
+
+.briefing-img-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+#briefing-name { color: white; margin: 0 0 5px; font-size: 1.5rem; }
+#briefing-desc { color: #aaa; font-size: 0.9rem; line-height: 1.4; margin-bottom: 15px; }
+
+.mission-badge {
+    background: rgba(255, 193, 7, 0.1);
+    color: #ffc107;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.briefing-right {
+    flex: 1.5;
+    min-width: 300px;
+    padding: 20px;
+    background: #1e1e2f;
+}
+
+.briefing-right h3 {
+    color: white;
+    margin-top: 0;
+    border-bottom: 2px solid #333;
+    padding-bottom: 10px;
+}
+
+.chapter-scroll {
+    max-height: 300px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+.chapter-item {
+    display: flex;
+    align-items: center;
+    background: rgba(255,255,255,0.05);
+    margin-bottom: 10px;
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+}
+
+.chapter-item:hover {
+    background: rgba(255,255,255,0.1);
+    transform: translateX(5px);
+}
+
+.chapter-item.locked {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: rgba(0,0,0,0.2);
+}
+
+.chapter-info { flex: 1; }
+.chapter-title { display: block; color: white; font-weight: bold; font-size: 0.95rem; }
+.chapter-desc { font-size: 0.8rem; color: #888; }
+
+.chapter-status { font-size: 1.2rem; margin-left: 10px; }
+
+.close-icon {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 2rem;
+    cursor: pointer;
+    z-index: 10;
+}
+
+@media (max-width: 600px) {
+    .briefing-content { flex-direction: column; }
+    .briefing-left { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .briefing-box { width: 95%; max-height: 90vh; overflow-y: auto; }
+}
+
+/* Sembunyikan scrollbar di area chapter list & profil */
+.briefing-left, 
+.briefing-right, 
+.chapter-scroll {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.briefing-left::-webkit-scrollbar, 
+.briefing-right::-webkit-scrollbar, 
+.chapter-scroll::-webkit-scrollbar {
+    display: none;
+}

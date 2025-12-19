@@ -1,7 +1,8 @@
 // vn-chat/lobby.js
-// VERSI: FILTER MODE FIRST (Pop-up muncul duluan, baru list karakter)
+// VERSI: FIREBASE INTEGRATION (Real Data)
 
-let cachedCharacters = []; // Menyimpan data mentah dari server
+let cachedCharacters = []; // Data karakter (termasuk chapters)
+let currentUserProgress = {}; // Data progress user
 
 // --- 1. HELPER AUTH ---
 function getAuthTokenSafe() {
@@ -28,90 +29,32 @@ function getAuthTokenSafe() {
 
 // --- 2. INISIALISASI ---
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Setup Tombol Navigasi Baru
+    // Setup Tombol Navigasi
     const btnTopBack = document.getElementById('btn-top-back');
     const btnChangeMode = document.getElementById('btn-change-mode');
 
-    // Klik tombol pojok kanan atas -> Ke Menu Utama
-    if (btnTopBack) {
-        btnTopBack.addEventListener('click', () => {
-            window.location.href = '../index.html';
-        });
-    }
+    if (btnTopBack) btnTopBack.addEventListener('click', () => window.location.href = '../index.html');
+    if (btnChangeMode) btnChangeMode.addEventListener('click', () => showModeSelectionModal(true));
 
-    // Klik tombol Ganti Mode -> Buka Modal lagi
-    if (btnChangeMode) {
-        btnChangeMode.addEventListener('click', () => {
-            showModeSelectionModal(true); // Parameter true artinya "ganti mode"
-        });
-    }
-
-    // 2. Cek Firebase (Standard)
+    // Cek Firebase & Load Data
     if (typeof firebase !== 'undefined') {
-        firebase.auth().onAuthStateChanged((user) => {
+        firebase.auth().onAuthStateChanged(async (user) => {
             if (!user) {
                 window.location.href = '../login.html';
             } else {
-                // Tampilkan modal hanya jika belum ada mode terpilih (opsional)
-                // Tapi logika Tuan sebelumnya "Show First", jadi kita panggil:
+                // Tampilkan modal mode selection dlu
                 showModeSelectionModal(); 
-                fetchAllCharacters();
+                
+                // LOAD DATA PARALEL (Karakter & Progress User)
+                await Promise.all([fetchAllCharacters(), fetchUserProgress()]);
             }
         });
     }
 });
 
-// --- 3. LOGIKA MODAL ---
-function showModeSelectionModal(isSwitching = false) {
-    const modal = document.getElementById('mode-selection-modal');
-    const btnFree = document.getElementById('btn-mode-free');
-    const btnStory = document.getElementById('btn-mode-story');
-    const btnCancel = document.getElementById('btn-cancel-mode');
-    const headerTitle = document.querySelector('.lobby-header h1');
-    const headerDesc = document.querySelector('.lobby-header p');
+// --- 3. FETCH DATA DARI SERVER ---
 
-    if (!modal) return;
-
-    modal.classList.remove('hidden');
-    modal.style.display = 'flex';
-
-    // --- KLIK FREE MODE ---
-    btnFree.onclick = () => {
-        modal.style.display = 'none';
-        if(headerTitle) headerTitle.textContent = "Mode Santai (Free Talk)";
-        if(headerDesc) headerDesc.textContent = "Pilih teman untuk ngobrol bebas.";
-        renderCharacters('free');
-    };
-
-    // --- KLIK STORY MODE ---
-    btnStory.onclick = () => {
-        modal.style.display = 'none';
-        if(headerTitle) headerTitle.textContent = "Mode Cerita (Story)";
-        if(headerDesc) headerDesc.textContent = "Pilih skenario petualanganmu.";
-        renderCharacters('story');
-    };
-
-    // --- KLIK BATAL ---
-    if (btnCancel) {
-        if (isSwitching) {
-            // Jika user cuma mau ganti mode tapi gak jadi -> Tutup aja modalnya
-            btnCancel.textContent = "Tutup";
-            btnCancel.onclick = () => {
-                modal.classList.add('hidden');
-                modal.style.display = 'none';
-            };
-        } else {
-            // Jika user baru masuk halaman -> Kembali ke Index
-            btnCancel.textContent = "Kembali ke Menu Utama";
-            btnCancel.onclick = () => {
-                window.location.href = '../index.html';
-            };
-        }
-    }
-}
-
-// --- 4. DATA & RENDER ---
-
+// Ambil Data Karakter (termasuk list Chapters dari DB)
 async function fetchAllCharacters() {
     const container = document.getElementById('character-grid');
     if(container) container.innerHTML = '<p style="text-align:center; color:#fff;">Menyiapkan data...</p>';
@@ -122,17 +65,37 @@ async function fetchAllCharacters() {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
-        if (!res.ok) throw new Error("Gagal fetch data");
-        
+        if (!res.ok) throw new Error("Gagal fetch data karakter");
         cachedCharacters = await res.json();
         
-        // Jangan render dulu, tunggu user pilih mode di Pop-up
-
     } catch (e) {
         console.error(e);
         if(container) container.innerHTML = '<p style="text-align:center; color:#ff6b6b;">Gagal memuat data.</p>';
     }
 }
+
+// [BARU] Ambil Progress User (Chapter mana yang sudah selesai)
+async function fetchUserProgress() {
+    try {
+        const token = await getAuthTokenSafe();
+        // Panggil fungsi backend baru kita
+        const res = await fetch('/.netlify/functions/get-user-progress', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (res.ok) {
+            const data = await res.json();
+            currentUserProgress = data.vnProgress || {};
+            console.log("Progress User Loaded:", currentUserProgress);
+        }
+    } catch (e) {
+        console.error("Gagal load progress:", e);
+        // Kalau gagal, anggap belum ada progress (New Game)
+        currentUserProgress = {}; 
+    }
+}
+
+// --- 4. RENDER & LOGIC ---
 
 function renderCharacters(mode) {
     const container = document.getElementById('character-grid');
@@ -142,72 +105,165 @@ function renderCharacters(mode) {
 
     // FILTER LOGIC
     const filteredChars = cachedCharacters.filter(char => {
-        // Syarat Dasar: Harus VN Available
         if (!char.isVnAvailable) return false;
-
         if (mode === 'story') {
-            // Syarat Story: Harus punya Game Goal
-            return char.gameGoal && char.gameGoal.trim().length > 0;
-        } else {
-            // Syarat Free: Semua yang VN Available boleh masuk
-            return true;
+            // Syarat Story: Harus punya Game Goal DAN punya data Chapters
+            return char.gameGoal && char.chapters && char.chapters.length > 0;
         }
+        return true;
     });
 
-    // Handle Kosong
     if (filteredChars.length === 0) {
         container.innerHTML = `
             <div style="text-align:center; width:100%; color:white; margin-top:50px;">
                 <h3>Belum ada karakter untuk mode ini 😢</h3>
-                <p>Coba pilih mode lain atau buat karakter baru.</p>
-                <button onclick="location.reload()" style="background:white; color:#333; border:none; padding:10px 20px; border-radius:20px; cursor:pointer; margin-top:10px;">Ganti Mode</button>
+                <p>Pastikan data karakter di Firebase sudah memiliki field 'chapters'.</p>
+                <button onclick="location.reload()" style="background:white; color:#333; border:none; padding:10px 20px; border-radius:20px; cursor:pointer; margin-top:10px;">Refresh</button>
             </div>
         `;
         return;
     }
 
-    // Render Kartu
     filteredChars.forEach(char => {
         const card = document.createElement('div');
-        card.className = 'char-card'; // Pakai style CSS Tuan
+        card.className = 'char-card'; 
 
         const imageSrc = char.image || 'https://via.placeholder.com/150';
-        
-        // Badge Opsional (Hanya kosmetik)
         const badgeColor = mode === 'story' ? 'linear-gradient(45deg, #667eea, #764ba2)' : 'linear-gradient(45deg, #a8edea, #fed6e3)';
         const badgeText = mode === 'story' ? '🎮 Story' : '☕ Free';
         const badgeTextColor = mode === 'story' ? 'white' : '#444';
 
         card.innerHTML = `
-            <div style="position:relative;">
-                <img src="${imageSrc}" alt="${char.name}" style="width:100%; height:200px; object-fit:cover; border-radius:8px 8px 0 0;">
-                <span style="position:absolute; top:10px; right:10px; background:${badgeColor}; color:${badgeTextColor}; padding:4px 8px; border-radius:12px; font-size:0.7rem; font-weight:bold; box-shadow:0 2px 4px rgba(0,0,0,0.3);">
+            <div class="char-image-wrapper">
+                <img src="${imageSrc}" class="char-image" alt="${char.name}">
+                <span class="status-badge" style="background:${badgeColor}; color:${badgeTextColor};">
                     ${badgeText}
                 </span>
             </div>
-            <div style="padding:15px;">
-                <h3 style="margin:0 0 5px 0; font-size:1.1rem; color:#333;">${char.name}</h3>
-                <p style="margin:0; font-size:0.85rem; color:#666; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
-                    ${char.tagline || char.description || '...'}
-                </p>
+            <div class="char-info">
+                <h3 class="char-name">${char.name}</h3>
+                <p class="char-desc">${char.tagline || char.description || '...'}</p>
             </div>
         `;
 
-        // Style Inline (Fallback jika CSS belum load)
-        card.style.cssText = `
-            background: white; border-radius: 12px; overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1); cursor: pointer;
-            transition: transform 0.2s;
-        `;
-        card.onmouseover = () => card.style.transform = 'translateY(-5px)';
-        card.onmouseout = () => card.style.transform = 'translateY(0)';
-
-        // KLIK KARTU -> Masuk Chat Sesuai Mode
         card.onclick = () => {
-            // Langsung lempar ke chat dengan mode yang sudah dipilih di awal
-            window.location.href = `chat.html?id=${char.id}&mode=${mode}`;
+            if (mode === 'story') {
+                showBriefingModal(char);
+            } else {
+                window.location.href = `chat.html?id=${char.id}&mode=free`;
+            }
         };
 
         container.appendChild(card);
     });
+}
+
+// --- 5. MODAL BRIEFING (REAL DATA) ---
+
+function showBriefingModal(char) {
+    const modal = document.getElementById('briefing-modal');
+    const btnClose = document.getElementById('btn-close-briefing');
+    
+    if (!modal) return;
+
+    // A. Isi Data Profil
+    document.getElementById('briefing-name').textContent = char.name;
+    document.getElementById('briefing-desc').textContent = char.tagline || char.description || "Tidak ada deskripsi.";
+    document.getElementById('briefing-goal').textContent = char.gameGoal || "Selesaikan cerita.";
+    
+    const imgEl = document.getElementById('briefing-img');
+    if (imgEl) imgEl.src = char.image || 'https://via.placeholder.com/150';
+
+    // B. Render Daftar Chapter (REAL DATA)
+    const chapterListEl = document.getElementById('chapter-list');
+    if (chapterListEl) {
+        chapterListEl.innerHTML = ''; 
+
+        // 1. Ambil List Chapter dari Object Karakter
+        const chapters = char.chapters || [];
+
+        // 2. Ambil Progress User untuk Karakter ini
+        // Format di DB: vnProgress: { "charID": ["chap1", "chap2"] }
+        const completedChapters = currentUserProgress[char.id] || [];
+
+        if (chapters.length === 0) {
+            chapterListEl.innerHTML = '<p style="color:#aaa; text-align:center;">Belum ada skenario tersedia.</p>';
+        }
+
+        chapters.forEach(chap => {
+            const item = document.createElement('div');
+            
+            // Logic Lock: Terkunci jika ada syarat DAN syarat belum selesai
+            const isLocked = chap.required && !completedChapters.includes(chap.required);
+            
+            item.className = `chapter-item ${isLocked ? 'locked' : ''}`;
+            const icon = isLocked ? '🔒' : '▶️';
+            const colorTitle = isLocked ? '#888' : '#fff';
+
+            item.innerHTML = `
+                <div class="chapter-info">
+                    <span class="chapter-title" style="color:${colorTitle}">${chap.title}</span>
+                    <span class="chapter-desc">${chap.desc}</span>
+                </div>
+                <div class="chapter-status">${icon}</div>
+            `;
+
+            if (!isLocked) {
+                item.onclick = () => {
+                    // Masuk ke Chat
+                    window.location.href = `chat.html?id=${char.id}&mode=story&chapter=${chap.id}`;
+                };
+            } else {
+                item.onclick = () => {
+                    alert(`Selesaikan dulu bab sebelumnya!`);
+                };
+            }
+
+            chapterListEl.appendChild(item);
+        });
+    }
+
+    modal.classList.remove('hidden');
+    
+    if (btnClose) btnClose.onclick = () => modal.classList.add('hidden');
+    window.onclick = (e) => {
+        if (e.target === modal) modal.classList.add('hidden');
+    };
+}
+
+// --- 6. LOGIKA MODAL MODE (BAWAAN) ---
+function showModeSelectionModal(isSwitching = false) {
+    const modal = document.getElementById('mode-selection-modal');
+    const btnFree = document.getElementById('btn-mode-free');
+    const btnStory = document.getElementById('btn-mode-story');
+    const btnCancel = document.getElementById('btn-cancel-mode');
+    const headerTitle = document.querySelector('.lobby-header h1');
+    const headerDesc = document.querySelector('.lobby-header p');
+
+    if (!modal) return;
+    modal.classList.remove('hidden');
+
+    btnFree.onclick = () => {
+        modal.classList.add('hidden');
+        if(headerTitle) headerTitle.textContent = "Mode Santai (Free Talk)";
+        if(headerDesc) headerDesc.textContent = "Pilih teman untuk ngobrol bebas.";
+        renderCharacters('free');
+    };
+
+    btnStory.onclick = () => {
+        modal.classList.add('hidden');
+        if(headerTitle) headerTitle.textContent = "Mode Cerita (Story)";
+        if(headerDesc) headerDesc.textContent = "Pilih skenario petualanganmu.";
+        renderCharacters('story');
+    };
+
+    if (btnCancel) {
+        if (isSwitching) {
+            btnCancel.textContent = "Tutup";
+            btnCancel.onclick = () => modal.classList.add('hidden');
+        } else {
+            btnCancel.textContent = "Kembali ke Menu Utama";
+            btnCancel.onclick = () => window.location.href = '../index.html';
+        }
+    }
 }

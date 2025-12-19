@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Misi Karakter</title>
+    <link rel="stylesheet" href="style.css"> <link rel="stylesheet" href="lobby.css"> <style>
+        /* CSS KHUSUS HALAMAN INI */
+        body {
+            background-color: #1a1a2e;
+            color: white;
+            padding: 20px;
+            font-family: 'Poppins', sans-serif;
+        }
+        .detail-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .hero-section {
+            display: flex;
+            flex-wrap: wrap;
+            background: linear-gradient(to bottom, rgba(0,0,0,0), #1a1a2e), url(''); /* BG Image dinamis */
+            background-size: cover;
+            background-position: center;
+            padding: 40px 20px;
+            align-items: flex-end;
+            min-height: 300px;
+        }
+        .char-info h1 { margin: 0; font-size: 2.5rem; text-shadow: 0 2px 4px black; }
+        .char-info p { font-size: 1rem; color: #ddd; text-shadow: 0 1px 2px black; max-width: 500px;}
+        
+        .mission-box {
+            background: rgba(0,0,0,0.6);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            border-left: 4px solid #4facfe;
+        }
+
+        .chapter-list {
+            padding: 20px;
+        }
+        .chapter-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: white;
+            color: #333;
+            margin-bottom: 15px;
+            padding: 20px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.2s;
+            opacity: 1;
+        }
+        .chapter-card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        
+        /* State Terkunci */
+        .chapter-card.locked {
+            background: #444;
+            color: #888;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        .chapter-card.locked:hover { transform: none; }
+
+        .btn-back {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <a href="lobby.html" class="btn-back">⬅ Kembali ke Lobby</a>
+
+    <div id="loading" style="text-align:center;">Memuat Data Agen...</div>
+
+    <div class="detail-container hidden" id="main-content">
+        <div class="hero-section" id="hero-bg">
+            <div class="char-info">
+                <h1 id="char-name">Nama Karakter</h1>
+                <p id="char-desc">Deskripsi singkat karakter...</p>
+                
+                <div class="mission-box">
+                    <strong>🎯 MISI UTAMA:</strong>
+                    <span id="char-goal">Membuat dia tertawa...</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="chapter-list">
+            <h3>Pilih Chapter</h3>
+            <div id="chapters-container">
+                </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="../js/firebase-config.js"></script>
+    
+    <script src="vn-detail.js"></script>
+</body>
+</html>
