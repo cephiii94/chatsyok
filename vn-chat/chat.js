@@ -394,10 +394,20 @@ async function sendMessage(manualText = null, isResume = false) {
             handleStoryResponse(data.reply);
         } else {
             // Free Mode
-            const { emotion, cleanText } = parseReply(data.reply);
+            
+            // [FIX] Cek jika AI malah kirim JSON (Leakage dari Story Mode)
+            let finalReply = data.reply;
+            try {
+                if (finalReply.trim().startsWith('{')) {
+                    const parsed = JSON.parse(finalReply);
+                    if (parsed.message) finalReply = parsed.message;
+                }
+            } catch (e) {}
+
+            const { emotion, cleanText } = parseReply(finalReply);
             updateSprite(emotion);
             typewriter(cleanText);
-            saveMessage('bot', data.reply); 
+            saveMessage('bot', finalReply); 
         }
 
     } catch (e) {

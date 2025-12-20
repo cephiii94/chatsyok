@@ -60,7 +60,10 @@ exports.handler = async (event, context) => {
         visibility: data.visibility || 'default',
 
         // ▼▼▼ INI YANG KEMARIN HILANG ▼▼▼
-        gameGoal: data.gameGoal || '' 
+        gameGoal: data.gameGoal || '',
+        
+        // [FIX] Tambahkan chapters agar muncul di Lobby Story Mode
+        chapters: data.chapters || []
         // ▲▲▲ DATA PENTING UNTUK STORY MODE ▲▲▲
       };
     });

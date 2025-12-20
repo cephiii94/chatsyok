@@ -25,9 +25,17 @@ exports.handler = async (event, context) => {
     const decodedToken = await admin.auth().verifyIdToken(token);
     const userId = decodedToken.uid;
 
-    // 2. Ambil ID dari Body
-    const data = JSON.parse(event.body);
-    const charId = data.id;
+    // 2. Ambil ID dari Body atau Query String (Prioritas Query String agar tidak error 500 saat body kosong)
+    let charId = event.queryStringParameters ? event.queryStringParameters.id : null;
+
+    if (!charId && event.body) {
+      try {
+        const data = JSON.parse(event.body);
+        charId = data.id;
+      } catch (e) {
+        // Body error/invalid
+      }
+    }
 
     if (!charId) {
       return { statusCode: 400, body: JSON.stringify({ error: "ID Karakter diperlukan" }) };

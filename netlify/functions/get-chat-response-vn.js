@@ -48,7 +48,7 @@ async function handleStoryMode(params) {
     const charData = charDoc.data();
     
     // Ambil array story dari database.
-    const STORY_LINE = charData.storyChapters || []; 
+    const STORY_LINE = charData.chapters || []; 
     
     // Fallback jika cerita belum ditulis
     if (STORY_LINE.length === 0) {
@@ -198,6 +198,7 @@ async function handleFreeMode(params) {
     1. Bahasa Indonesia Gaul/Natural.
     2. Pendek (2-3 kalimat).
     3. WAJIB awali dengan TAG EMOSI: [IDLE], [HAPPY], [SAD], [ANGRY], [SURPRISED], [SHY], [THINKING].
+    4. DILARANG OUTPUT JSON (Hanya teks biasa).
     
     History:
     ${historyContext}

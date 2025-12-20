@@ -9,13 +9,12 @@ if (!admin.apps.length) {
 }
 const db = admin.firestore();
 
-// Helper Auth
 async function getUserIdFromToken(event) {
   const authHeader = event.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) throw new Error('No Token');
   const token = authHeader.split('Bearer ')[1];
   const decodedToken = await admin.auth().verifyIdToken(token);
-  return decodedToken.uid;
+  return decodedToken.uid; 
 }
 
 exports.handler = async (event, context) => {
@@ -25,45 +24,42 @@ exports.handler = async (event, context) => {
     const userId = await getUserIdFromToken(event);
     const data = JSON.parse(event.body);
 
-    // Validasi Field Utama
     if (!data.name || !data.description) {
-      return { statusCode: 400, body: JSON.stringify({ error: "Nama & Deskripsi wajib diisi." }) };
+      return { statusCode: 400, body: JSON.stringify({ error: 'Data wajib tidak lengkap.' }) };
     }
 
-    // Siapkan Dokumen Baru
-    const newDocRef = db.collection('characters').doc();
-    
-    const newChar = {
-      id: newDocRef.id, // ID otomatis dari Firebase
-      creatorId: userId,
-      
+    // Generate ID Baru (Auto-ID dari Firestore lebih aman)
+    const newDocRef = db.collection('characters').doc(); 
+    const newId = newDocRef.id;
+
+    const newMaiData = {
+      id: newId, 
       name: data.name,
+      description: data.description, 
+      tagline: data.tagline || '',   
       greeting: data.greeting,
-      tagline: data.tagline,
-      description: data.description,
+      image: data.image || null,
       tags: data.tags || [],
       visibility: data.visibility || 'public',
+      creatorId: userId,
       
-      // Data Visual
-      image: data.image || null,
-      sprites: data.sprites || {}, // { happy: url, sad: url ... }
-
-      // Data Game / Story
-      mode: data.mode || 'free', // 'free' atau 'story'
-      isVnAvailable: data.isVnAvailable || false,
-      gameGoal: data.gameGoal || "",
+      // --- DATA GAME / STORY ---
+      mode: data.mode || 'free',
+      isVnAvailable: data.isVnAvailable === true,
+      gameGoal: data.gameGoal || '',
       
-      // [BARU] Field Chapter Manager
+      // [FIX] Kita simpan sebagai 'chapters' (SAMA DENGAN EDIT & LOBBY)
       chapters: data.chapters || [], 
+      
+      sprites: data.sprites || {},
 
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp()
     };
 
-    // Simpan ke Firestore
-    await newDocRef.set(newChar);
+    await newDocRef.set(newMaiData);
 
-    return { statusCode: 200, body: JSON.stringify({ success: true, id: newDocRef.id }) };
+    return { statusCode: 200, body: JSON.stringify({ success: true, id: newId }) };
 
   } catch (error) {
     console.error("Save Error:", error);
