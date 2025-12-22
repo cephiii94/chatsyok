@@ -15,68 +15,65 @@
     <div id="app-container">
         
         <header class="mobile-header">
-            <button id="hamburger-btn" style="background:none; border:none; font-size:1.5rem; cursor:pointer;">☰</button>
-            <h1 style="font-size:1.2rem; margin:0;">Buat Karakter</h1>
-        </header>
-        
+            <button id="hamburger-btn">&#9776;</button> 
+            <h1>Buat Karakter</h1> </header>
+
         <aside class="lobby-sidebar" id="lobby-sidebar">
-            <div style="padding: 20px;">
-                <h1 style="color:white; margin-top:0;">ChatApp</h1>
+            <div style="padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <h1 style="color:white; margin:0; font-size:1.5rem;">ChatsYok!</h1> 
             </div>
             <nav class="lobby-sidebar-nav">
                 <a href="index.html">Home</a>
-                <a href="create-mai.html" class="active">Buat Bot</a>
+                <a href="create-mai.html" class="active">Buat Bot</a> 
                 <a href="leaderboard.html">Leaderboard</a>
             </nav>
         </aside>
 
         <main class="lobby-main">
-            <header class="lobby-header">
-                <h2>Ciptakan Model AI (MAI)</h2>
-                <p>Isi identitas, visual, dan skenario cerita karakter Anda.</p>
-            </header>
-
             <form id="create-mai-form" class="form-container">
                 
+                <h2 style="margin-top:0; color:var(--primary-color); border-bottom:1px solid #eee; padding-bottom:15px; margin-bottom:25px;">
+                    Ciptakan Karakter Baru
+                </h2>
+
                 <div class="tabs-header">
                     <button type="button" class="tab-btn active enabled" onclick="switchTab('tab-identitas')">1. Identitas</button>
-                    <button type="button" id="btn-tab-visual" class="tab-btn" onclick="switchTab('tab-visual')">🔒 2. Visual (VN)</button>
-                    <button type="button" id="btn-tab-skenario" class="tab-btn" onclick="switchTab('tab-skenario')">🔒 3. Skenario (Story)</button>
+                    <button type="button" id="btn-tab-visual" class="tab-btn" onclick="switchTab('tab-visual')">🔒 2. Visual</button>
+                    <button type="button" id="btn-tab-skenario" class="tab-btn" onclick="switchTab('tab-skenario')">🔒 3. Skenario</button>
                 </div>
 
                 <div id="tab-identitas" class="tab-content active">
-                    <div class="form-group avatar-group">
-                        <label>Avatar Utama</label>
+                    <div class="avatar-group">
                         <img src="https://via.placeholder.com/150" alt="Preview" id="avatar-preview" class="avatar-preview">
                         <div>
                             <input type="file" id="mai-image" accept="image/*" onchange="updateFileName(this, 'label-main-avatar')" style="display: none;">
-                            <label for="mai-image" id="label-main-avatar" class="btn-secondary-action">📁 Pilih Foto</label>
+                            <label for="mai-image" id="label-main-avatar" class="btn-secondary-action">📁 Upload Avatar</label>
                         </div>
                     </div>
 
                     <div class="form-group">
-                        <label>Nama MAI</label>
-                        <input type="text" id="mai-name" required placeholder="Nama karakter...">
+                        <label>Nama Karakter</label>
+                        <input type="text" id="mai-name" required placeholder="Contoh: Mai, Asisten Cerdas">
                     </div>
                     
                     <div class="form-group">
-                        <label>Pesan Sapaan</label>
-                        <input type="text" id="mai-greeting" required placeholder="Hai! Apa kabar?">
+                        <label>Sapaan Awal</label>
+                        <input type="text" id="mai-greeting" required placeholder="Halo! Ada yang bisa kubantu?">
                     </div>
 
                     <div class="form-group">
-                        <label>Deskripsi Singkat (Tagline)</label>
-                        <textarea id="mai-tagline" rows="2" maxlength="150" placeholder="Muncul di kartu lobby..."></textarea>
+                        <label>Tagline (Info Singkat)</label>
+                        <textarea id="mai-tagline" rows="2" maxlength="150" placeholder="Muncul di kartu karakter..."></textarea>
                     </div>
 
                     <div class="form-group">
-                        <label>Instruksi Kepribadian (Prompt)</label>
-                        <textarea id="mai-description" rows="8" required placeholder="Jelaskan sifat, latar belakang..."></textarea>
+                        <label>Prompt Kepribadian</label>
+                        <textarea id="mai-description" rows="6" required placeholder="Jelaskan detail sifat dan cara bicaranya..."></textarea>
                     </div>
 
                     <div class="form-group">
-                        <label>Kategori (Tags)</label>
-                        <input type="text" id="mai-tags" placeholder="Anime, Sekolah, Misteri">
+                        <label>Tags</label>
+                        <input type="text" id="mai-tags" placeholder="Anime, Game, Asisten (Pisahkan koma)">
                     </div>
 
                     <div class="config-section">
@@ -85,71 +82,75 @@
                         <label class="toggle-card">
                             <input type="checkbox" id="check-is-vn" class="toggle-input">
                             <div class="toggle-text">
-                                <strong>A. Aktifkan Mode Visual</strong>
-                                <small>Membuka Tab Visual (Sprite & BG).</small>
+                                <strong>A. Mode Visual</strong>
+                                <small>Aktifkan tab Visual (Sprite & Background).</small>
                             </div>
                         </label>
 
                         <label class="toggle-card">
                             <input type="checkbox" id="check-is-story" class="toggle-input">
                             <div class="toggle-text">
-                                <strong>B. Aktifkan Story Mode</strong>
-                                <small>Membuka Tab Skenario (Misi & Chapter).</small>
+                                <strong>B. Story Mode</strong>
+                                <small>Aktifkan tab Skenario (Misi & Chapter).</small>
                             </div>
                         </label>
                     </div>
 
                     <div class="form-group" style="margin-top:20px;">
                         <label>Visibilitas</label>
-                        <div class="radio-group">
-                            <label><input type="radio" name="visibility" value="public" checked> Publik</label>
-                            <label><input type="radio" name="visibility" value="private"> Privat</label>
+                        <div style="display:flex; gap:20px;">
+                            <label style="font-weight:normal; display:flex; align-items:center;">
+                                <input type="radio" name="visibility" value="public" checked style="margin-right:5px;"> Publik
+                            </label>
+                            <label style="font-weight:normal; display:flex; align-items:center;">
+                                <input type="radio" name="visibility" value="private" style="margin-right:5px;"> Privat
+                            </label>
                         </div>
                     </div>
                     
                     <div style="text-align:right; margin-top:20px;">
-                        <button type="button" class="btn-next" onclick="handleNextStep()">Lanjut ▶</button>
+                        <button type="button" class="btn-next" onclick="handleNextStep()">Lanjut ke Visual ▶</button>
                     </div>
                 </div>
 
                 <div id="tab-visual" class="tab-content">
-                    <h3 style="color:#00e5ff; margin-bottom:10px;">Aset Visual Novel</h3>
+                    <h3 style="color:var(--primary-color);">Aset Visual Novel</h3>
                     
                     <div class="form-group">
-                        <label>Background Default (URL)</label>
+                        <label>Background Default</label>
                         <div style="display:flex; gap:10px;">
-                            <input type="text" id="vn-bg-url" placeholder="URL Background..." readonly>
+                            <input type="text" id="vn-bg-url" placeholder="URL Gambar..." readonly>
                             <input type="file" id="vn-bg-file" accept="image/*" style="display:none;">
-                            <button type="button" onclick="document.getElementById('vn-bg-file').click()" class="btn-secondary-action">Upload</button>
+                            <button type="button" onclick="document.getElementById('vn-bg-file').click()" class="btn-secondary-action">Upload BG</button>
                         </div>
                     </div>
 
                     <div class="sprites-grid">
-                        <div style="text-align: center;">
+                        <div class="sprite-item">
                             <input type="file" id="sprite-happy" accept="image/*" style="display:none;" onchange="updateFileName(this, 'label-happy')">
                             <label for="sprite-happy" id="label-happy" class="sprite-upload-box">
                                 <div class="sprite-icon">😄</div><span>Senang</span>
                             </label>
                         </div>
-                        <div style="text-align: center;">
+                        <div class="sprite-item">
                             <input type="file" id="sprite-sad" accept="image/*" style="display:none;" onchange="updateFileName(this, 'label-sad')">
                             <label for="sprite-sad" id="label-sad" class="sprite-upload-box">
                                 <div class="sprite-icon">😢</div><span>Sedih</span>
                             </label>
                         </div>
-                         <div style="text-align: center;">
+                        <div class="sprite-item">
                             <input type="file" id="sprite-angry" accept="image/*" style="display:none;" onchange="updateFileName(this, 'label-angry')">
                             <label for="sprite-angry" id="label-angry" class="sprite-upload-box">
                                 <div class="sprite-icon">😡</div><span>Marah</span>
                             </label>
                         </div>
-                         <div style="text-align: center;">
+                        <div class="sprite-item">
                             <input type="file" id="sprite-shy" accept="image/*" style="display:none;" onchange="updateFileName(this, 'label-shy')">
                             <label for="sprite-shy" id="label-shy" class="sprite-upload-box">
                                 <div class="sprite-icon">😳</div><span>Malu</span>
                             </label>
                         </div>
-                         <div style="text-align: center;">
+                        <div class="sprite-item">
                             <input type="file" id="sprite-surprised" accept="image/*" style="display:none;" onchange="updateFileName(this, 'label-surprised')">
                             <label for="sprite-surprised" id="label-surprised" class="sprite-upload-box">
                                 <div class="sprite-icon">😱</div><span>Kaget</span>
@@ -158,28 +159,28 @@
                     </div>
 
                     <div style="text-align:right; margin-top:30px;">
-                        <button type="button" class="btn-next" onclick="switchTab('tab-skenario')">Lanjut ▶</button>
+                        <button type="button" class="btn-next" onclick="switchTab('tab-skenario')">Lanjut ke Skenario ▶</button>
                     </div>
                 </div>
 
                 <div id="tab-skenario" class="tab-content">
-                    <h3 style="color:#00e5ff; margin-bottom:10px;">Editor Skenario</h3>
+                    <h3 style="color:var(--primary-color);">Editor Skenario</h3>
                     
                     <div class="form-group">
                         <label>Tujuan Akhir (Game Goal)</label>
                         <textarea id="mai-game-goal" rows="2" placeholder="Contoh: Buat dia jatuh cinta."></textarea>
                     </div>
 
-                    <div id="chapters-container" style="margin-top:20px;"></div>
+                    <div id="chapters-container"></div>
 
                     <button type="button" onclick="addChapterInput()" class="btn-secondary-action btn-full" style="margin-top:15px; border-style:dashed;">
                         + Tambah Chapter Baru
                     </button>
                 </div>
 
-                <div class="form-group" style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+                <div class="form-group" style="margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px;">
                     <button type="submit" class="submit-btn btn-full" id="submit-btn">✨ CIPTAKAN KARAKTER</button>
-                    <button type="button" onclick="window.location.href='index.html'" class="btn-cancel">Batal</button>
+                    <button type="button" onclick="window.location.href='index.html'" class="btn-cancel">Batalkan</button>
                     <div id="form-status" style="margin-top: 15px; text-align:center; font-weight:bold;"></div>
                 </div>
 
