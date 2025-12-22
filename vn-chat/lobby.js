@@ -1,5 +1,5 @@
 // vn-chat/lobby.js
-// VERSI: FIREBASE INTEGRATION (Real Data)
+// VERSI: STRICTLY STORY MODE
 
 let cachedCharacters = []; // Data karakter (termasuk chapters)
 let currentUserProgress = {}; // Data progress user
@@ -31,10 +31,9 @@ function getAuthTokenSafe() {
 document.addEventListener('DOMContentLoaded', () => {
     // Setup Tombol Navigasi
     const btnTopBack = document.getElementById('btn-top-back');
-    const btnChangeMode = document.getElementById('btn-change-mode');
 
+    // Tombol Back di sini kembali ke Index Utama (Home)
     if (btnTopBack) btnTopBack.addEventListener('click', () => window.location.href = '../index.html');
-    if (btnChangeMode) btnChangeMode.addEventListener('click', () => showModeSelectionModal(true));
 
     // Cek Firebase & Load Data
     if (typeof firebase !== 'undefined') {
@@ -42,11 +41,33 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!user) {
                 window.location.href = '../login.html';
             } else {
-                // Tampilkan modal mode selection dlu
-                showModeSelectionModal(); 
+                // Header settings...
+                const headerTitle = document.querySelector('.lobby-header h1');
+                const headerDesc = document.querySelector('.lobby-header p');
+                if(headerTitle) headerTitle.textContent = "Story Mode";
+                if(headerDesc) headerDesc.textContent = "Selesaikan misi dan buka ending rahasia.";
                 
-                // LOAD DATA PARALEL (Karakter & Progress User)
-                await Promise.all([fetchAllCharacters(), fetchUserProgress()]);
+                // Pastikan loader NYALA di awal (HTML sudah class 'active', tapi kita pastikan lagi)
+                const loader = document.getElementById('page-loader');
+                if(loader) loader.classList.add('active');
+
+                // LOAD DATA
+                try {
+                    await Promise.all([fetchAllCharacters(), fetchUserProgress()]);
+                    renderCharacters('story');
+                } catch (e) {
+                    console.error("Error init:", e);
+                } finally {
+                    // [PENTING] Matikan Loader setelah selesai (sukses/gagal)
+                    if(loader) {
+                        // Fade out effect
+                        loader.style.opacity = '0';
+                        setTimeout(() => {
+                            loader.classList.remove('active'); 
+                            loader.style.opacity = ''; // Reset
+                        }, 500);
+                    }
+                }
             }
         });
     }
@@ -56,8 +77,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Ambil Data Karakter (termasuk list Chapters dari DB)
 async function fetchAllCharacters() {
-    const container = document.getElementById('character-grid');
-    if(container) container.innerHTML = '<p style="text-align:center; color:#fff;">Menyiapkan data...</p>';
+ //   const container = document.getElementById('character-grid');
+ //   if(container) container.innerHTML = '<p style="text-align:center; color:#fff;">Menyiapkan data...</p>';
 
     try {
         const token = await getAuthTokenSafe();
@@ -74,11 +95,10 @@ async function fetchAllCharacters() {
     }
 }
 
-// [BARU] Ambil Progress User (Chapter mana yang sudah selesai)
+// Ambil Progress User (Chapter mana yang sudah selesai)
 async function fetchUserProgress() {
     try {
         const token = await getAuthTokenSafe();
-        // Panggil fungsi backend baru kita
         const res = await fetch('/.netlify/functions/get-user-progress', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -90,7 +110,6 @@ async function fetchUserProgress() {
         }
     } catch (e) {
         console.error("Gagal load progress:", e);
-        // Kalau gagal, anggap belum ada progress (New Game)
         currentUserProgress = {}; 
     }
 }
@@ -103,22 +122,18 @@ function renderCharacters(mode) {
     
     container.innerHTML = '';
 
-    // FILTER LOGIC
+    // FILTER LOGIC (Khusus Story)
     const filteredChars = cachedCharacters.filter(char => {
         if (!char.isVnAvailable) return false;
-        if (mode === 'story') {
-// Syarat Story: Cukup punya Game Goal saja (karena isVnAvailable sudah dicek di atas)
-            // Jadi kalau chapters kosong, dia tetap muncul (bisa kita kasih label "Coming Soon")
-            return char.gameGoal && char.gameGoal.trim().length > 0;
-        }
-        return true;
+        // Syarat Story: Cukup punya Game Goal
+        return char.gameGoal && char.gameGoal.trim().length > 0;
     });
 
     if (filteredChars.length === 0) {
         container.innerHTML = `
             <div style="text-align:center; width:100%; color:white; margin-top:50px;">
-                <h3>Belum ada karakter untuk mode ini 😢</h3>
-                <p>Pastikan data karakter di Firebase sudah memiliki field 'chapters'.</p>
+                <h3>Belum ada skenario cerita 😢</h3>
+                <p>Nantikan update cerita dari kreator favoritmu.</p>
                 <button onclick="location.reload()" style="background:white; color:#333; border:none; padding:10px 20px; border-radius:20px; cursor:pointer; margin-top:10px;">Refresh</button>
             </div>
         `;
@@ -130,9 +145,10 @@ function renderCharacters(mode) {
         card.className = 'char-card'; 
 
         const imageSrc = char.image || 'https://via.placeholder.com/150';
-        const badgeColor = mode === 'story' ? 'linear-gradient(45deg, #667eea, #764ba2)' : 'linear-gradient(45deg, #a8edea, #fed6e3)';
-        const badgeText = mode === 'story' ? '🎮 Story' : '☕ Free';
-        const badgeTextColor = mode === 'story' ? 'white' : '#444';
+        // Badge Story
+        const badgeColor = 'linear-gradient(45deg, #667eea, #764ba2)';
+        const badgeText = '🎮 Story';
+        const badgeTextColor = 'white';
 
         card.innerHTML = `
             <div class="char-image-wrapper">
@@ -148,18 +164,14 @@ function renderCharacters(mode) {
         `;
 
         card.onclick = () => {
-            if (mode === 'story') {
-                showBriefingModal(char);
-            } else {
-                window.location.href = `chat.html?id=${char.id}&mode=free`;
-            }
+            showBriefingModal(char);
         };
 
         container.appendChild(card);
     });
 }
 
-// --- 5. MODAL BRIEFING (REAL DATA) ---
+// --- 5. MODAL BRIEFING (STORY ONLY) ---
 
 function showBriefingModal(char) {
     const modal = document.getElementById('briefing-modal');
@@ -175,16 +187,12 @@ function showBriefingModal(char) {
     const imgEl = document.getElementById('briefing-img');
     if (imgEl) imgEl.src = char.image || 'https://via.placeholder.com/150';
 
-    // B. Render Daftar Chapter (REAL DATA)
+    // B. Render Daftar Chapter
     const chapterListEl = document.getElementById('chapter-list');
     if (chapterListEl) {
         chapterListEl.innerHTML = ''; 
 
-        // 1. Ambil List Chapter dari Object Karakter
         const chapters = char.chapters || [];
-
-        // 2. Ambil Progress User untuk Karakter ini
-        // Format di DB: vnProgress: { "charID": ["chap1", "chap2"] }
         const completedChapters = currentUserProgress[char.id] || [];
 
         if (chapters.length === 0) {
@@ -194,7 +202,7 @@ function showBriefingModal(char) {
         chapters.forEach(chap => {
             const item = document.createElement('div');
             
-            // Logic Lock: Terkunci jika ada syarat DAN syarat belum selesai
+            // Logic Lock
             const isLocked = chap.required && !completedChapters.includes(chap.required);
             
             item.className = `chapter-item ${isLocked ? 'locked' : ''}`;
@@ -211,7 +219,7 @@ function showBriefingModal(char) {
 
             if (!isLocked) {
                 item.onclick = () => {
-                    // Masuk ke Chat
+                    // Masuk ke Chat Story + Chapter ID
                     window.location.href = `chat.html?id=${char.id}&mode=story&chapter=${chap.id}`;
                 };
             } else {
@@ -230,41 +238,4 @@ function showBriefingModal(char) {
     window.onclick = (e) => {
         if (e.target === modal) modal.classList.add('hidden');
     };
-}
-
-// --- 6. LOGIKA MODAL MODE (BAWAAN) ---
-function showModeSelectionModal(isSwitching = false) {
-    const modal = document.getElementById('mode-selection-modal');
-    const btnFree = document.getElementById('btn-mode-free');
-    const btnStory = document.getElementById('btn-mode-story');
-    const btnCancel = document.getElementById('btn-cancel-mode');
-    const headerTitle = document.querySelector('.lobby-header h1');
-    const headerDesc = document.querySelector('.lobby-header p');
-
-    if (!modal) return;
-    modal.classList.remove('hidden');
-
-    btnFree.onclick = () => {
-        modal.classList.add('hidden');
-        if(headerTitle) headerTitle.textContent = "Mode Santai (Free Talk)";
-        if(headerDesc) headerDesc.textContent = "Pilih teman untuk ngobrol bebas.";
-        renderCharacters('free');
-    };
-
-    btnStory.onclick = () => {
-        modal.classList.add('hidden');
-        if(headerTitle) headerTitle.textContent = "Mode Cerita (Story)";
-        if(headerDesc) headerDesc.textContent = "Pilih skenario petualanganmu.";
-        renderCharacters('story');
-    };
-
-    if (btnCancel) {
-        if (isSwitching) {
-            btnCancel.textContent = "Tutup";
-            btnCancel.onclick = () => modal.classList.add('hidden');
-        } else {
-            btnCancel.textContent = "Kembali ke Menu Utama";
-            btnCancel.onclick = () => window.location.href = '../index.html';
-        }
-    }
 }

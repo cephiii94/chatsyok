@@ -1,4 +1,5 @@
-// File: js/lobby.js (FINAL FULL VERSION)
+// File: js/lobby.js
+// VERSI: UPDATED (One Gateway System)
 
 let selectedCharacterId = null;
 
@@ -133,14 +134,18 @@ function renderCharacterGrid(characters, isGuest) {
     });
 }
 
+// [MODIFIKASI BRI] Fungsi Modal Updated
 async function openProfileModal(char, isGuest) {
     const modal = document.getElementById('character-profile-modal');
     const imgEl = document.getElementById('modal-char-img');
     const nameEl = document.getElementById('modal-char-name');
     const descEl = document.getElementById('modal-char-desc');
     const tagsContainer = document.getElementById('modal-char-tags');
-    const startBtn = document.getElementById('btn-start-chat');
     const adminActionsDiv = document.getElementById('modal-admin-actions');
+
+    // Ambil elemen tombol baru
+    const btnWA = document.getElementById('btn-action-chat-wa');
+    const btnVN = document.getElementById('btn-action-vn-free');
 
     imgEl.src = optimizeCloudinaryUrl(char.image, 500); 
     nameEl.textContent = char.name;
@@ -224,25 +229,54 @@ async function openProfileModal(char, isGuest) {
         } catch (e) { console.log("Gagal cek akses admin:", e); }
     }
 
-    modal.style.display = 'flex';
-    setTimeout(() => modal.classList.add('visible'), 10);
+    // --- SETUP LOGIKA TOMBOL PILIHAN MODE ---
+    
+    // Gunakan cloneNode untuk membersihkan event listener lama (prevents double firing)
+    const newBtnWA = btnWA.cloneNode(true);
+    const newBtnVN = btnVN.cloneNode(true);
+    
+    btnWA.parentNode.replaceChild(newBtnWA, btnWA);
+    btnVN.parentNode.replaceChild(newBtnVN, btnVN);
 
-    const newStartBtn = startBtn.cloneNode(true);
-    startBtn.parentNode.replaceChild(newStartBtn, startBtn);
-
-    newStartBtn.addEventListener('click', () => {
+    // 1. Logika Chat Cepat (WA)
+    newBtnWA.addEventListener('click', () => {
         if (isGuest) {
-            const guestModal = document.getElementById('guest-login-modal');
-            modal.classList.remove('visible');
-            setTimeout(() => modal.style.display = 'none', 300);
-            if(guestModal) {
-                guestModal.style.display = 'flex';
-                setTimeout(() => guestModal.classList.add('visible'), 10);
-            }
+            handleGuestLimit(modal);
         } else {
+            // Masuk ke chat biasa
             window.location.href = `chat.html?id=${selectedCharacterId}`;
         }
     });
+
+    // 2. Logika Visual Mode (VN Free Talk)
+    newBtnVN.addEventListener('click', () => {
+            if (isGuest) {
+                handleGuestLimit(modal);
+            } else {
+                // [UPDATE BRI] Tampilkan Loading dulu
+                const loader = document.getElementById('global-loader');
+                if(loader) loader.classList.add('active');
+
+                // Beri jeda sedikit biar loadingnya terlihat (aesthetic), baru pindah
+                setTimeout(() => {
+                    window.location.href = `vn-chat/chat.html?id=${char.id}&mode=free`;
+                }, 800); // 0.8 detik
+            }
+    });
+
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('visible'), 10);
+}
+
+// Helper Guest Limit
+function handleGuestLimit(currentModal) {
+    const guestModal = document.getElementById('guest-login-modal');
+    currentModal.classList.remove('visible');
+    setTimeout(() => currentModal.style.display = 'none', 300);
+    if(guestModal) {
+        guestModal.style.display = 'flex';
+        setTimeout(() => guestModal.classList.add('visible'), 10);
+    }
 }
 
 function setupModalEvents() {

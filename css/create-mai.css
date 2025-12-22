@@ -1,309 +1,370 @@
-/* Ambil variabel warna dari lobby.css */
+/* File: css/create-mai.css */
+
+/* --- VARIABEL GLOBAL (Diambil dari Lobby untuk konsistensi) --- */
 :root {
-    --bg-primary: #f0f8ff;
-    --bg-secondary: #ffffff;
-    --bg-sidebar: #e3f2fd;
-    --bg-accent: #bbdefb;
-    --bg-button: #90caf9;
-    --bg-button-hover: #64b5f6;
-    --text-primary: #1e3a5a;
-    --text-secondary: #4a658a;
-    --border-color: #d1e5f8;
-    --shadow-light: 0 4px 10px rgba(0, 82, 160, 0.05);
+    --primary-color: #667eea;
+    --primary-hover: #5a6fd6;
+    --secondary-color: #4ecdc4;
+    --text-color: #333;
+    --bg-color: #f4f7f6;
+    --card-bg: #ffffff;
+    --border-color: #ddd;
 }
 
-/* Container utama formulir */
-.form-container {
-    background-color: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 24px;
-    max-width: 800px;
-    margin: 0 auto;
-    box-shadow: var(--shadow-light);
-}
-
-/* Setiap grup (label + input) */
-.form-group {
-    margin-bottom: 20px;
-}
-
-.form-group label {
-    display: block;
-    font-weight: 600;
-    margin-bottom: 8px;
-    color: var(--text-primary);
-}
-
-/* Baris untuk input berdampingan */
-.form-row {
-    display: flex;
-    gap: 20px;
-    flex-wrap: wrap;
-}
-.form-row .form-group {
-    flex-basis: 300px; /* Basis untuk wrapping */
-}
-
-/* Styling input teks dan textarea */
-input[type="text"],
-textarea {
-    width: 100%;
-    padding: 12px 16px;
-    font-size: 1rem;
+/* --- LAYOUT UTAMA --- */
+body {
+    background-color: var(--bg-color);
     font-family: 'Inter', sans-serif;
+    color: var(--text-color);
+    margin: 0;
+    overflow-x: hidden;
+}
+
+#app-container {
+    display: flex;
+    min-height: 100vh;
+}
+
+.create-mai-container, .form-container {
+    max-width: 800px;
+    margin: 30px auto;
+    background: var(--card-bg);
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+}
+
+/* --- HEADER MOBILE --- */
+.mobile-header {
+    display: none;
+    background: #fff;
+    padding: 15px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+@media (max-width: 768px) {
+    .mobile-header { display: flex; }
+    .create-mai-container, .form-container { margin: 15px; padding: 20px; }
+    #app-container { flex-direction: column; }
+}
+
+/* --- FORM ELEMENTS --- */
+.form-group { margin-bottom: 20px; }
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #444;
+}
+
+input[type="text"], 
+textarea, 
+select {
+    width: 100%;
+    padding: 12px;
     border: 1px solid var(--border-color);
     border-radius: 8px;
-    background-color: var(--bg-primary);
-    color: var(--text-primary);
-}
-
-textarea {
-    resize: vertical;
-    min-height: 80px;
-}
-
-input[type="text"]:focus,
-textarea:focus {
-    outline: none;
-    border-color: var(--accent-blue);
-    box-shadow: 0 0 0 3px rgba(144, 202, 249, 0.3);
-}
-
-/* Grup Avatar */
-.avatar-group label {
-    margin-bottom: 12px;
-}
-.avatar-upload {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-}
-.image-preview {
-    width: 100px;
-    height: 100px;
-    border-radius: 50%; /* Bulat */
-    object-fit: cover;
-    border: 2px dashed var(--border-color);
-    cursor: pointer;
-    background-color: var(--bg-sidebar);
-}
-input[type="file"] {
-    font-size: 0.8rem;
-    color: var(--text-secondary);
-    padding: 5px 0;
-}
-.avatar-upload small {
-    color: var(--text-secondary);
-    font-size: 0.9rem;
-}
-
-/* Grup Radio Button */
-.radio-group {
-    display: flex;
-    gap: 24px;
-}
-.radio-group label {
-    font-weight: 500;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-}
-input[type="radio"] {
-    accent-color: var(--accent-blue-dark);
-}
-
-/* Tombol Submit */
-.submit-btn {
-    width: 100%;
-    padding: 14px;
     font-size: 1rem;
-    font-weight: 600;
-    background-color: var(--bg-button);
-    color: var(--text-primary);
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-.submit-btn:hover {
-    background-color: var(--bg-button-hover);
-}
-.submit-btn:disabled {
-    background-color: var(--border-color);
-    cursor: not-allowed;
+    transition: border 0.3s;
+    background: #fff;
+    color: #333;
+    box-sizing: border-box;
 }
 
-/* Status message */
-#form-status.success {
-    color: green;
-}
-#form-status.error {
-    color: red;
+input:focus, textarea:focus {
+    border-color: var(--primary-color);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
-/* File: css/create-mai.css (Tambahan di paling bawah) */
-
-/* Sembunyikan Grid Sprite secara default agar tidak muncul sebelum checkbox dicentang */
-#vn-sprites-container {
-    display: none;
-}
-
-/* Pastikan input file di dalam grid VN selalu terlihat (karena sebelumnya kita sembunyikan input file global) */
-#vn-sprites-container input[type="file"] {
-    display: block;
-    margin: 5px auto; /* Tengahkan tombol */
-}
-/* --- TAB NAVIGATION STYLES (LIGHT MODE) --- */
+/* --- TABS SYSTEM --- */
 .tabs-header {
-    display: flex;
-    background: #f1f3f5; /* Abu-abu sangat muda */
-    border-radius: 12px 12px 0 0;
-    overflow: hidden;
-    margin-bottom: 0;
-    border-bottom: 1px solid #dee2e6;
+    display: flex; 
+    gap: 10px; 
+    border-bottom: 2px solid #eee; 
+    margin-bottom: 25px;
+    overflow-x: auto;
+    padding-bottom: 5px;
 }
 
-.tab-btn {
-    flex: 1;
-    padding: 15px;
-    background: transparent;
+.tab-btn { 
+    background: none;
     border: none;
-    color: #666; /* Teks abu-abu gelap */
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
+    padding: 10px 15px;
+    font-size: 1rem;
+    color: #888;
+    cursor: not-allowed;
+    opacity: 0.6;
+    transition: all 0.3s;
+    white-space: nowrap;
     border-bottom: 3px solid transparent;
 }
 
-.tab-btn:hover {
-    background: #e9ecef;
-    color: #333;
+.tab-btn.enabled { 
+    opacity: 1; 
+    cursor: pointer; 
 }
 
-.tab-btn.active {
-    background: #ffffff; /* Putih aktif */
-    color: #007bff; /* Biru standar (atau ganti warna tema Tuan) */
-    border-bottom: 3px solid #007bff;
-    box-shadow: 0 -2px 5px rgba(0,0,0,0.05); /* Sedikit bayangan biar pop-up */
+.tab-btn.active { 
+    border-bottom-color: #00e5ff; 
+    color: #00e5ff; 
+    font-weight: 700; 
+    opacity: 1; 
 }
 
-.tab-content {
-    display: none;
-    background: #ffffff; /* Putih bersih */
-    padding: 25px;
-    border-radius: 0 0 12px 12px;
-    border: 1px solid #dee2e6;
-    border-top: none; /* Biar nyatu sama header */
-    animation: fadeIn 0.3s ease;
-    color: #333; /* Teks hitam */
-}
-
-.tab-content.active {
-    display: block;
-}
-
-/* Fix Input Field di dalam Tab agar terlihat jelas di background putih */
-.tab-content input, 
-.tab-content textarea {
-    background: #ffffff !important;
-    color: #333 !important;
-    border: 1px solid #ced4da !important;
-}
-
-.tab-content input:focus, 
-.tab-content textarea:focus {
-    border-color: #80bdff !important;
-    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25) !important;
-}
-
-/* Modifikasi container form biar nyatu sama tab */
-.form-container {
-    background: transparent !important;
-    padding: 0 !important;
-    box-shadow: none !important;
-}
-
-.hidden-control { display: none; }
+.tab-content { display: none; animation: fadeIn 0.3s ease; }
+.tab-content.active { display: block; }
 
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(5px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* --- MODERN FILE UPLOAD STYLES --- */
-
-/* 1. Sembunyikan Input Asli (Wajib) */
-input[type="file"] {
-    display: none;
+/* --- CONFIG BOX (Area Toggle Dual Tag) --- */
+.config-section {
+    background: rgba(102, 126, 234, 0.08); 
+    padding: 20px; 
+    border-radius: 12px; 
+    border: 1px solid var(--primary-color); 
+    margin-top: 25px;
 }
 
-/* 2. Gaya Tombol Standar (Untuk Avatar Utama) */
-.custom-file-btn {
-    display: inline-block;
-    background: #ffffff;
-    color: #333;
-    border: 1px solid #ced4da;
-    border-radius: 8px;
-    padding: 10px 20px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    text-align: center;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-
-.custom-file-btn:hover {
-    background: #f8f9fa;
-    border-color: #007bff;
-    color: #007bff;
-    transform: translateY(-1px);
-}
-
-.custom-file-btn i {
-    margin-right: 5px; /* Jika pakai FontAwesome */
-}
-
-/* 3. Gaya Kotak Dashed (Untuk Sprite Grid) */
-.sprite-upload-box {
+.config-title {
+    color: var(--primary-color); 
+    margin-top: 0; 
+    font-size: 1.1rem;
     display: flex;
-    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    background: #ffffff;
-    border: 2px dashed #dee2e6; /* Garis putus-putus modern */
-    border-radius: 12px;
-    padding: 20px 10px;
+    gap: 8px;
+}
+
+.toggle-card {
+    display: flex; 
+    align-items: center; 
+    gap: 15px; 
+    margin-top: 15px; 
     cursor: pointer;
-    transition: all 0.3s ease;
-    height: 100%;
-    min-height: 100px;
-    text-align: center;
+    background: #fff;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    transition: all 0.2s;
 }
 
-.sprite-upload-box:hover {
-    border-color: #007bff;
-    background: #f1f8ff;
+.toggle-card:hover {
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    border-color: #eee;
 }
 
-.sprite-upload-box .icon {
-    font-size: 24px;
-    margin-bottom: 5px;
-    opacity: 0.7;
+.toggle-input {
+    width: 20px; 
+    height: 20px;
+    accent-color: var(--primary-color);
 }
 
-.sprite-upload-box span {
-    font-size: 0.8rem;
+.toggle-text strong { display: block; color: #333; }
+.toggle-text small { font-size: 0.85rem; color: #666; }
+
+
+/* --- CHAPTER ITEMS --- */
+.chapter-item {
+    background: #f8f9fa; 
+    padding: 20px; 
+    margin-bottom: 20px;
+    border-left: 5px solid var(--primary-color); 
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
+    color: #333;
+    position: relative;
+}
+
+.chapter-header {
+    margin-bottom: 15px; 
+    border-bottom: 1px solid #eee; 
+    padding-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.btn-delete-chap {
+    color: #ff6b6b; 
+    background: none; 
+    border: none; 
+    cursor: pointer; 
+    font-weight: bold;
+}
+
+.grid-2-col {
+    display: grid; 
+    grid-template-columns: 1fr 2fr; 
+    gap: 15px; 
+    margin-bottom: 15px;
+}
+
+/* --- SPRITE UPLOADER --- */
+.sprites-grid {
+    display: grid; 
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 15px; 
+    margin-top: 15px;
+}
+
+.sprite-upload-box {
+    border: 2px dashed #ddd; 
+    border-radius: 10px; 
+    padding: 15px;
+    text-align: center; 
+    cursor: pointer; 
+    transition: 0.3s;
+    background: #fff; 
+    display: flex;
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: center;
+    min-height: 110px;
+}
+
+.sprite-upload-box:hover { 
+    border-color: #00e5ff; 
+    background: rgba(0, 229, 255, 0.05); 
+}
+
+.sprite-upload-box.has-file { 
+    border-color: #2ecc71; 
+    background: rgba(46, 204, 113, 0.05); 
+}
+
+.sprite-icon { font-size: 1.5rem; margin-bottom: 5px; }
+
+/* --- AVATAR UPLOAD --- */
+.avatar-group { text-align: center; }
+.avatar-preview {
+    width: 120px; height: 120px; 
+    border-radius: 50%; 
+    object-fit: cover; 
+    border: 3px solid #eee;
+    margin-bottom: 10px;
+}
+
+/* --- BUTTONS --- */
+.btn-next, .submit-btn {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: opacity 0.3s;
+    width: auto;
+}
+
+.btn-full { width: 100%; }
+
+.btn-next:hover, .submit-btn:hover {
+    opacity: 0.9;
+    background: var(--primary-hover);
+}
+
+.btn-secondary-action {
+    background: transparent;
+    border: 1px solid #ccc;
+    padding: 8px 15px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #555;
+}
+
+.btn-danger-outline {
+    background: rgba(220, 53, 69, 0.1);
+    color: #dc3545;
+    border: 1px solid #dc3545;
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    width: 100%;
+    margin-top: 20px;
+}
+
+.btn-cancel {
+    background: transparent;
     color: #666;
-    font-weight: 500;
-    word-break: break-word; /* Biar nama file panjang turun ke bawah */
+    border: none;
+    padding: 10px;
+    cursor: pointer;
+    width: 100%;
 }
 
-/* Indikator kalau file sudah dipilih (Lewat JS nanti) */
-.sprite-upload-box.has-file {
-    border-style: solid;
-    border-color: #28a745; /* Hijau */
-    background: #e6fffa;
+/* --- RADIO GROUP --- */
+.radio-group label {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 15px;
+    cursor: pointer;
+    font-weight: normal;
+}
+.radio-group input { margin-right: 8px; }
+
+/* --- MOBILE SIDEBAR & OVERLAY (Tambahkan di create-mai.css) --- */
+
+/* Overlay Gelap (Latar Belakang saat menu buka) */
+.overlay {
+    position: fixed;
+    top: 0; 
+    left: 0;
+    width: 100%; 
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5); /* Gelap transparan */
+    z-index: 998; /* Di bawah sidebar, di atas konten */
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+/* Class untuk memunculkan Overlay */
+.overlay.overlay-visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Responsif Mobile (Max Lebar 768px) */
+@media (max-width: 768px) {
+    
+    /* 1. Sidebar Default (Sembunyi di Kiri) */
+    .lobby-sidebar {
+        position: fixed;
+        top: 0;
+        left: -280px; /* Geser ke kiri layar */
+        width: 260px;
+        height: 100vh;
+        z-index: 999; /* Paling depan */
+        transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Animasi halus */
+        box-shadow: 4px 0 15px rgba(0,0,0,0.1);
+        display: block !important; /* Pastikan tidak display:none */
+        background: var(--primary-color, #667eea); /* Warna background sidebar */
+    }
+
+    /* Warna teks sidebar biar kontras di mobile */
+    .lobby-sidebar h1, 
+    .lobby-sidebar a {
+        color: white !important;
+    }
+    
+    .lobby-sidebar a.active {
+        background: rgba(255,255,255,0.2) !important;
+        border-radius: 8px;
+    }
+
+    /* 2. Sidebar Aktif (Muncul saat tombol diklik) */
+    .lobby-sidebar.sidebar-visible {
+        left: 0; /* Geser masuk ke layar */
+    }
 }

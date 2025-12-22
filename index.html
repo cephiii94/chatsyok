@@ -96,11 +96,16 @@
             <div id="modal-char-tags" class="profile-tags"></div>
 
             <div class="modal-actions">
-                <button id="btn-start-chat" class="btn-primary" style="width: 100%; margin-bottom: 10px;">Mulai
-                    Chat</button>
-
-                <div id="modal-admin-actions" style="display: flex; gap: 10px; justify-content: center;">
+                <div style="display: flex; gap: 10px; margin-bottom: 10px; width: 100%;">
+                    <button id="btn-action-chat-wa" class="btn-primary" style="flex: 1;">
+                        💬 Chat Cepat
+                    </button>
+                    <button id="btn-action-vn-free" class="btn-secondary" style="flex: 1;">
+                        ☕ Visual Mode
+                    </button>
                 </div>
+
+                <div id="modal-admin-actions" style="display: flex; gap: 10px; justify-content: center;"></div>
             </div>
         </div>
     </div>
@@ -115,6 +120,11 @@
                 <button id="btn-confirm-yes" class="btn btn-danger">Ya, Hapus</button>
             </div>
         </div>
+    </div>
+
+    <div id="global-loader" class="loading-overlay">
+        <div class="spinner"></div>
+        <div class="loading-text">MEMUAT DUNIA...</div>
     </div>
 
 

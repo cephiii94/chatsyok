@@ -190,3 +190,74 @@
     background-color: #e2e8f0;
 }
 
+/* --- BUTTON SECONDARY (STYLE OUTLINE) --- */
+.btn-secondary {
+    background-color: white; /* Latar putih */
+    color: var(--primary-color, #667eea); /* Teks warna ungu utama */
+    border: 2px solid var(--primary-color, #667eea); /* Garis tepi */
+    border-radius: 8px; /* Sudut melengkung */
+    padding: 10px 20px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease; /* Animasi halus */
+    /* Pastikan tombol tidak gepeng di mobile */
+    min-height: 44px; 
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-secondary:hover {
+    background-color: var(--primary-color, #667eea); /* Saat hover jadi ungu */
+    color: white; /* Teks jadi putih */
+    transform: translateY(-2px); /* Efek naik sedikit */
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1); /* Bayangan */
+}
+
+.btn-secondary:active {
+    transform: translateY(0); /* Saat diklik turun lagi */
+}
+
+/* --- GLOBAL LOADING OVERLAY --- */
+.loading-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(255, 255, 255, 0.9); /* Latar putih transparan */
+    z-index: 9999; /* Paling depan */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.loading-overlay.active {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid #e0e0e0;
+    border-top: 5px solid var(--primary-color, #667eea);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 15px;
+}
+
+.loading-text {
+    font-family: 'Inter', sans-serif;
+    color: #555;
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+

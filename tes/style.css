@@ -1,0 +1,195 @@
+/* --- RESET & GLOBAL STYLES --- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: #000;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Lato', sans-serif; /* Font default untuk angka/teks biasa */
+    overflow: hidden; /* Mencegah scroll bar */
+}
+
+/* Font dekoratif untuk judul (mirip Serif di gambar) */
+h2, h3, .enter-btn {
+    font-family: 'Cinzel', serif;
+}
+
+/* --- GAME CONTAINER UTAMA --- */
+.game-screen {
+    position: relative;
+    width: 100%;
+    max-width: 1280px; /* Batasi lebar agar tidak terlalu melar di layar besar */
+    aspect-ratio: 16/9; /* Menjaga rasio layar seperti HP landscape */
+    background: #1a1a2e;
+    border: 2px solid #333;
+    overflow: hidden;
+}
+
+/* --- LAYERING SYSTEM --- */
+.bg-layer {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background-size: cover;
+    background-position: center;
+    z-index: 1;
+    filter: brightness(0.6); /* Membuat background agak gelap */
+}
+
+.char-layer {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-65%); /* Menggeser karakter sedikit ke kiri */
+    height: 95%; /* Tinggi karakter */
+    z-index: 2;
+    pointer-events: none; /* Agar klik tembus ke background jika perlu */
+}
+
+.ui-layer {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 3;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    /* pointer-events: none;  <- Hapus ini jika ingin tombol bisa diklik */
+}
+
+/* --- KOMPONEN UI --- */
+
+/* 1. Header */
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    color: white;
+}
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.level-badge {
+    background: #333; border-radius: 50%; width: 40px; height: 40px;
+    display: flex; justify-content: center; align-items: center; border: 2px solid gold;
+}
+.uid { font-size: 0.8rem; opacity: 0.7; }
+
+.currencies {
+    display: flex;
+    gap: 15px;
+}
+.currency-item {
+    background: rgba(0,0,0,0.5);
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+}
+
+/* 2. Sidebar Kiri */
+.left-sidebar {
+    position: absolute;
+    top: 25%;
+    left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+.side-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    padding: 10px;
+    width: 80px;
+    height: 60px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    transition: 0.3s;
+}
+.side-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* 3. Panel Kanan (Menu Utama) */
+.right-panel {
+    position: absolute;
+    top: 15%;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    align-items: flex-end;
+}
+
+/* Gaya umum untuk kartu menu */
+.menu-card {
+    background: #e8e0c5; /* Warna Beige kertas */
+    color: #3d2b1f; /* Warna teks coklat tua */
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 5px 5px 15px rgba(0,0,0,0.5);
+    border: 2px solid #c7b299;
+}
+
+.story-card {
+    width: 400px;
+    background: #d4c4a8; /* Beige agak gelap */
+    border-left: 5px solid #a33131; /* Aksen merah */
+}
+.story-card h2 { color: #a33131; }
+.route { margin: 10px 0; font-weight: bold; text-align: center; }
+.enter-btn {
+    width: 100%;
+    padding: 10px;
+    background: #a33131;
+    color: white;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+}
+
+.sub-menu-row {
+    display: flex;
+    gap: 15px;
+}
+.recruit-card {
+    width: 180px; height: 250px;
+    display: flex; flex-direction: column; align-items: center;
+}
+.card-icon { font-size: 4rem; margin-top: 20px; opacity: 0.5; }
+
+.right-column {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+.management-card, .planet-card {
+    width: 200px;
+    height: 115px;
+}
+
+/* 4. Banner Bawah */
+.bottom-banner {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    width: 250px;
+    height: 80px;
+    background: linear-gradient(45deg, #333, #555);
+    color: white;
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    border: 2px solid gold;
+}

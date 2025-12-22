@@ -309,14 +309,30 @@ async function loadCharacterAndState() {
                 } 
                 // KASUS 2: Chat terakhir adalah USER (Bot belum jawab/error sebelumnya)
                 else {
-                    // Tampilkan pesan user agar tidak bingung
-                    document.getElementById('dialogue-text').innerText = `(Kamu): ${lastMsg.text} \n\n(Melanjutkan cerita...)`;
+                    console.log("📂 History loaded: Menampilkan pesan terakhir User (Tanpa Auto-Reply).");
+
+                    // 1. Tampilkan Nama User di Label Nama (Supaya jelas ini teks User)
+                    const nameLabel = document.getElementById('char-name');
+                    if(nameLabel) nameLabel.textContent = currentUserName || "Kamu";
+
+                    // 2. Tampilkan Teks User
+                    const dialogueText = document.getElementById('dialogue-text');
+                    if(dialogueText) dialogueText.innerText = lastMsg.text;
                     
-                    // AUTO-TRIGGER: Kirim ulang pesan user ke AI untuk minta jawaban
-                    console.log("🔄 Auto-resume: Memicu respons untuk pesan terakhir...");
-                    
-                    // Parameter 'true' di sini agar tidak save double ke DB
-                    await sendMessage("...", true);
+                    // 3. Reset Sprite ke IDLE (Karena bot sedang menyimak)
+                    updateSprite('IDLE');
+
+                    // 4. Matikan Auto-Trigger (Jangan panggil sendMessage)
+                    // HAPUS/KOMENTARI BARIS INI: await sendMessage("...", true);
+
+                    // 5. Langsung nyalakan input agar User bisa lanjut chat manual
+                    if (!isStoryMode) {
+                        enableInput(true);
+                    } else {
+                        // Jika Story Mode, mungkin perlu tombol "Lanjut" jika Tuan mau
+                        // Tapi untuk Free Talk, langsung enableInput sudah cukup.
+                         enableInput(true);
+                    }
                 }
             } else {
                 // HISTORY KOSONG (NEW GAME)
@@ -748,10 +764,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnMenu = document.getElementById('btn-menu-trigger');
     const menuDropdown = document.getElementById('vn-system-menu');
     
-    if(btnBack) btnBack.addEventListener('click', () => window.location.href = 'lobby.html');
     if(btnSend) btnSend.addEventListener('click', () => sendMessage());
     if(input) input.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
 
+    // tombol kembali
+    if(btnBack) btnBack.addEventListener('click', () => {
+        if (isStoryMode) {
+            // Story Mode: Kembali ke Lobby VN (Pilih Skenario)
+            window.location.href = 'lobby.html';
+        } else {
+            // Free Mode: Kembali ke Index Utama (Pilih Chat Biasa/Visual)
+            window.location.href = '../index.html';
+        }
+    });
     // Menu System
     if (btnMenu && menuDropdown) {
         btnMenu.addEventListener('click', (e) => {
